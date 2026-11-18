@@ -1,0 +1,8 @@
+<!doctype html><html><head><meta charset="utf-8"><script type="importmap">{ "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }</script></head><body><script type="module">
+import * as W from './world.js'; import * as Md from './models.js'; import { eraBuilding } from './eras.js'; import { nationBuilding } from './nations.js';
+W.loadTextures(); Md.initMaterials();
+const bad = [];
+const check = (name, g) => { if (!g) return; g.traverse(o => { if (o.isMesh) { const a = o.geometry.attributes.position.array; for (let i = 0; i < a.length; i++) if (!Number.isFinite(a[i])) { bad.push(name + ':' + o.geometry.type); break; } } }); };
+for (const t of ['town', 'house', 'storage', 'farm', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall']) for (let e = 0; e < 8; e++) { check(t + e, eraBuilding(t, e, '#1f4fa8')); for (const n of ['usa', 'russia', 'germany', 'china', 'austria', 'yugoslavia', 'india']) check(n + '-' + t + e, nationBuilding(t, e, '#1f4fa8', n)); }
+document.title = JSON.stringify([...new Set(bad)]).slice(0, 2000); window.__ready = true;
+</script></body></html>
