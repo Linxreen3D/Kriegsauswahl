@@ -17,7 +17,7 @@ const UNIT_ICONS = {
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
-const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', mine: '⛏', quarry: '🪨', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
+const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 function iconOf(def) {
   if (def.kind === 'b') return BLD_ICONS[def.key];
   if (def.unique) return UNIQUE_ICONS[def.unique];
@@ -182,8 +182,8 @@ function onStart(m) {
   G.res = new Map();
   G.resAt = new Int32Array(G.W * G.H);
   G.bldAt = new Int32Array(G.W * G.H);
-  for (let i = 0; i < m.res.length; i += 5) {
-    const r = { id: m.res[i], kind: RESOURCE_KINDS[m.res[i + 1]], x: m.res[i + 2], y: m.res[i + 3], amount: m.res[i + 4] };
+  for (let i = 0; i < m.res.length; i += 6) {
+    const r = { id: m.res[i], kind: RESOURCE_KINDS[m.res[i + 1]], x: m.res[i + 2], y: m.res[i + 3], amount: m.res[i + 4], layer: m.res[i + 5] };
     r.size = r.kind === 'gold' || r.kind === 'stone' ? 2 : 1;
     G.res.set(r.id, r);
     for (let y = r.y; y < r.y + r.size; y++) for (let x = r.x; x < r.x + r.size; x++) G.resAt[y * G.W + x] = r.id;
@@ -225,7 +225,7 @@ function onDelta(m) {
     if (!e) continue;
     if (e.def.kind === 'b' && e.owner !== G.you) e.ghost = true; else removeEnt(id);
   }
-  if (m.rc) for (let i = 0; i < m.rc.length; i += 2) { const r = G.res.get(m.rc[i]); if (r) r.amount = m.rc[i + 1]; }
+  if (m.rc) for (let i = 0; i < m.rc.length; i += 3) { const r = G.res.get(m.rc[i]); if (r) { r.amount = m.rc[i + 1]; r.layer = m.rc[i + 2]; } }
   if (m.rr) for (const id of m.rr) {
     const r = G.res.get(id); if (!r) continue;
     G.res.delete(id);

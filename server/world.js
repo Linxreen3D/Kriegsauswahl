@@ -2,7 +2,7 @@
 import {
   TICK_MS, RES, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, RESOURCE_TYPES, RESOURCE_KINDS,
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
-  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, isProducer,
+  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, isProducer, DEPOSIT_LAYERS, hasLayers,
 } from '../shared/rules.js';
 import { generateMap, blockedTerrain } from './mapgen.js';
 
@@ -84,7 +84,7 @@ export class World {
 
   addResource(type, x, y, mul = 1) {
     const d = RESOURCE_TYPES[type];
-    const r = { id: this.nextId++, kind: 'r', rtype: type, res: d.res, amount: Math.round(d.amount * mul), x, y, size: d.size, cx: x + d.size / 2, cy: y + d.size / 2 };
+    const r = { id: this.nextId++, kind: 'r', rtype: type, res: d.res, amount: Math.round(d.amount * mul), base: Math.round(d.amount * mul), layer: 0, depleted: false, x, y, size: d.size, cx: x + d.size / 2, cy: y + d.size / 2 };
     for (let yy = y; yy < y + d.size; yy++) for (let xx = x; xx < x + d.size; xx++) { const i = this.idx(xx, yy); this.pass[i] = 0; this.occ[i] = r.id; }
     this.resources.set(r.id, r); this.ents.set(r.id, r);
     return r;
@@ -334,6 +334,11 @@ export class World {
       case 'gather': {
         const t = this.ents.get(c.target);
         if (!t) return;
+        if (t.kind === 'r' && t.depleted && !this.canDeepen(t, pid)) {
+          const nx = DEPOSIT_LAYERS[t.layer + 1];
+          this.notice(pid, `Erschöpft. Die nächste Schicht (${nx.name}) lässt sich ab der Epoche „${ERAS[nx.era].name}“ abbauen.`);
+          return;
+        }
         for (const u of own(c.ids)) if (u.kind === 'u' && u.cls === 'wrk') this.orderGather(u, t);
         break;
       }
@@ -739,9 +744,21 @@ export class World {
       if (e.x !== tx || e.y !== ty) continue; // nur einmal pro Mine
       const d = (e.cx - x) ** 2 + (e.cy - y) ** 2;
       if (d >= bd || !this.accessible(e)) continue;
+      if (e.depleted && !this.canDeepen(e, owner)) continue;
       if (d < bd) { bd = d; best = e; }
     }
     return best;
+  }
+  // Kann der Spieler die nächste Schicht eines erschöpften Vorkommens erschließen?
+  canDeepen(r, owner) {
+    const next = DEPOSIT_LAYERS[r.layer + 1];
+    return !!next && owner != null && owner >= 0 && this.P[owner].era >= next.era;
+  }
+  deepen(r, owner) {
+    r.layer++; r.depleted = false;
+    r.amount = Math.round(r.base * DEPOSIT_LAYERS[r.layer].mul);
+    this.resChanged.add(r.id);
+    this.notice(owner, `⛏ ${DEPOSIT_LAYERS[r.layer].name}: Ein erschöpftes ${r.rtype === 'gold' ? 'Gold' : 'Stein'}vorkommen liefert wieder.`);
   }
 
   // Hat der Rohstoff mindestens eine begehbare Nachbarkachel?
@@ -781,6 +798,15 @@ export class World {
         u.order = { t: 'idle' }; return;
       }
     }
+    if (!isFarm && t.depleted) {
+      if (this.canDeepen(t, u.owner)) this.deepen(t, u.owner);
+      else {
+        const n = this.findResourceNear(o.rtype, u.x, u.y, 14, u.owner);
+        if (n) { o.target = n.id; return; }
+        if (u.carry && u.carry.amt > 0) { o.returning = true; return; }
+        u.order = { t: 'idle' }; return;
+      }
+    }
     if (isFarm) {
       if (t.worker && t.worker !== u.id && this.ents.get(t.worker) && this.ents.get(t.worker).order.target === t.id) {
         const n = this.findResourceNear(o.rtype, u.x, u.y, 12, u.owner);
@@ -815,7 +841,11 @@ export class World {
       amt = Math.min(amt, t.amount);
       t.amount -= amt;
       this.resChanged.add(t.id);
-      if (t.amount <= 0.01) this.removeResource(t);
+      if (t.amount <= 0.01) {
+        // Gold/Stein: Vorkommen bleibt erschöpft stehen, bis bessere Technik die nächste Schicht erschließt
+        if (hasLayers(t.rtype) && DEPOSIT_LAYERS[t.layer + 1]) { t.amount = 0; t.depleted = true; this.resChanged.add(t.id); }
+        else this.removeResource(t);
+      }
     }
     u.carry.amt += amt;
   }
@@ -848,7 +878,7 @@ export class World {
         if (isProducer(b.type) && b.owner === u.owner) { b.worker = u.id; u.order = { t: 'gather', target: b.id, rtype: b.type }; }
         else if (b.type === 'storage' || b.type === 'town') {
           // nach Lagerbau: in der Nähe weitersammeln
-          const res = this.findResourceNear('tree', b.cx, b.cy, 8) || this.findResourceNear('gold', b.cx, b.cy, 8) || this.findResourceNear('stone', b.cx, b.cy, 8);
+          const res = this.findResourceNear('tree', b.cx, b.cy, 8) || this.findResourceNear('gold', b.cx, b.cy, 8, b.owner) || this.findResourceNear('stone', b.cx, b.cy, 8, b.owner);
           if (res && !u.buildQ.length) u.order = { t: 'gather', target: res.id, rtype: res.rtype };
         }
         this.recount();
@@ -1116,6 +1146,7 @@ export class World {
     w.bcells = Array.from({ length: w.cellsW * w.cellsH }, () => []);
     w.resources = new Map(); w.ents = new Map();
     for (const r of d.resources) {
+      if (r.layer == null) { r.layer = 0; r.base = r.amount; r.depleted = false; }
       for (let yy = r.y; yy < r.y + r.size; yy++) for (let xx = r.x; xx < r.x + r.size; xx++) { const i = w.idx(xx, yy); w.pass[i] = 0; w.occ[i] = r.id; }
       w.resources.set(r.id, r); w.ents.set(r.id, r);
     }
@@ -1135,7 +1166,7 @@ export class World {
   // ---------------- Netzwerk ----------------
   initPayload(pid) {
     const res = [];
-    for (const r of this.resources.values()) res.push(r.id, RESOURCE_KINDS.indexOf(r.rtype), r.x, r.y, Math.round(r.amount));
+    for (const r of this.resources.values()) res.push(r.id, RESOURCE_KINDS.indexOf(r.rtype), r.x, r.y, Math.round(r.amount), r.layer || 0);
     return {
       t: 'start', w: this.W, h: this.H, terrain: Buffer.from(this.terrain).toString('base64'), res, you: pid,
       map: this.mapInfo, wonderHold: wonderHold(this.W), players: this.playersPublic(), settings: this.settings, time: this.time,
@@ -1202,7 +1233,7 @@ export class World {
   }
   resourceDelta() {
     const ch = [];
-    for (const id of this.resChanged) { const r = this.resources.get(id); if (r) ch.push(id, Math.round(r.amount)); }
+    for (const id of this.resChanged) { const r = this.resources.get(id); if (r) ch.push(id, Math.round(r.amount), r.layer || 0); }
     this.resChanged.clear();
     const rm = this.resRemoved; this.resRemoved = [];
     return { ch, rm };

@@ -202,18 +202,7 @@ export class AI {
           }
         } else {
           const rt = best === 'wood' ? 'tree' : best;
-          for (const r of [16, 30, 50, 80]) { target = w.findResourceNear(rt, u.x, u.y, r); if (target) break; }
-          if (!target && best !== 'wood') {
-            // Vorkommen erschöpft: Bergwerk bzw. Steinbruch nutzen oder bauen
-            const ptype = best === 'gold' ? 'mine' : 'quarry';
-            target = w.findResourceNear(ptype, this.bx, this.by, 40, this.pid);
-            if (!target) {
-              const unbuilt = blds.find(b => b.type === ptype && !b.built);
-              if (unbuilt) { this.cmd({ c: 'repair', ids: [u.id], target: unbuilt.id }); counts[best]++; done = true; break; }
-              if (pl.era >= BUILDINGS[ptype].minEra && this.build(ptype, [u], 1, 4, 12)) { counts[best]++; done = true; break; }
-              continue;
-            }
-          }
+          for (const r of [16, 30, 50, 80]) { target = w.findResourceNear(rt, u.x, u.y, r, this.pid); if (target) break; }
           if (!target) continue;
           // weit vom Lager? Lager bauen
           const drop = w.dropoffFor({ x: target.cx, y: target.cy, owner: this.pid });

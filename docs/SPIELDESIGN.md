@@ -63,7 +63,14 @@ Wer die Forschung früh holt, hat einen Vorsprung. Wer erst aufrüstet, steht st
 
 **Stellschrauben dafür:**
 1. **Aufstiegskosten und Forschungszeiten** steigen stärker als heute. Das Haupthaus bildet während der Forschung keine Arbeiter aus.
-2. **Rohstoffe am Start erschöpfen sich** etwa bis Epoche IV. Ab dem Frühen Mittelalter gibt es deshalb **Bergwerk** (Gold) und **Steinbruch** (Stein) als unerschöpfliche, aber langsamere Quellen, wie das Feld für Nahrung. Ohne sie blieb in Tests nach etwa einer Stunde jede Wirtschaft stehen. Danach muss man expandieren. Das erzeugt Kampf um die Karte statt Einigeln. Ab Epoche VI hilft die Eisenbahn, ferne Vorkommen zu nutzen.
+2. **Rohstoffe und Tiefbau:** Es entstehen nie neue Vorkommen. Ein erschöpftes Gold- oder Steinvorkommen bleibt aber an seinem Ort und lässt sich mit besserer Technik tiefer abbauen:
+   - Stollenbau ab dem Frühen Mittelalter.
+   - Tiefbau mit Dampfpumpen ab der 1. Industriellen Revolution (1,5-fache Menge).
+   - Industrieller Tiefbau ab der 2. Industriellen Revolution (2-fache Menge).
+   - Großtagebau im Kalten Krieg (2-fache Menge).
+
+   Lagerstätten bleiben dadurch das ganze Spiel über umkämpft. Wer eine erschließt, liefert seinem Gegner keinen Vorteil, solange dieser technisch zurückliegt.
+   **Zielzeit** bis zum Ende der Epochen: 1,5 bis 4 Stunden. Freundesrunden eilen meist zuerst ans Ende und kämpfen dann.
 3. **Aufholhilfe:** Wer zwei oder mehr Epochen hinter dem Führenden liegt, zahlt 15 % weniger pro Rückstands-Epoche fürs Aufsteigen.
 
 ## 4. Truppengattungen und Konter-System

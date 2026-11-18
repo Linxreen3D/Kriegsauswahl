@@ -132,9 +132,6 @@ export const BUILDINGS = {
   house: { name: 'Haus', size: 2, hp: 300, cost: { wood: 30 }, time: 14, pop: 5, sight: 4, minEra: 0, key: 'Q', desc: '+5 Bevölkerung.' },
   storage: { name: 'Lager', size: 2, hp: 450, cost: { wood: 100 }, time: 20, drop: true, sight: 5, minEra: 0, key: 'W', desc: 'Abgabestelle für alle Ressourcen.' },
   farm: { name: 'Feld', size: 2, hp: 200, cost: { wood: 60 }, time: 10, walkable: true, sight: 2, minEra: 0, key: 'E', yields: 'food', rate: 0.6, desc: 'Unerschöpfliche Nahrung für einen Arbeiter.' },
-  // Dauerhafte Quellen für Gold und Stein, wenn die Vorkommen der Karte erschöpft sind
-  mine: { name: 'Bergwerk', size: 2, hp: 500, cost: { wood: 150, stone: 50 }, time: 30, walkable: true, sight: 3, minEra: 3, key: 'F', yields: 'gold', rate: 0.3, desc: 'Unerschöpfliches Gold für einen Arbeiter, langsamer als ein Vorkommen.' },
-  quarry: { name: 'Steinbruch', size: 2, hp: 500, cost: { wood: 150 }, time: 25, walkable: true, sight: 3, minEra: 3, key: 'X', yields: 'stone', rate: 0.34, desc: 'Unerschöpflicher Stein für einen Arbeiter, langsamer als ein Vorkommen.' },
   barracks: { name: 'Kaserne', size: 3, hp: 900, cost: { wood: 150 }, time: 30, sight: 6, minEra: 0, key: 'R', desc: 'Bildet Nahkämpfer aus.' },
   range: { name: 'Schießplatz', size: 3, hp: 800, cost: { wood: 150 }, time: 30, sight: 6, minEra: 0, key: 'T', desc: 'Bildet Fernkämpfer aus.' },
   stable: { name: 'Stall', size: 3, hp: 900, cost: { wood: 175, gold: 25 }, time: 35, sight: 6, minEra: 1, key: 'D', desc: 'Bildet Reiterei und später Fahrzeuge aus.' },
@@ -148,15 +145,25 @@ export const WONDER = { name: 'Weltwunder', cost: { food: 6000, wood: 5000, ston
 export const wonderHold = mapW => (mapW >= 160 ? WONDER.holdLarge : WONDER.hold);
 export const WONDER_ERA = 8; // Anzeige-Epoche für das Modell (nach der letzten Epoche)
 
-export const BUILD_ORDER = ['house', 'storage', 'farm', 'mine', 'quarry', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
+export const BUILD_ORDER = ['house', 'storage', 'farm', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
 
 // ---------------- Rohstoffe auf der Karte ----------------
 export const RESOURCE_TYPES = {
   tree: { res: 'wood', amount: 100, size: 1, rate: 0.72 },
   berry: { res: 'food', amount: 150, size: 1, rate: 0.8 },
-  gold: { res: 'gold', amount: 900, size: 2, rate: 0.6 },
-  stone: { res: 'stone', amount: 700, size: 2, rate: 0.6 },
+  gold: { res: 'gold', amount: 1500, size: 2, rate: 0.6 },
+  stone: { res: 'stone', amount: 1200, size: 2, rate: 0.6 },
 };
+// Tiefere Schichten: Ein erschöpftes Gold- oder Steinvorkommen bleibt an seinem Ort und lässt sich
+// mit besserer Bergbautechnik weiter abbauen. Es entstehen keine neuen Vorkommen – Lagerstätten bleiben umkämpft.
+export const DEPOSIT_LAYERS = [
+  { era: 0, mul: 1, name: 'Oberfläche' },
+  { era: 3, mul: 1, name: 'Stollenbau' },
+  { era: 5, mul: 1.5, name: 'Tiefbau mit Dampfpumpen' },
+  { era: 6, mul: 2, name: 'Industrieller Tiefbau' },
+  { era: 7, mul: 2, name: 'Großtagebau' },
+];
+export const hasLayers = rtype => rtype === 'gold' || rtype === 'stone';
 export const RESOURCE_KINDS = ['tree', 'berry', 'gold', 'stone'];
 export const FARM_RATE = 0.6;
 export const CARRY = 10;

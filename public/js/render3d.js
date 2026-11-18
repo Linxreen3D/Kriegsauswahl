@@ -443,7 +443,7 @@ export class Renderer3D {
     let mdl = this.bldModels.get(key);
     if (mdl) return mdl;
     const sz = BUILDINGS[type].size * S;
-    const g = type === 'mine' || type === 'quarry' ? producerModel(type, era) : (nk && nationBuilding(type, era, color, nation)) || eraBuilding(type, era, color);
+    const g = (nk && nationBuilding(type, era, color, nation)) || eraBuilding(type, era, color);
     const mm = mergeModel(g);
     const size = mm.box.getSize(new THREE.Vector3());
     const fit = type === 'wall' ? (sz * 1.0) / Math.max(size.x, size.z) : (sz * 0.96 * (era === 7 ? 1.55 : 1)) / Math.max(size.x, size.z);
@@ -688,27 +688,6 @@ function tank(color) {
   add(new THREE.BoxGeometry(0.9, 0.08, 0.5), cloth, 0, 1.57, -0.5);
   return g;
 }
-// Bergwerk (Förderturm über Stollen) und Steinbruch (gestufte Abbaugrube) – einfache Platzhalter bis zu den Blender-Modellen
-function producerModel(type, era) {
-  const g = new THREE.Group(), stone = U.mat('#8d8a82', 0.95, 0), dark = U.mat('#2a2622', 1, 0), wood = U.wood();
-  const box = (w, h, d, m, x, y, z, ry = 0) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.rotation.y = ry; o.castShadow = o.receiveShadow = true; g.add(o); return o; };
-  if (type === 'quarry') {
-    box(2, 0.12, 2, stone, 0, 0.06, 0);
-    for (let k = 0; k < 3; k++) box(1.7 - k * 0.45, 0.28, 1.4 - k * 0.3, stone, 0.1, 0.2 + k * 0.28, -0.15 - k * 0.12);
-    for (let k = 0; k < 4; k++) box(0.32, 0.26, 0.32, U.mat('#b7b1a3', 0.9, 0), -0.6 + (k % 2) * 0.38, 0.25 + Math.floor(k / 2) * 0.26, 0.6, k * 0.3);
-    box(0.08, 1.1, 0.08, wood, 0.75, 0.55, 0.7); box(0.6, 0.06, 0.06, wood, 0.5, 1.08, 0.7);
-  } else {
-    box(2, 0.1, 2, U.mat('#5b5246', 1, 0), 0, 0.05, 0);
-    box(0.9, 0.7, 0.7, dark, -0.35, 0.4, 0.4);
-    const iron = era >= 5, frame = iron ? U.mat('#3b3f44', 0.5, 0.7) : wood;
-    for (const [x, z] of [[0.15, -0.55], [0.75, -0.55], [0.15, 0.05], [0.75, 0.05]]) box(0.09, 1.9, 0.09, frame, x, 0.95, z);
-    box(0.75, 0.08, 0.75, frame, 0.45, 1.88, -0.25);
-    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.04, 6, 18), frame); wheel.position.set(0.45, 2.05, -0.25); g.add(wheel);
-    box(0.9, 0.5, 0.6, wood, -0.4, 0.95, -0.5);
-  }
-  return g;
-}
-
 // Gebäude-Epoche -> vorhandenes Modell: Weltwunder (WONDER_ERA) nutzt das Wundermodell (7),
 // der Kalte Krieg vorerst die Modelle der 2. Industriellen Revolution, bis eigene Modelle (Blender) kommen.
 function modelEra(era) { era = era | 0; return era >= WONDER_ERA ? 7 : Math.max(0, Math.min(6, era)); }
