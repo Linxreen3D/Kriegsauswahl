@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Frontlinien</title>
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="map"></canvas>
+
+  <!-- Startbildschirm -->
+  <section id="home" class="screen">
+    <div class="card hero">
+      <div class="logo"><span class="logo-mark">◆</span> FRONTLINIEN</div>
+      <p class="tagline">Wähle dein Land. Erobere die Welt. Mit Freunden.</p>
+      <label class="field">Dein Name
+        <input id="nameInput" maxlength="20" placeholder="Kommandant" autocomplete="nickname">
+      </label>
+      <button id="createBtn" class="btn primary big">Neuen Raum erstellen</button>
+      <div class="divider"><span>oder</span></div>
+      <div class="join-row">
+        <input id="codeInput" maxlength="5" placeholder="RAUMCODE" autocomplete="off" spellcheck="false">
+        <button id="joinBtn" class="btn">Beitreten</button>
+      </div>
+      <p id="homeError" class="error"></p>
+      <details class="howto">
+        <summary>So wird gespielt</summary>
+        <ul>
+          <li><b>Startwahl:</b> Klicke zu Beginn auf ein freies Gebiet – das wird deine Hauptstadt.</li>
+          <li><b>Angreifen:</b> Eigene Region anklicken, dann ein verbundenes Ziel anklicken – oder einfach ziehen.</li>
+          <li><b>Sammelangriff:</b> Mit <kbd>Shift</kbd> mehrere eigene Regionen auswählen.</li>
+          <li><b>Truppenanteil:</b> Tasten <kbd>1</kbd>–<kbd>4</kbd> = 25 / 50 / 75 / 100 %.</li>
+          <li><b>Gold</b> kommt aus deinen Regionen. Baue Fabriken, Kasernen und Festungen oder setze Spezialfähigkeiten ein.</li>
+          <li><b>Gestrichelte Linien</b> sind Seewege (langsamer). Bündnisse schützen vor Angriffen und erlauben Unterstützung.</li>
+          <li><b>Kamera:</b> Mausrad / Pinch zum Zoomen, ziehen zum Verschieben, <kbd>Leertaste</kbd> springt zur Hauptstadt.</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- Lobby -->
+  <section id="lobby" class="screen hidden">
+    <div class="card lobby-card">
+      <div class="lobby-head">
+        <div>
+          <div class="muted small">Raumcode</div>
+          <div class="code-row"><span id="roomCode" class="room-code">-----</span>
+            <button id="copyLink" class="btn small">Einladungslink kopieren</button></div>
+        </div>
+        <button id="leaveLobby" class="btn ghost small">Verlassen</button>
+      </div>
+      <div class="lobby-grid">
+        <div>
+          <h3>Teilnehmer <span id="playerCount" class="muted"></span></h3>
+          <ul id="playerList" class="player-list"></ul>
+          <div class="row host-only">
+            <select id="botDiff">
+              <option value="easy">Bot: Leicht</option>
+              <option value="normal" selected>Bot: Normal</option>
+              <option value="hard">Bot: Schwer</option>
+            </select>
+            <button id="addBot" class="btn small">+ Bot hinzufügen</button>
+          </div>
+          <h3>Deine Farbe</h3>
+          <div id="colorPicker" class="color-picker"></div>
+        </div>
+        <div>
+          <h3>Einstellungen</h3>
+          <div id="settingsForm" class="settings"></div>
+        </div>
+      </div>
+      <div class="lobby-foot">
+        <span id="lobbyHint" class="muted"></span>
+        <button id="startBtn" class="btn primary big host-only">Spiel starten</button>
+      </div>
+      <div class="lobby-chat">
+        <div id="lobbyChatLog" class="chat-log"></div>
+        <input id="lobbyChatInput" class="chat-input" maxlength="200" placeholder="Nachricht…">
+      </div>
+    </div>
+  </section>
+
+  <!-- Spiel-HUD -->
+  <section id="hud" class="hidden">
+    <header class="topbar">
+      <div class="tb-left">
+        <span class="logo small-logo">◆ FRONTLINIEN</span>
+        <span id="phaseLabel" class="pill"></span>
+      </div>
+      <div class="tb-center">
+        <div class="stat" title="Gold"><span class="gold-icon">●</span><b id="goldVal">0</b><small id="incomeVal">+0/s</small></div>
+        <div class="stat" title="Regionen"><span>⬢</span><b id="regionVal">0</b></div>
+        <div class="stat" title="Truppen"><span>⚑</span><b id="troopVal">0</b></div>
+        <div class="stat" title="Spielzeit"><span>⏱</span><b id="timeVal">0:00</b></div>
+      </div>
+      <div class="tb-right">
+        <div class="pct" id="pctGroup" title="Anteil der Truppen, die gesendet werden (Tasten 1–4)">
+          <button data-p="0.25">25%</button><button data-p="0.5" class="on">50%</button><button data-p="0.75">75%</button><button data-p="1">100%</button>
+        </div>
+        <button id="soundBtn" class="icon-btn" title="Ton an/aus">🔊</button>
+        <button id="menuBtn" class="icon-btn" title="Menü">☰</button>
+      </div>
+    </header>
+
+    <aside id="scoreboard" class="panel">
+      <div class="panel-title">Nationen <button class="collapse" data-target="scoreList">–</button></div>
+      <ul id="scoreList"></ul>
+    </aside>
+
+    <aside id="infoPanel" class="panel hidden">
+      <div id="infoContent"></div>
+    </aside>
+
+    <div id="abilityBar"></div>
+
+    <div id="feedWrap" class="panel">
+      <div class="tabs"><button data-tab="feed" class="on">Ereignisse</button><button data-tab="chat">Chat <span id="chatBadge" class="badge hidden"></span></button></div>
+      <div id="feed" class="feed"></div>
+      <div id="chatBox" class="hidden">
+        <div id="chatLog" class="chat-log"></div>
+        <div class="chat-row">
+          <input id="chatInput" class="chat-input" maxlength="200" placeholder="Nachricht… (Enter)">
+          <label class="small muted"><input type="checkbox" id="allyChat"> nur Verbündete</label>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="minimap" width="240" height="106"></canvas>
+
+    <div id="banner" class="banner hidden"></div>
+    <div id="toast" class="toast hidden"></div>
+    <div id="tooltip" class="tooltip hidden"></div>
+
+    <div id="menu" class="modal hidden">
+      <div class="card">
+        <h2>Menü</h2>
+        <p class="muted">Raumcode: <b id="menuCode"></b></p>
+        <button id="menuInvite" class="btn">Einladungslink kopieren</button>
+        <button id="surrenderBtn" class="btn danger">Kapitulieren</button>
+        <button id="leaveGame" class="btn">Spiel verlassen</button>
+        <button id="closeMenu" class="btn primary">Weiterspielen</button>
+      </div>
+    </div>
+
+    <div id="endScreen" class="modal hidden">
+      <div class="card end-card">
+        <h1 id="endTitle"></h1>
+        <p id="endReason" class="muted"></p>
+        <canvas id="endChart" width="640" height="240"></canvas>
+        <table id="endTable"></table>
+        <div class="row center">
+          <button id="rematchBtn" class="btn primary">Zurück zur Lobby</button>
+          <button id="endLeave" class="btn">Hauptmenü</button>
+          <button id="endView" class="btn ghost">Karte ansehen</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="connLost" class="conn hidden">Verbindung unterbrochen – verbinde neu…</div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
