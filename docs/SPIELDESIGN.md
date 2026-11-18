@@ -364,6 +364,20 @@ Celo ist eine **einzigartige Heldeneinheit** für Jugoslawien. Er ist die einzig
   - Widmung im Abspann: „In Erinnerung an Celo“.
 - **Balancing:** Er ist stark, aber eine einzelne Einheit. Er soll schützen und aufdecken, nicht allein Schlachten gewinnen.
 
+#### Celos Familie: Ljilje, Antonija und Marija (stille Easter Eggs, keine Truppen)
+
+Seine Frau Ljilje und seine Töchter Antonija und Marija sind im Spiel nicht als Einheiten dabei. Sie tauchen an ruhigen, liebevollen Stellen auf:
+
+| Wo | Was |
+|---|---|
+| **Celos Haus** | Wird Celo ausgebildet, erscheint neben dem Haupthaus ein kleines Wohnhaus mit Garten, Wäscheleine und zwei Kinderfahrrädern. Fährt man mit der Maus darüber: „Hier warten Ljilje, Antonija und Marija auf Celo.“ Nur Dekoration, kann nicht angegriffen werden |
+| **Heimkehr** | Fällt Celo und kehrt nach 3 Minuten zurück, erscheint er an seinem Haus statt am Haupthaus. Meldung: „Celo ist zurück bei seiner Familie.“ |
+| **Brief von zu Hause** | Ein Ereignis nur für Jugoslawien, solange Celo im Spiel ist: Ein Brief von Ljilje, Antonija und Marija kommt an. Wahl 1: Celo liest ihn sofort, er pausiert 30 s und danach haben alle eigenen Einheiten 3 min +15 % Moral. Wahl 2: Er steckt ihn ein und kämpft weiter, +10 % Schaden für Celo, bis er das nächste Mal fällt |
+| **Schiffsnamen** | Jugoslawische Schiffe tragen, wie bei Schiffen üblich, Frauennamen. Die ersten drei heißen immer **Ljilje**, **Antonija** und **Marija** |
+| **Landschaft** | Auf jeder Karte gibt es mit kleiner Wahrscheinlichkeit einen See „Ljiljes See“ oder Provinzen namens „Antonija“ und „Marija“. Nur Namen, für alle Spieler sichtbar, als stilles Zeichen |
+| **Gedenkstein** | Die Inschrift lautet: „Celo – Leibwächter, Vater, Ehemann. Für Ljilje, Antonija und Marija.“ |
+| **Abspann** | „In Erinnerung an Celo. Für Ljilje, Antonija und Marija.“ |
+
 ### USA – Bonus: alle Rohstoffe 15 % schneller (gleicht die fehlenden Einheiten in IV–V aus)
 | Epoche | Einheit | Historisch | Rolle |
 |---|---|---|---|
