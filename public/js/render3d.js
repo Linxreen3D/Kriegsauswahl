@@ -18,7 +18,7 @@ const Q = { low: { ao: false, shadow: 1024, dpr: 1, grass: 0 }, medium: { ao: fa
 // ---------- Nebel des Krieges für alle Materialien ----------
 const FOW = { tex: { value: null }, size: { value: new THREE.Vector2(1, 1) } };
 function fowify(mat) {
-  if (!mat || mat.userData.fow || !(mat.isMeshStandardMaterial || mat.isMeshBasicMaterial)) return;
+  if (!mat || mat.userData.fow || !(mat.isMeshStandardMaterial || mat.isMeshBasicMaterial || mat.isLineBasicMaterial)) return;
   mat.userData.fow = true;
   const prev = mat.onBeforeCompile;
   const prevKey = prev ? prev.toString() : '';
@@ -259,7 +259,7 @@ export class Renderer3D {
     const base = new Float32Array(MW * MH);
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
       const t = terrain[y * MW + x], n = nz(x * 0.15, y * 0.15, 3);
-      base[y * MW + x] = t === 3 ? -2.2 : t === 4 ? 2.6 + n * 3.2 : t === 2 ? 0.35 : 0.85 + (n - 0.5) * 0.9;
+      base[y * MW + x] = t === 3 ? -2.2 : t === 9 ? -0.75 : t === 4 ? 2.6 + n * 3.2 : t === 5 ? 2.0 + n * 1.4 : t === 2 || t === 7 ? 0.35 + (t === 7 ? n * 0.5 : 0) : t === 8 ? 0.45 + (n - 0.5) * 0.3 : 0.85 + (n - 0.5) * 0.9;
     }
     const at = (x, y) => base[Math.min(MH - 1, Math.max(0, y)) * MW + Math.min(MW - 1, Math.max(0, x))];
     const VW = MW + 1, VH = MH + 1, vh = new Float32Array(VW * VH);
@@ -277,19 +277,22 @@ export class Renderer3D {
     const p = geo.attributes.position;
     for (let i = 0; i < p.count; i++) p.setY(i, vh[i]);
     geo.computeVertexNormals();
-    const splat = new Float32Array(p.count * 4);
+    const splat = new Float32Array(p.count * 4), clim = new Float32Array(p.count * 2);
     for (let i = 0; i < p.count; i++) {
       const vx = i % VW, vy = Math.floor(i / VW);
-      let g = 0, d = 0, r = 0, s = 0;
+      let g = 0, d = 0, r = 0, s = 0, sn = 0, sw = 0;
       for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) {
         const tx = Math.min(MW - 1, Math.max(0, vx + dx)), ty = Math.min(MH - 1, Math.max(0, vy + dy)), t = terrain[ty * MW + tx];
-        if (t === 0) g++; else if (t === 1) { g += 0.75; d += 0.25; } else if (t === 4) r++; else s++;
+        if (t === 0) g++; else if (t === 1) { g += 0.75; d += 0.25; } else if (t === 4) r++; else if (t === 5) { g += 0.55; d += 0.25; r += 0.2; }
+        else if (t === 6) { g++; sn++; } else if (t === 8) { g++; sw++; } else s++;
       }
       d += Math.max(0, (nz(vx * 0.08 + 70, vy * 0.08, 3) - 0.66) * 3);
       const tot = g + d + r + s; splat.set([g / tot, d / tot, r / tot, s / tot], i * 4);
+      clim[i * 2] = sn / 4; clim[i * 2 + 1] = sw / 4;
     }
     geo.setAttribute('splat', new THREE.BufferAttribute(splat, 4));
-    const tmat = W.terrainMaterial(); fowify(tmat);
+    geo.setAttribute('clim', new THREE.BufferAttribute(clim, 2));
+    const tmat = W.terrainMaterial(); fowify(tmat); this.terrainMat = tmat;
     const tm = new THREE.Mesh(geo, tmat); tm.receiveShadow = true; this.mapRoot.add(tm);
     // Wasser (günstig: kein Spiegel-Rendering)
     const wTex = W.TEX.water; wTex.repeat.set(MW / 6, MH / 6);
@@ -307,13 +310,13 @@ export class Renderer3D {
     if (Q.grass > 0) {
       const tileAt = (X, Z) => terrain[Math.min(MH - 1, Math.floor(Z / S)) * MW + Math.min(MW - 1, Math.floor(X / S))];
       const grass = W.plantGrass(this.mapRoot, this.T, Math.round(Math.min(70000, MW * MH * 2.2) * Q.grass), [0, 0, MW * S, MH * S], (X, Z) => tileAt(X, Z) !== 0 || G.resAt[Math.floor(Z / S) * MW + Math.floor(X / S)], 5);
-      fowify(grass.material);
+      fowify(grass.material); this.grass = grass;
     }
     this.buildResources();
     // Minimap-Grundbild
     const mc = document.createElement('canvas'); mc.width = MW; mc.height = MH;
     const mg = mc.getContext('2d'), img = mg.createImageData(MW, MH);
-    const TC = [[86, 128, 52], [128, 104, 64], [210, 192, 136], [40, 92, 120], [118, 112, 104]];
+    const TC = [[86, 128, 52], [128, 104, 64], [210, 192, 136], [40, 92, 120], [118, 112, 104], [104, 120, 62], [228, 232, 238], [222, 196, 132], [72, 92, 58], [70, 130, 150]];
     for (let i = 0; i < MW * MH; i++) { const c = TC[terrain[i]], j = (Math.random() - 0.5) * 10; img.data.set([c[0] + j, c[1] + j, c[2] + j, 255], i * 4); }
     mg.putImageData(img, 0, 0); this.miniBase = mc;
     this.fogCanvas = document.createElement('canvas'); this.fogCanvas.width = MW; this.fogCanvas.height = MH;
@@ -323,6 +326,34 @@ export class Renderer3D {
     fowifyTree(this.mapRoot);
   }
 
+  // Provinzgrenzen als Linien auf dem Gelände; Farbe = Besitzer (neutral: hell)
+  setProvinces(G) {
+    if (this.provLines) { this.mapRoot.remove(this.provLines); this.provLines.geometry.dispose(); }
+    const { W: MW, H: MH, prov } = G;
+    if (!prov) return;
+    const pos = [], col = [], c = new THREE.Color();
+    const colorOf = (a, b) => {
+      const oa = a !== 65535 ? G.provOwner[a] : -1, ob = b !== 65535 ? G.provOwner[b] : -1;
+      const o = oa >= 0 ? oa : ob, p = o >= 0 ? G.players[o] : null;
+      return p ? c.set(p.color) : c.set('#e8e2cf');
+    };
+    const seg = (x0, z0, x1, z1, a, b) => {
+      const y0 = this.T.height(x0, z0) + 0.15, y1 = this.T.height(x1, z1) + 0.15;
+      pos.push(x0, y0, z0, x1, y1, z1); const k = colorOf(a, b); col.push(k.r, k.g, k.b, k.r, k.g, k.b);
+    };
+    for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+      const a = prov[y * MW + x]; if (a === 65535) continue;
+      if (x + 1 < MW) { const b = prov[y * MW + x + 1]; if (b !== a && b !== 65535) seg((x + 1) * S, y * S, (x + 1) * S, (y + 1) * S, a, b); }
+      if (y + 1 < MH) { const b = prov[(y + 1) * MW + x]; if (b !== a && b !== 65535) seg(x * S, (y + 1) * S, (x + 1) * S, (y + 1) * S, a, b); }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    const mat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false });
+    fowify(mat);
+    this.provLines = new THREE.LineSegments(geo, mat); this.provLines.renderOrder = 2;
+    this.mapRoot.add(this.provLines);
+  }
+  setWinter(v) { W.WINTER.value = v; if (this.grass) this.grass.visible = v < 0.5; }
   buildResources() {
     const G = this.G, R = rng(G.W * 7 + 3);
     if (!this.treeKinds) { this.treeKinds = W.makeTreeKinds(); for (const k of this.treeKinds) { fowify(k.trunkMat); fowify(k.leafMat); if (k.autumnMat) fowify(k.autumnMat); } }
@@ -443,7 +474,7 @@ export class Renderer3D {
     let mdl = this.bldModels.get(key);
     if (mdl) return mdl;
     const sz = BUILDINGS[type].size * S;
-    const g = (nk && nationBuilding(type, era, color, nation)) || eraBuilding(type, era, color);
+    const g = INFRA[type] ? INFRA[type](era, color) : (nk && nationBuilding(type, era, color, nation)) || eraBuilding(type, era, color);
     const mm = mergeModel(g);
     const size = mm.box.getSize(new THREE.Vector3());
     const fit = type === 'wall' ? (sz * 1.0) / Math.max(size.x, size.z) : (sz * 0.96 * (era === 7 ? 1.55 : 1)) / Math.max(size.x, size.z);
@@ -546,6 +577,7 @@ export class Renderer3D {
         const mdl = this.buildingModel(e.def.key, e.era || 0, color, p ? p.nation : null);
         const X = (e.x + sz / 2) * S, Z = (e.y + sz / 2) * S;
         let h = Infinity; for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) h = Math.min(h, this.T.height(X + dx * sz * 0.4 * S, Z + dz * sz * 0.4 * S));
+        if (e.def.key === 'bridge') h = 0.25; else if (e.def.key === 'road') h = this.T.height(X, Z) + 0.02;
         const prog = (e.prog ?? 100) / 100;
         const sink = prog < 1 ? -(1 - prog) * mdl.h * 0.92 : 0;
         m4.compose(pos.set(X, h - 0.05 + sink, Z), q.identity(), one);
@@ -671,6 +703,16 @@ export class Renderer3D {
     g.setTransform(sx, 0, 0, sy, 0, 0);
     for (const r of G.res.values()) { if (r.kind === 'tree' || !G.explored[r.y * G.W + r.x]) continue; g.fillStyle = r.kind === 'gold' ? '#ffd34d' : r.kind === 'stone' ? '#d8d8e0' : '#d6324a'; g.fillRect(r.x, r.y, r.kind === 'berry' ? 1 : 2, r.kind === 'berry' ? 1 : 2); }
     for (const e of G.ents.values()) { const p = G.players[e.owner]; g.fillStyle = p ? p.color : '#fff'; if (e.def.kind === 'b') { const s2 = BUILDINGS[e.def.key].size; g.fillRect(e.x - 0.5, e.y - 0.5, s2 + 1, s2 + 1); } else g.fillRect(e.rx - 1, e.ry - 1, 2, 2); }
+    if (G.prov && G.provOwner) {
+      if (!this.provCanvas || this.provVer !== G.provVer) {
+        this.provVer = G.provVer;
+        const pc = this.provCanvas || (this.provCanvas = document.createElement('canvas')); pc.width = G.W; pc.height = G.H;
+        const pg = pc.getContext('2d'), im = pg.createImageData(G.W, G.H), cc = new THREE.Color();
+        for (let i = 0; i < G.W * G.H; i++) { const pv = G.prov[i]; const o = pv !== 65535 ? G.provOwner[pv] : -1; if (o < 0 || !G.players[o]) continue; cc.set(G.players[o].color); im.data.set([cc.r * 255, cc.g * 255, cc.b * 255, 70], i * 4); }
+        pg.putImageData(im, 0, 0);
+      }
+      g.drawImage(this.provCanvas, 0, 0, G.W, G.H);
+    }
     g.drawImage(this.fogCanvas, 0, 0, G.W, G.H);
     for (const a of ui.pings || []) { const k = (performance.now() - a.t0) / 3000; if (k > 1) continue; g.strokeStyle = `rgba(255,70,50,${1 - k})`; g.lineWidth = 1.5 / sx; g.beginPath(); g.arc(a.x, a.y, 3 + 10 * (k * 3 % 1), 0, 6.3); g.stroke(); }
     if (this.view) { const v = this.view; g.strokeStyle = '#fff'; g.lineWidth = 1.2 / sx; g.beginPath(); g.moveTo(v[0][0], v[0][1]); g.lineTo(v[1][0], v[1][1]); g.lineTo(v[3][0], v[3][1]); g.lineTo(v[2][0], v[2][1]); g.closePath(); g.stroke(); }
@@ -688,6 +730,35 @@ function tank(color) {
   add(new THREE.BoxGeometry(0.9, 0.08, 0.5), cloth, 0, 1.57, -0.5);
   return g;
 }
+// Straße, Brücke, Außenposten: einfache Platzhalter bis zu den Blender-Modellen
+const INFRA = {
+  road(era) {
+    const g = new THREE.Group();
+    const m = U.mat(era >= 6 ? '#3a3a3c' : era >= 5 ? '#8a8378' : '#9c8d74', 0.95, 0);
+    const o = new THREE.Mesh(new THREE.BoxGeometry(2, 0.06, 2), m); o.position.y = 0.03; o.receiveShadow = true; g.add(o);
+    return g;
+  },
+  bridge(era) {
+    const g = new THREE.Group(), stone = era >= 3, iron = era >= 5;
+    const deck = U.mat(iron ? '#4a4e52' : stone ? '#9a9286' : '#7a5a3a', 0.85, iron ? 0.5 : 0), post = iron ? U.mat('#3b3f44', 0.5, 0.7) : stone ? U.mat('#8a8276', 0.95, 0) : U.wood();
+    const add = (geo, mm, x, y, z) => { const o = new THREE.Mesh(geo, mm); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); };
+    add(new THREE.BoxGeometry(2, 0.22, 2), deck, 0, 0, 0);
+    for (const z of [-0.95, 0.95]) add(new THREE.BoxGeometry(2, 0.35, 0.1), post, 0, 0.28, z);
+    add(new THREE.BoxGeometry(stone ? 0.7 : 0.25, 2.6, stone ? 1.6 : 0.25), post, 0, -1.3, 0);
+    return g;
+  },
+  outpost(era, color) {
+    const g = new THREE.Group(), wood = U.wood(), stone = U.mat('#8f887c', 0.95, 0);
+    const add = (geo, mm, x, y, z) => { const o = new THREE.Mesh(geo, mm); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); };
+    const fort = era >= 4;
+    for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; add(new THREE.BoxGeometry(3.4, fort ? 0.9 : 1.1, 0.25), fort ? stone : wood, Math.sin(a) * 1.6, 0.5, Math.cos(a) * 1.6); g.children[g.children.length - 1].rotation.y = a; }
+    add(new THREE.BoxGeometry(1.2, 2.2, 1.2), fort ? stone : wood, 0.7, 1.1, -0.7);
+    add(new THREE.BoxGeometry(1.4, 0.2, 1.4), wood, 0.7, 2.3, -0.7);
+    const flag = Md.banner(color, 2.4, 0.7, 1, 0.2); flag.position.set(-0.8, 0, 0.8); g.add(flag);
+    return g;
+  },
+};
+
 // Gebäude-Epoche -> vorhandenes Modell: Weltwunder (WONDER_ERA) nutzt das Wundermodell (7),
 // der Kalte Krieg vorerst die Modelle der 2. Industriellen Revolution, bis eigene Modelle (Blender) kommen.
 function modelEra(era) { era = era | 0; return era >= WONDER_ERA ? 7 : Math.max(0, Math.min(6, era)); }

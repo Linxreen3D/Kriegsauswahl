@@ -4,8 +4,12 @@ import {
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
   WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, isProducer, DEPOSIT_LAYERS, hasLayers,
   VET_RANKS, VET_BONUS, FORMATIONS, FORMATION_KEYS, SUPPLY_RANGE, SUPPLY_GRACE,
+  seasonAt, PROVINCE_BONUS, PROVINCE_WEIGHT,
 } from '../shared/rules.js';
-import { generateMap, blockedTerrain } from './mapgen.js';
+import { generateMap, blockedTerrain, waterTerrain, T_HILL, T_SNOW, T_DESERT, T_SWAMP, T_FORD, T_GRASS, T_DIRT } from './mapgen.js';
+
+const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
+const isVehicle = u => (u.cls === 'cav' && u.era >= 6) || u.cls === 'art' || u.cls === 'sie';
 
 const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3 };
 const MILITARY = cls => cls !== 'wrk' && cls !== 'sup'; // kämpft selbstständig
@@ -33,7 +37,10 @@ export class World {
     this.mapInfo = { type: map.mapType, name: map.mapName };
     this.W = map.w; this.H = map.h;
     this.terrain = map.terrain;
+    this.prov = map.prov; this.provinces = map.provinces;
+    this.provOwner = new Int16Array(map.provinces.length).fill(-1); this.provDirty = true;
     const N = this.W * this.H;
+    this.road = new Uint8Array(N);
     this.pass = new Uint8Array(N);
     this.occ = new Int32Array(N); // Entity-ID auf der Kachel (Gebäude/Rohstoff)
     for (let i = 0; i < N; i++) this.pass[i] = blockedTerrain(this.terrain[i]) ? 0 : 1;
@@ -63,6 +70,7 @@ export class World {
     { const byId = []; for (const pl of this.P) byId[pl.id] = pl; this.P = byId; }
     for (const pl of this.P) if (pl.era >= 1) pl.choice = 'culture';
     for (const r of map.resources) this.addResource(r.type, r.x, r.y, r.mul);
+    this.computeTreeDensity();
     // Startbasis
     for (const pl of this.P) {
       const s = pl.start;
@@ -91,7 +99,20 @@ export class World {
     this.resources.set(r.id, r); this.ents.set(r.id, r);
     return r;
   }
+  // Anzahl Bäume im 3×3-Umfeld je Kachel (Wald: Tarnung für Infanterie, bremst Fahrzeuge)
+  computeTreeDensity() {
+    this.treeD = new Uint8Array(this.W * this.H);
+    for (const r of this.resources.values()) if (r.rtype === 'tree') this.treeAdd(r, 1);
+  }
+  treeAdd(r, d) {
+    for (let yy = r.y - 1; yy <= r.y + 1; yy++) for (let xx = r.x - 1; xx <= r.x + 1; xx++) if (this.inBounds(xx, yy)) this.treeD[this.idx(xx, yy)] += d;
+  }
+  inForest(u) { return this.treeD[this.idx(Math.floor(u.x), Math.floor(u.y))] >= 3; }
+  tileAt(u) { return this.terrain[this.idx(Math.min(this.W - 1, Math.max(0, Math.floor(u.x))), Math.min(this.H - 1, Math.max(0, Math.floor(u.y))))]; }
+  season() { return seasonAt(this.time); }
+  ownProvince(pid, x, y) { const p = this.prov[this.idx(Math.floor(x), Math.floor(y))]; return p !== 65535 && this.provOwner[p] === pid; }
   removeResource(r) {
+    if (r.rtype === 'tree' && this.treeD) this.treeAdd(r, -1);
     for (let yy = r.y; yy < r.y + r.size; yy++) for (let xx = r.x; xx < r.x + r.size; xx++) {
       const i = this.idx(xx, yy); this.occ[i] = 0; if (!blockedTerrain(this.terrain[i])) this.pass[i] = 1;
     }
@@ -101,11 +122,12 @@ export class World {
   }
 
   canPlace(type, x, y) {
-    const sz = BUILDINGS[type].size;
+    const sz = BUILDINGS[type].size, water = BUILDINGS[type].onWater;
     for (let yy = y; yy < y + sz; yy++) for (let xx = x; xx < x + sz; xx++) {
       if (!this.inBounds(xx, yy)) return false;
-      const i = this.idx(xx, yy);
-      if (blockedTerrain(this.terrain[i]) || this.occ[i]) return false;
+      const i = this.idx(xx, yy), t = this.terrain[i];
+      if (this.occ[i]) return false;
+      if (water ? !waterTerrain(t) : (blockedTerrain(t) || t === T_FORD)) return false;
     }
     return true;
   }
@@ -153,7 +175,17 @@ export class World {
   removeBuilding(b) {
     for (let yy = b.y; yy < b.y + b.size; yy++) for (let xx = b.x; xx < b.x + b.size; xx++) {
       const i = this.idx(xx, yy);
-      if (this.occ[i] === b.id) { this.occ[i] = 0; if (!blockedTerrain(this.terrain[i])) this.pass[i] = 1; }
+      if (this.occ[i] === b.id) { this.occ[i] = 0; this.pass[i] = blockedTerrain(this.terrain[i]) ? 0 : 1; this.road[i] = 0; }
+    }
+    this.blockVer++;
+    if (b.type === 'bridge' && b.built && this.units) {
+      // Einsturz: Infanterie stürzt ins Wasser und schwimmt ans Ufer, Fahrzeuge gehen verloren
+      for (const u of this.units) {
+        if (u.dead || Math.floor(u.x) !== b.x || Math.floor(u.y) !== b.y) continue;
+        if (isVehicle(u) || u.cls === 'cav') { this.kill(u, -1); continue; }
+        const p = this.nearestFree(u.x, u.y, 8); if (p) { u.x = p[0]; u.y = p[1]; }
+        this.damage(u, u.maxHp * 0.5, -1);
+      }
     }
     const c = this.bcells[this.cellOf(b.cx, b.cy)];
     const k = c.indexOf(b); if (k >= 0) c.splice(k, 1);
@@ -535,8 +567,28 @@ export class World {
   }
   speedOf(u) {
     const f = FORMATIONS[u.form];
-    return u.st.speed * (f ? f.speed : 1) * (u.morale < 30 ? 0.85 : 1);
+    return u.st.speed * (f ? f.speed : 1) * (u.morale < 30 ? 0.85 : 1) * this.terrainSpeed(u);
   }
+  // Gelände × Jahreszeit; Straßen heben Nachteile auf
+  terrainSpeed(u) {
+    const i = this.idx(Math.min(this.W - 1, Math.max(0, Math.floor(u.x))), Math.min(this.H - 1, Math.max(0, Math.floor(u.y))));
+    if (this.road[i]) return 1.25;
+    const t = this.terrain[i], veh = isVehicle(u), sea = this.season();
+    const winterFree = this.P[u.owner].mods.winter && this.ownProvince(u.owner, u.x, u.y);
+    let m = 1;
+    if (t === T_HILL) m *= 0.85;
+    else if (t === T_SNOW) m *= winterFree ? 1 : sea === 3 ? 0.7 : 0.85;
+    else if (t === T_SWAMP) m *= veh ? 0.5 : 0.65;
+    else if (t === T_FORD) m *= 0.6;
+    else if (t === T_DESERT) m *= 0.9;
+    if (veh && this.treeD[i] >= 3) m *= 0.7;
+    if (veh && (sea === 0 || sea === 2) && (t === T_GRASS || t === T_DIRT)) m *= 0.6; // Schlammperiode
+    if (sea === 3 && !winterFree && t !== T_SNOW && t !== T_DESERT) m *= 0.92;
+    return m;
+  }
+  onHill(u) { return this.tileAt(u) === T_HILL; }
+  sightOf(u) { return u.st.sight + (this.onHill(u) ? 2 : 0); }
+  rangeOf(u) { return u.st.range + (u.st.range > 1.2 && this.onHill(u) ? 1 : 0); }
   orderGather(u, t) {
     u.buildQ = [];
     if (t.kind === 'r') u.order = { t: 'gather', target: t.id, rtype: t.rtype };
@@ -565,15 +617,38 @@ export class World {
     if (this.buildings.some(b => b.dead)) this.buildings = this.buildings.filter(b => !b.dead);
 
     if (this.tickNo % 10 === 0) this.updateSupply(1 * this.settings.speed);
+    if (this.tickNo % 50 === 0) this.updateProvinces();
     if (this.tickNo % 5 === 0) this.recount();
     if (this.tickNo % 10 === 0) this.checkDefeat();
     if (Math.floor(this.time / 10) !== Math.floor((this.time - dt) / 10)) this.recordStats();
   }
 
+  // Provinzbesitz: wer dort die meisten Gebäudepunkte hat (Haupthaus 10, Außenposten 6, Turm 3, sonst 1)
+  updateProvinces() {
+    const score = new Map();
+    for (const b of this.buildings) {
+      if (b.dead || !b.built || b.type === 'wall' || b.type === 'road' || b.type === 'bridge') continue;
+      const p = this.prov[this.idx(Math.floor(b.cx), Math.floor(b.cy))];
+      if (p === 65535) continue;
+      const k = p * 64 + b.owner;
+      score.set(k, (score.get(k) || 0) + (PROVINCE_WEIGHT[b.type] || 1));
+    }
+    const best = new Map();
+    for (const [k, v] of score) { const p = Math.floor(k / 64), o = k % 64, cur = best.get(p); if (!cur || v > cur[1]) best.set(p, [o, v]); }
+    for (let p = 0; p < this.provOwner.length; p++) {
+      const o = best.has(p) ? best.get(p)[0] : -1;
+      if (this.provOwner[p] !== o) {
+        const prev = this.provOwner[p]; this.provOwner[p] = o; this.provDirty = true;
+        const name = this.provinces[p].name;
+        if (o >= 0) this.notice(o, `🏳 Provinz ${name} gehört jetzt dir.`);
+        if (prev >= 0) this.notice(prev, `Provinz ${name} ist verloren.`);
+      }
+    }
+  }
   // Nachschub und Moral (einmal pro Spielsekunde): Versorgung im Umkreis von Haupthaus, Lager und Türmen
   updateSupply(dt) {
     const src = new Map();
-    for (const b of this.buildings) if (!b.dead && b.built && (b.st.drop || b.type === 'tower')) {
+    for (const b of this.buildings) if (!b.dead && b.built && (b.st.drop || b.type === 'tower' || b.type === 'outpost')) {
       const team = this.P[b.owner].team; if (!src.has(team)) src.set(team, []); src.get(team).push(b);
     }
     const R2 = SUPPLY_RANGE * SUPPLY_RANGE;
@@ -585,8 +660,10 @@ export class World {
       u.supplied = ok;
       if (ok) { u.unsup = 0; u.morale = Math.min(100, u.morale + 5 * dt); }
       else {
-        u.unsup += dt; u.morale = Math.max(0, u.morale - 0.5 * dt);
-        if (u.unsup > SUPPLY_GRACE) this.damage(u, u.maxHp * 0.001 * dt, -1); // 1 % Leben je 10 s
+        const sea = this.season(), winterFree = this.P[u.owner].mods.winter && this.ownProvince(u.owner, u.x, u.y);
+        u.unsup += dt; u.morale = Math.max(0, u.morale - 0.5 * dt * (sea === 3 && !winterFree ? 2 : 1));
+        const heat = sea === 1 && this.tileAt(u) === T_DESERT ? 2 : 1;
+        if (u.unsup > SUPPLY_GRACE) this.damage(u, u.maxHp * 0.001 * dt * heat, -1); // 1 % Leben je 10 s, Wüste im Sommer doppelt
       }
       // Sanitäter heilen bis zu drei verwundete Verbündete in der Nähe
       if (u.st.heal) {
@@ -649,7 +726,7 @@ export class World {
           u.scan -= dt;
           if (u.scan <= 0) {
             u.scan = 0.5;
-            const t = this.findTarget(u.owner, u.x, u.y, u.st.sight);
+            const t = this.findTarget(u.owner, u.x, u.y, this.sightOf(u));
             if (t) u.order = { t: 'attack', target: t.id, guard: { x: u.x, y: u.y } };
           }
         } else if (u.buildQ.length) {
@@ -663,7 +740,7 @@ export class World {
           u.scan -= dt;
           if (u.scan <= 0) {
             u.scan = 0.4;
-            const t = this.findTarget(u.owner, u.x, u.y, u.st.sight);
+            const t = this.findTarget(u.owner, u.x, u.y, this.sightOf(u));
             if (t) { u.order = { t: 'attack', target: t.id, resume: o }; break; }
           }
         }
@@ -695,7 +772,7 @@ export class World {
     const done = () => {
       if (o.resume) u.order = o.resume;
       else if (o.guard && u.cls !== 'wrk') {
-        const nt = this.findTarget(u.owner, u.x, u.y, u.st.sight);
+        const nt = this.findTarget(u.owner, u.x, u.y, this.sightOf(u));
         u.order = nt ? { t: 'attack', target: nt.id, guard: o.guard } : { t: 'move', x: o.guard.x, y: o.guard.y, key: 'p' + Math.floor(o.guard.x) + ',' + Math.floor(o.guard.y), tx: Math.floor(o.guard.x), ty: Math.floor(o.guard.y) };
       } else u.order = { t: 'idle' };
     };
@@ -705,7 +782,7 @@ export class World {
     if (o.guard && Math.hypot(u.x - o.guard.x, u.y - o.guard.y) > u.st.sight + 6) { u.order = { t: 'move', x: o.guard.x, y: o.guard.y, key: 'p' + Math.floor(o.guard.x) + ',' + Math.floor(o.guard.y), tx: Math.floor(o.guard.x), ty: Math.floor(o.guard.y) }; return; }
     // nicht sichtbares Ziel nicht ewig jagen
     if (!this.visibleTo(u.owner, t)) return done();
-    const range = u.st.range;
+    const range = this.rangeOf(u);
     const d = this.distTo(u, t);
     if (d > range + u.r) {
       // Fernkämpfer im Angriffsbewegung: neues, näheres Ziel?
@@ -852,6 +929,7 @@ export class World {
       const d = (e.cx - x) ** 2 + (e.cy - y) ** 2;
       if (d >= bd || !this.accessible(e)) continue;
       if (e.depleted && !this.canDeepen(e, owner)) continue;
+      if (owner != null && e.bad && e.bad[owner] > this.time - 180) continue; // kürzlich unerreichbar
       if (d < bd) { bd = d; best = e; }
     }
     return best;
@@ -936,12 +1014,13 @@ export class World {
         }
         return;
       }
-      if (r === 'fail') { u.order = { t: 'idle' }; return; }
+      if (r === 'fail') { (t.bad || (t.bad = {}))[u.owner] = this.time; u.order = { t: 'idle' }; return; }
     }
     u.lastD = null;
     u.state = ST.gather;
     u.dir = Math.atan2(t.cy - u.y, t.cx - u.x);
-    const rate = (isFarm ? BUILDINGS[o.rtype].rate : RESOURCE_TYPES[o.rtype].rate) * pl.mods.gather[resKind] * (1 + pl.era * 0.06);
+    const rate = (isFarm ? BUILDINGS[o.rtype].rate : RESOURCE_TYPES[o.rtype].rate) * pl.mods.gather[resKind] * (1 + pl.era * 0.06)
+      * (this.ownProvince(u.owner, t.cx, t.cy) ? 1 + PROVINCE_BONUS : 1) * (o.rtype === 'farm' && this.season() === 3 ? 0.7 : 1);
     let amt = rate * dt;
     if (!u.carry) u.carry = { res: resKind, amt: 0 };
     if (!isFarm) {
@@ -980,6 +1059,8 @@ export class World {
       b.hp = Math.min(b.maxHp, b.hp + b.maxHp * inc);
       if (b.progress >= 1) {
         b.built = true;
+        if (b.type === 'bridge') { this.pass[this.idx(b.x, b.y)] = 1; this.blockVer++; }
+        if (b.type === 'road') this.road[this.idx(b.x, b.y)] = 1;
         this.P[b.owner].stats.built++;
         this.event({ k: 'built', to: b.owner, id: b.id, type: b.type });
         if (isProducer(b.type) && b.owner === u.owner) { b.worker = u.id; u.order = { t: 'gather', target: b.id, rtype: b.type }; }
@@ -1136,22 +1217,26 @@ export class World {
       let v = this.vis.get(t);
       if (!v) { v = new Uint8Array(N); this.vis.set(t, v); } else v.fill(0);
     }
-    const stamp = (v, x, y, r) => {
+    const stamp = (v, x, y, r, val = 1) => {
       const c = CIRCLES[Math.min(14, Math.round(r))];
       const tx = Math.floor(x), ty = Math.floor(y);
       for (let k = 0; k < c.length; k += 2) {
         const nx = tx + c[k], ny = ty + c[k + 1];
-        if (nx >= 0 && ny >= 0 && nx < this.W && ny < this.H) v[ny * this.W + nx] = 1;
+        if (nx >= 0 && ny >= 0 && nx < this.W && ny < this.H && v[ny * this.W + nx] < val) v[ny * this.W + nx] = val;
       }
     };
-    for (const u of this.units) if (!u.dead) stamp(this.vis.get(this.P[u.owner].team), u.x, u.y, u.st.sight);
+    for (const u of this.units) if (!u.dead) { const v = this.vis.get(this.P[u.owner].team); stamp(v, u.x, u.y, this.sightOf(u)); stamp(v, u.x, u.y, 3, 2); }
     for (const b of this.buildings) if (!b.dead) stamp(this.vis.get(this.P[b.owner].team), b.cx, b.cy, b.st.sight + b.size / 2);
   }
   visibleTo(pid, e) {
     if (this.allied(pid, e.owner)) return true;
     const v = this.vis && this.vis.get(this.P[pid].team);
     if (!v) return true;
-    if (e.kind === 'u') return v[this.idx(Math.floor(e.x), Math.floor(e.y))] === 1;
+    if (e.kind === 'u') {
+      const s = v[this.idx(Math.floor(e.x), Math.floor(e.y))];
+      // Infanterie im Wald ist erst aus der Nähe (3 Kacheln) zu sehen
+      return CAMO[e.cls] && this.inForest(e) ? s === 2 : s >= 1;
+    }
     for (let yy = e.y; yy < e.y + e.size; yy++) for (let xx = e.x; xx < e.x + e.size; xx++) if (v[this.idx(xx, yy)]) return true;
     return false;
   }
@@ -1234,6 +1319,7 @@ export class World {
       units: this.units.filter(u => !u.dead),
       buildings: this.buildings.filter(b => !b.dead),
       resources: [...this.resources.values()],
+      prov: Buffer.from(this.prov.buffer, this.prov.byteOffset, this.prov.byteLength).toString('base64'), provinces: this.provinces, provOwner: Array.from(this.provOwner),
     };
   }
   static restore(room, d) {
@@ -1246,6 +1332,9 @@ export class World {
     w.pass = new Uint8Array(N); w.occ = new Int32Array(N);
     for (let i = 0; i < N; i++) w.pass[i] = blockedTerrain(w.terrain[i]) ? 0 : 1;
     w.blockVer = 1; w.fields = new Map(); w.fieldBudget = 0;
+    w.road = new Uint8Array(N);
+    w.prov = d.prov ? new Uint16Array(new Uint8Array(Buffer.from(d.prov, 'base64')).buffer) : new Uint16Array(N).fill(65535);
+    w.provinces = d.provinces || []; w.provOwner = Int16Array.from(d.provOwner || w.provinces.map(() => -1)); w.provDirty = true;
     w.events = []; w.resChanged = new Set(); w.resRemoved = [];
     w.meteors = d.meteors || []; w.nextMeteor = d.nextMeteor || 0;
     w.cellsW = Math.ceil(w.W / CELL); w.cellsH = Math.ceil(w.H / CELL);
@@ -1259,7 +1348,7 @@ export class World {
     }
     w.buildings = d.buildings;
     for (const b of w.buildings) {
-      for (let yy = b.y; yy < b.y + b.size; yy++) for (let xx = b.x; xx < b.x + b.size; xx++) { const i = w.idx(xx, yy); w.occ[i] = b.id; if (!b.st.walkable) w.pass[i] = 0; }
+      for (let yy = b.y; yy < b.y + b.size; yy++) for (let xx = b.x; xx < b.x + b.size; xx++) { const i = w.idx(xx, yy); w.occ[i] = b.id; if (!b.st.walkable) w.pass[i] = 0; if (b.type === 'bridge' && b.built) w.pass[i] = 1; if (b.type === 'road' && b.built) w.road[i] = 1; }
       w.bcells[w.cellOf(b.cx, b.cy)].push(b); w.ents.set(b.id, b);
     }
     w.units = d.units;
@@ -1270,6 +1359,7 @@ export class World {
       w.ents.set(u.id, u);
     }
     for (const b of w.buildings) b.typeIdx = TYPE_INDEX[b.type];
+    w.computeTreeDensity();
     w.P = [];
     for (const pl of d.P) { pl.mods = playerMods(pl.culture, pl.nation, pl.late); w.P[pl.id] = pl; }
     w.recount();
@@ -1283,6 +1373,7 @@ export class World {
     return {
       t: 'start', w: this.W, h: this.H, terrain: Buffer.from(this.terrain).toString('base64'), res, you: pid,
       map: this.mapInfo, wonderHold: wonderHold(this.W), players: this.playersPublic(), settings: this.settings, time: this.time,
+      prov: Buffer.from(this.prov.buffer, this.prov.byteOffset, this.prov.byteLength).toString('base64'), provinces: this.provinces, provOwner: Array.from(this.provOwner),
       start: this.P[pid] ? this.P[pid].start : this.P[0].start,
     };
   }

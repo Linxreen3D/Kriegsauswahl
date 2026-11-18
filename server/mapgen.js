@@ -1,7 +1,14 @@
 // Prozeduraler Kartengenerator: Gelände, Wälder, Rohstoffe, Startpositionen.
-// Terrain-Codes: 0 Gras, 1 Erde, 2 Sand, 3 Wasser (blockiert), 4 Fels (blockiert)
-export const T_GRASS = 0, T_DIRT = 1, T_SAND = 2, T_WATER = 3, T_ROCK = 4;
+// Terrain-Codes: 0 Gras, 1 Erde, 2 Sand (Strand), 3 Wasser (blockiert), 4 Fels (blockiert),
+// 5 Hügel, 6 Schnee, 7 Wüste, 8 Sumpf, 9 Furt (flaches Flusswasser, begehbar)
+export const T_GRASS = 0, T_DIRT = 1, T_SAND = 2, T_WATER = 3, T_ROCK = 4, T_HILL = 5, T_SNOW = 6, T_DESERT = 7, T_SWAMP = 8, T_FORD = 9;
 export const blockedTerrain = t => t === T_WATER || t === T_ROCK;
+export const waterTerrain = t => t === T_WATER || t === T_FORD;
+
+// Provinznamen (zusammengesetzt), dazu sehr selten die Widmungsnamen
+const PROV_A = ['Eichen', 'Birken', 'Grauen', 'Silber', 'Raben', 'Wolfs', 'Falken', 'Nebel', 'Sonnen', 'Kalten', 'Roten', 'Hohen', 'Tiefen', 'Weiden', 'Stein', 'Linden', 'Bären', 'Adler', 'Moos', 'Kiefern', 'Erlen', 'Mühl', 'Burg', 'Fels', 'Dorn', 'Klee', 'Hirsch', 'Ulmen', 'Schwarzen', 'Weißen'];
+const PROV_B = ['tal', 'mark', 'au', 'feld', 'heim', 'grund', 'wald', 'berg', 'land', 'furt', 'stein', 'hain', 'bruck', 'moor', 'ried', 'eck', 'hof', 'weiler', 'gau', 'see'];
+const DEDICATION = ['Antonija', 'Marija'];
 
 export function rng(seed) {
   let a = seed >>> 0;
@@ -35,10 +42,10 @@ function makeNoise(rand) {
 }
 
 export const MAP_TYPES = {
-  continent: { name: 'Kontinent', water: 0.30, rock: 0.80, forest: 0.60 },
-  lakes: { name: 'Seenplatte', water: 0.42, rock: 0.86, forest: 0.62 },
-  highlands: { name: 'Hochland', water: 0.26, rock: 0.66, forest: 0.62, ridges: true },
-  forest: { name: 'Urwald', water: 0.30, rock: 0.82, forest: 0.52 },
+  continent: { name: 'Kontinent', water: 0.30, rock: 0.80, forest: 0.60, snow: 0.08, desert: 0.06 },
+  lakes: { name: 'Seenplatte', water: 0.42, rock: 0.86, forest: 0.62, snow: 0.06, desert: 0.04 },
+  highlands: { name: 'Hochland', water: 0.26, rock: 0.66, forest: 0.62, ridges: true, snow: 0.14, desert: 0.03 },
+  forest: { name: 'Urwald', water: 0.30, rock: 0.82, forest: 0.52, snow: 0.04, desert: 0.03 },
 };
 
 export function mapSide(setting, players) {
@@ -55,8 +62,8 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
   const typeKey = type === 'random' || !MAP_TYPES[type] ? types[Math.floor(rand() * types.length)] : type;
   const T = MAP_TYPES[typeKey];
   const W = mapSide(size, players), H = W;
-  const elev = makeNoise(rand), moist = makeNoise(rand), forestN = makeNoise(rand), detail = makeNoise(rand);
-  const terrain = new Uint8Array(W * H);
+  const elev = makeNoise(rand), moist = makeNoise(rand), forestN = makeNoise(rand), detail = makeNoise(rand), climate = makeNoise(rand);
+  const terrain = new Uint8Array(W * H), tempA = new Float32Array(W * H), moistA = new Float32Array(W * H), elevA = new Float32Array(W * H);
   const freq = 4.5 / 128;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     let e = elev(x * freq, y * freq, 5);
@@ -66,8 +73,50 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
     if (e < T.water) t = T_WATER;
     else if (e < T.water + 0.025) t = T_SAND;
     else if (e > T.rock) t = T_ROCK;
+    else if (e > T.rock - 0.07) t = T_HILL;
     else if (m < 0.3 || detail(x * 0.15, y * 0.15, 2) > 0.74) t = T_DIRT;
     terrain[y * W + x] = t;
+    tempA[y * W + x] = climate(x * freq * 0.8 + 300, y * freq * 0.8 + 300, 3);
+    moistA[y * W + x] = m; elevA[y * W + x] = e;
+  }
+  // Klimazonen über Anteile statt fester Schwellen: kälteste Gegenden verschneit, heißeste und trockene Wüste, feuchte Senken Sumpf
+  {
+    const q = (arr, f) => { const a = Array.from(arr).sort((p, q2) => p - q2); return a[Math.min(a.length - 1, Math.floor(a.length * f))]; };
+    const coldT = q(tempA, T.snow), hotT = q(tempA, 1 - T.desert * 2), wetM = q(moistA, 0.5);
+    for (let i = 0; i < W * H; i++) {
+      const t = terrain[i];
+      if (t !== T_GRASS && t !== T_DIRT && t !== T_HILL) continue;
+      if (tempA[i] < coldT) terrain[i] = T_SNOW;
+      else if (tempA[i] > hotT && moistA[i] < wetM && t !== T_HILL) terrain[i] = T_DESERT;
+      else if (moistA[i] > 0.64 && elevA[i] < T.water + 0.08) terrain[i] = T_SWAMP;
+    }
+  }
+
+  // Flüsse: vom Hochland bergab bis zu einem See oder zum Rand; Furten als Übergänge
+  const river = new Uint8Array(W * H);
+  const nRivers = typeKey === 'lakes' ? 1 : 1 + Math.floor(rand() * 2) + (W > 150 ? 1 : 0);
+  for (let r = 0; r < nRivers; r++) {
+    let bx = 0, by = 0, be = -1;
+    for (let k = 0; k < 60; k++) { const x = 8 + Math.floor(rand() * (W - 16)), y = 8 + Math.floor(rand() * (H - 16)); const e = elev(x * freq, y * freq, 5); if (e > be && e < T.rock) { be = e; bx = x; by = y; } }
+    let x = bx, y = by, dir = rand() * Math.PI * 2, len = 0, sinceFord = 0;
+    while (len++ < W * 2 && x > 1 && y > 1 && x < W - 2 && y < H - 2) {
+      // Richtung: bergab mit Mäandern
+      let best = dir, bestE = Infinity;
+      for (let k = -2; k <= 2; k++) { const a = dir + k * 0.35, e = elev((x + Math.cos(a) * 3) * freq, (y + Math.sin(a) * 3) * freq, 5) + (rand() - 0.5) * 0.02; if (e < bestE) { bestE = e; best = a; } }
+      dir = best * 0.7 + dir * 0.3 + (rand() - 0.5) * 0.25;
+      x += Math.cos(dir); y += Math.sin(dir);
+      const ix = Math.round(x), iy = Math.round(y);
+      if (ix < 1 || iy < 1 || ix >= W - 1 || iy >= H - 1) break;
+      const i = iy * W + ix;
+      if (terrain[i] === T_WATER && !river[i] && len > 6) break; // mündet in einen See
+      const ford = ++sinceFord > 14 && rand() < 0.25;
+      if (ford) sinceFord = 0;
+      for (const [dx, dy] of [[0, 0], [1, 0], [0, 1]]) {
+        const j = (iy + dy) * W + ix + dx;
+        if (terrain[j] === T_ROCK) continue;
+        river[j] = 1; terrain[j] = ford ? T_FORD : T_WATER;
+      }
+    }
   }
 
   // Startpositionen gleichmäßig auf einem Kreis
@@ -84,7 +133,8 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
       if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) continue;
       if ((x - cx) ** 2 + (y - cy) ** 2 > rad * rad) continue;
       const i = y * W + x;
-      if (blockedTerrain(terrain[i]) || terrain[i] === T_SAND) terrain[i] = T_GRASS;
+      if (river[i]) { if (rad <= 2) terrain[i] = T_FORD; else terrain[i] = T_GRASS; continue; }
+      if (blockedTerrain(terrain[i]) || terrain[i] === T_SAND || terrain[i] >= T_SNOW) terrain[i] = T_GRASS;
     }
   };
   for (const s of starts) clear(s.x, s.y, 11);
@@ -131,7 +181,7 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
     for (let yy = y; yy < y + sz; yy++) for (let xx = x; xx < x + sz; xx++) {
       if (xx < 1 || yy < 1 || xx >= W - 1 || yy >= H - 1) return false;
       const i = yy * W + xx;
-      if (occ[i] || blockedTerrain(terrain[i]) || !reachable[i]) return false;
+      if (occ[i] || blockedTerrain(terrain[i]) || terrain[i] === T_FORD || !reachable[i]) return false;
     }
     return true;
   };
@@ -175,7 +225,7 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
   // Wälder nach Rauschen
   for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
     const i = y * W + x;
-    if (occ[i] || terrain[i] !== T_GRASS && terrain[i] !== T_DIRT) continue;
+    if (occ[i] || terrain[i] !== T_GRASS && terrain[i] !== T_DIRT && terrain[i] !== T_HILL && terrain[i] !== T_SNOW) continue;
     if (nearStart(x, y, 9)) continue;
     const f = forestN(x * 0.07, y * 0.07, 4);
     if (f > T.forest && rand() < 0.85) place('tree', x, y);
@@ -194,5 +244,30 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
   scatter('stone', Math.round(area / 1300), 2, 16);
   scatter('berry', Math.round(area / 1800), 1, 14);
 
-  return { w: W, h: H, terrain, resources: resList, starts, mapType: typeKey, mapName: T.name };
+  // Provinzen: Voronoi um Startpunkte und weitere Zentren (ca. 6 je Spieler)
+  const centers = starts.map(s => ({ x: s.x, y: s.y }));
+  const want = Math.max(6, Math.round(players * 6)), minD = Math.max(9, W / Math.sqrt(want) * 0.8);
+  for (let t = 0; t < want * 60 && centers.length < want; t++) {
+    const x = 3 + Math.floor(rand() * (W - 6)), y = 3 + Math.floor(rand() * (H - 6));
+    if (blockedTerrain(terrain[y * W + x])) continue;
+    if (centers.some(c => (c.x - x) ** 2 + (c.y - y) ** 2 < minD * minD)) continue;
+    centers.push({ x, y });
+  }
+  const prov = new Uint16Array(W * H).fill(65535);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x; if (terrain[i] === T_WATER || terrain[i] === T_ROCK) continue;
+    let best = 0, bd = Infinity;
+    for (let k = 0; k < centers.length; k++) { const d = (centers[k].x - x) ** 2 + (centers[k].y - y) ** 2 * 1.0 + detail(x * 0.2 + k, y * 0.2, 2) * 30; if (d < bd) { bd = d; best = k; } }
+    prov[i] = best;
+  }
+  const used = new Set();
+  const provinces = centers.map((c, k) => {
+    let name;
+    if (rand() < 0.04 && DEDICATION.some(n => !used.has(n))) name = DEDICATION.find(n => !used.has(n));
+    for (let t = 0; !name && t < 50; t++) { const n = PROV_A[Math.floor(rand() * PROV_A.length)] + PROV_B[Math.floor(rand() * PROV_B.length)]; if (!used.has(n)) name = n; }
+    used.add(name);
+    return { id: k, name: name || 'Provinz ' + (k + 1), x: c.x, y: c.y };
+  });
+
+  return { w: W, h: H, terrain, resources: resList, starts, mapType: typeKey, mapName: T.name, prov, provinces };
 }

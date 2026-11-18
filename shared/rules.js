@@ -75,7 +75,7 @@ export const CULTURES = {
 };
 export const NATIONS = {
   usa: { name: 'USA', desc: 'Alle Ressourcen werden 15 % schneller gesammelt. Weltwunder: Freiheitsstatue.', bonus: { gather: 1.15 } },
-  russia: { name: 'Russland', desc: 'Militäreinheiten haben 10 % mehr Leben. Weltwunder: Kathedrale mit Zwiebelkuppeln.', bonus: { armyHp: 1.1 } },
+  russia: { name: 'Russland', desc: 'Militäreinheiten haben 10 % mehr Leben. „General Winter“: keine Nachteile durch Schnee und Winter in eigenen Provinzen. Weltwunder: Kathedrale mit Zwiebelkuppeln.', bonus: { armyHp: 1.1, winter: true } },
   germany: { name: 'Deutschland', desc: 'Militäreinheiten verursachen 10 % mehr Schaden. Weltwunder: gotischer Dom.', bonus: { armyDmg: 1.1 } },
   china: { name: 'China', desc: 'Einheiten werden 25 % schneller ausgebildet. Weltwunder: Himmelstempel.', bonus: { trainSpeed: 1.25 } },
   austria: { name: 'Österreich-Ungarn', desc: 'Türme haben +2 Reichweite. Weltwunder: Parlament.', bonus: { towerRange: 2 } },
@@ -162,6 +162,19 @@ export const FORMATION_KEYS = Object.keys(FORMATIONS);
 export const SUPPLY_RANGE = 16; // Kacheln um Haupthaus, Lager und Türme
 export const SUPPLY_GRACE = 120; // Sekunden ohne Nachschub, bevor Leben verloren geht
 
+// ---------------- Gelände, Jahreszeiten, Provinzen ----------------
+export const TERRAIN = ['Wiese', 'Erde', 'Strand', 'Wasser', 'Fels', 'Hügel', 'Schnee', 'Wüste', 'Sumpf', 'Furt'];
+export const SEASON_LEN = 900; // Spielsekunden je Jahreszeit (ein Jahr = 1 Stunde)
+export const SEASONS = [
+  { name: 'Frühling', icon: '🌱', mud: true, desc: 'Schlammperiode: Fahrzeuge abseits von Straßen −40 % Tempo.' },
+  { name: 'Sommer', icon: '☀', desc: 'Hitze: Truppen ohne Nachschub verlieren in der Wüste doppelt so schnell Leben.' },
+  { name: 'Herbst', icon: '🍂', mud: true, desc: 'Schlammperiode: Fahrzeuge abseits von Straßen −40 % Tempo.' },
+  { name: 'Winter', icon: '❄', desc: 'Schnee bremst stärker, Felder liefern 30 % weniger, Moral ohne Nachschub sinkt doppelt so schnell.' },
+];
+export const seasonAt = t => Math.floor(t / SEASON_LEN) % 4;
+export const PROVINCE_BONUS = 0.1; // schnelleres Sammeln in eigenen Provinzen
+export const PROVINCE_WEIGHT = { town: 10, outpost: 6, tower: 3 }; // übrige Gebäude 1, Mauern/Straßen/Brücken 0
+
 // ---------------- Gebäude ----------------
 export const BUILDINGS = {
   town: { name: 'Haupthaus', size: 3, hp: 1400, cost: { wood: 300, stone: 150 }, time: 70, pop: 10, drop: true, atk: 6, range: 6, cd: 2, sight: 9, minEra: 0, key: 'Y', desc: 'Bildet Arbeiter aus, Epochenaufstieg, Abgabestelle für alle Ressourcen.' },
@@ -173,7 +186,10 @@ export const BUILDINGS = {
   stable: { name: 'Stall', size: 3, hp: 900, cost: { wood: 175, gold: 25 }, time: 35, sight: 6, minEra: 1, key: 'D', desc: 'Bildet Reiterei und später Fahrzeuge aus.' },
   tower: { name: 'Wachturm', size: 2, hp: 700, cost: { stone: 125, wood: 25 }, time: 30, atk: 8, range: 7, cd: 1.8, sight: 9, minEra: 1, key: 'G', desc: 'Schießt auf Feinde in Reichweite.' },
   workshop: { name: 'Werkstatt', size: 3, hp: 900, cost: { wood: 200, gold: 50 }, time: 40, sight: 6, minEra: 2, key: 'V', desc: 'Baut Belagerungswaffen.' },
-  wall: { name: 'Palisade', size: 1, hp: 350, cost: { wood: 4 }, time: 3, sight: 2, minEra: 0, key: 'C', desc: 'Günstiges Hindernis (ab Mittelalter Steinmauer).' },
+  outpost: { name: 'Außenposten', size: 2, hp: 600, cost: { wood: 120, stone: 60 }, time: 25, sight: 8, minEra: 1, key: 'A', claim: 6, desc: 'Beansprucht die Provinz, versorgt Truppen in der Nähe (Nachschub) und dient als Abgabestelle.', drop: true },
+  road: { name: 'Straße', size: 1, hp: 200, cost: { stone: 4 }, time: 2, walkable: true, sight: 1, minEra: 4, key: 'F', line: true, desc: 'Wie eine Mauer ziehen: +25 % Tempo, ignoriert Schlamm und Schnee.' },
+  bridge: { name: 'Brücke', size: 1, hp: 400, cost: { wood: 20, stone: 6 }, time: 6, walkable: true, sight: 2, minEra: 1, key: 'X', line: true, onWater: true, desc: 'Wie eine Mauer über Wasser ziehen, Abschnitt für Abschnitt vom Ufer aus. Jeder kann sie benutzen; Abschnitte lassen sich zerstören.' },
+  wall: { name: 'Palisade', size: 1, hp: 350, cost: { wood: 4 }, time: 3, sight: 2, minEra: 0, key: 'C', line: true, desc: 'Günstiges Hindernis (ab Mittelalter Steinmauer).' },
 };
 // Weltwunder: Ausbau des Haupthauses in der letzten Epoche. Wer es 30 Minuten (große Karten: 60) hält, gewinnt.
 export const WONDER = { name: 'Weltwunder', cost: { food: 6000, wood: 5000, stone: 5000, gold: 7000 }, time: 240, hold: 1800, holdLarge: 3600, hpMul: 4 };
@@ -181,7 +197,7 @@ export const WONDER = { name: 'Weltwunder', cost: { food: 6000, wood: 5000, ston
 export const wonderHold = mapW => (mapW >= 160 ? WONDER.holdLarge : WONDER.hold);
 export const WONDER_ERA = 8; // Anzeige-Epoche für das Modell (nach der letzten Epoche)
 
-export const BUILD_ORDER = ['house', 'storage', 'farm', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
+export const BUILD_ORDER = ['house', 'storage', 'farm', 'outpost', 'road', 'bridge', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
 
 // ---------------- Rohstoffe auf der Karte ----------------
 export const RESOURCE_TYPES = {
@@ -284,6 +300,7 @@ export function playerMods(culture, nation, late = false) {
     if (b.gather) for (const k in m.gather) m.gather[k] *= b.gather;
     for (const k of ['armyCost', 'cavHp', 'trainSpeed', 'siegeDmg', 'infSpeed', 'armyHp', 'armyDmg']) if (b[k]) m[k] *= b[k];
     for (const k of ['housePop', 'rangedRange', 'towerRange', 'regen']) if (b[k]) m[k] += b[k];
+    if (b.winter) m.winter = true;
   }
   return m;
 }

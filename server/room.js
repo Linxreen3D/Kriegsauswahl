@@ -285,6 +285,7 @@ export class Room {
     const sendPriv = w.tickNo % 3 === 0;
     const sendPlayers = w.tickNo % 10 === 0 || evs.some(e => e.k === 'era' || e.k === 'defeat' || e.k === 'choice');
     const playersMsg = sendPlayers ? w.playersPublic() : null;
+    const provMsg = w.provDirty ? Array.from(w.provOwner) : null; w.provDirty = false;
     for (const ws of this.clients) {
       if (ws.readyState !== 1) continue;
       ws.pid = ws.player ? ws.player.id : -1;
@@ -294,6 +295,7 @@ export class Room {
       const e = w.eventsFor(ws.pid, evs);
       if (e.length) msg.e = e;
       if (playersMsg) msg.p = playersMsg;
+      if (provMsg) msg.po = provMsg;
       this.send(ws, msg);
       if (sendPriv && ws.pid >= 0 && w.P[ws.pid]) this.send(ws, w.privateState(w.P[ws.pid]));
     }

@@ -192,7 +192,7 @@ export class AI {
         if (ratio[best] <= 0 && best !== 'wood') continue;
         let target = null;
         if (best === 'food') {
-          target = w.findResourceNear('berry', this.bx, this.by, 18) || w.findResourceNear('farm', this.bx, this.by, 30, this.pid);
+          target = w.findResourceNear('berry', this.bx, this.by, 18, this.pid) || w.findResourceNear('farm', this.bx, this.by, 30, this.pid);
           if (!target) {
             const unbuilt = blds.find(b => b.type === 'farm' && !b.built);
             if (unbuilt) { this.cmd({ c: 'repair', ids: [u.id], target: unbuilt.id }); counts.food++; done = true; break; }

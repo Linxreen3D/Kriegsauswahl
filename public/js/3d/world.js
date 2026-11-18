@@ -137,13 +137,15 @@ export function createTerrain(scene, { size = 240, seg = 240, seed = 7, river = 
   return { mesh, height, nz };
 }
 
+// Winterstärke (0–1) für das Gelände, vom Spiel je nach Jahreszeit gesetzt
+export const WINTER = { value: 0 };
 export function terrainMaterial() {
   const mat = new THREE.MeshStandardMaterial({ map: TEX.grass.map, normalMap: TEX.grass.normalMap, normalScale: new THREE.Vector2(0.8, 0.8), roughness: 0.95 });
   mat.onBeforeCompile = sh => {
-    Object.assign(sh.uniforms, { tDirt: { value: TEX.dirt.map }, tRock: { value: TEX.rock.map }, tSand: { value: TEX.sand.map } });
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 splat; varying vec4 vSplat; varying vec3 vWP;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSplat = splat; vWP = (modelMatrix * vec4(position,1.0)).xyz;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tDirt, tRock, tSand; varying vec4 vSplat; varying vec3 vWP;')
+    Object.assign(sh.uniforms, { tDirt: { value: TEX.dirt.map }, tRock: { value: TEX.rock.map }, tSand: { value: TEX.sand.map }, uWinter: WINTER });
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 splat; attribute vec2 clim; varying vec4 vSplat; varying vec2 vClim; varying vec3 vWP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSplat = splat; vClim = clim; vWP = (modelMatrix * vec4(position,1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tDirt, tRock, tSand; uniform float uWinter; varying vec4 vSplat; varying vec2 vClim; varying vec3 vWP;')
       .replace('#include <map_fragment>', `
         vec2 w = vWP.xz * 0.12;
         vec4 cg = mix(texture2D(map, w), texture2D(map, w * 0.27 + 0.37), 0.45);
@@ -160,6 +162,10 @@ export function terrainMaterial() {
         col = mix(col, cd, sp.y); col = mix(col, cr, sp.z); col = mix(col, cs, sp.w);
         float macro = 0.82 + 0.36 * texture2D(map, vWP.xz * 0.009).g;
         col.rgb *= macro;
+        // Sumpf: dunkles, nasses Grün; Schnee: Schneedecke, im Winter auch auf Wiesen
+        col.rgb = mix(col.rgb, col.rgb * vec3(0.5, 0.6, 0.42), clamp(vClim.y * 1.4, 0.0, 0.85));
+        float snow = clamp(vClim.x * 1.3 + uWinter * (1.0 - sp.w) * (0.55 + 0.45 * cg.g), 0.0, 0.95);
+        col.rgb = mix(col.rgb, vec3(0.88, 0.9, 0.94) * (0.86 + 0.14 * cg.g), snow);
         diffuseColor *= col;`);
   };
   return mat;

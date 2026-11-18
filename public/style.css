@@ -268,3 +268,9 @@ body:not(.is-host) .settings input, body:not(.is-host) .settings select { pointe
 .small { font-size: 12px; }
 
 .stats .warn { color: #ff9a5a; }
+
+/* Jahreszeit und Provinz */
+.res.season { font-size: 14px; white-space: nowrap; padding-right: 10px; }
+.mm-wrap { position: relative; }
+.prov-label { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; font-size: 11px; color: #f3e6c4; text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+@media (max-width: 1200px) { .res.season { font-size: 0; } .res.season .ri { font-size: 20px; } }

@@ -2,7 +2,7 @@ import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -20,7 +20,7 @@ const UNIT_ICONS = {
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
-const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
+const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 function iconOf(def) {
   if (def.kind === 'b') return BLD_ICONS[def.key];
   if (def.unique) return UNIQUE_ICONS[def.unique];
@@ -101,6 +101,25 @@ function handle(m) {
   }
 }
 
+function updateSeason(time) {
+  if (time == null) return;
+  const s = seasonAt(time);
+  if (s !== G.season) {
+    const first = G.season === -1; G.season = s;
+    const se = SEASONS[s];
+    $('seasonLabel').innerHTML = `<span class="ri">${se.icon}</span>${se.name}`; $('seasonLabel').title = `${se.name}: ${se.desc}`;
+    renderer.setWinter(s === 3 ? 1 : 0);
+    if (!first) notice(`${se.icon} ${se.name}: ${se.desc}`);
+  }
+  // Provinz unter der Kameramitte
+  if (G.prov && renderer.cam) {
+    const x = Math.floor(renderer.cam.x), y = Math.floor(renderer.cam.y);
+    const pv = x >= 0 && y >= 0 && x < G.W && y < G.H ? G.prov[y * G.W + x] : 65535;
+    let txt = '';
+    if (pv !== 65535 && G.provinces[pv]) { const o = G.provOwner[pv], p = o >= 0 ? G.players[o] : null; txt = `${G.provinces[pv].name}${p ? ' · ' + p.name : ' · frei'}`; }
+    if ($('provLabel').textContent !== txt) $('provLabel').textContent = txt;
+  }
+}
 function fmtDur(s) { s = Math.round(s); return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min${s % 60 ? ' ' + (s % 60) + ' s' : ''}`; }
 function showSaves(list) {
   $('savesList').innerHTML = list.length ? list.map(x => `<button class="btn" data-file="${esc(x.file)}">${esc(x.label)}<span class="who">${x.players.map(p => esc(p.name) + ' · ' + esc(ERAS[p.era] ? ERAS[p.era].short : '') + (p.alive ? '' : ' ☠')).join(' | ')}</span></button>`).join('') : '<p class="muted">Noch keine Spielstände vorhanden.</p>';
@@ -182,6 +201,8 @@ function onStart(m) {
   const bin = atob(m.terrain);
   G.terrain = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) G.terrain[i] = bin.charCodeAt(i);
+  if (m.prov) { const pb = atob(m.prov), u8 = new Uint8Array(pb.length); for (let i = 0; i < pb.length; i++) u8[i] = pb.charCodeAt(i); G.prov = new Uint16Array(u8.buffer); }
+  G.provinces = m.provinces || []; G.provOwner = m.provOwner || []; G.provVer = 1; G.season = -1;
   G.res = new Map();
   G.resAt = new Int32Array(G.W * G.H);
   G.bldAt = new Int32Array(G.W * G.H);
@@ -200,6 +221,7 @@ function onStart(m) {
   showScreen('game');
   $('menuCode').textContent = G.code;
   renderer.setMap(G);
+  renderer.setProvinces(G);
   renderer.resize();
   renderer.cam.z = 1.7;
   renderer.cam.x = m.start.x + 0.5; renderer.cam.y = m.start.y + 2;
@@ -235,6 +257,8 @@ function onDelta(m) {
     for (let y = r.y; y < r.y + r.size; y++) for (let x = r.x; x < r.x + r.size; x++) { G.resAt[y * G.W + x] = 0; renderer.invalidateTile(x, y); }
   }
   if (m.p) G.players = m.p;
+  if (m.po) { G.provOwner = m.po; G.provVer++; renderer.setProvinces(G); }
+  updateSeason(m.time);
   if (m.e) for (const e of m.e) onEvent(e, now);
   stampVision();
   renderer.updateFog();
@@ -488,14 +512,15 @@ function placeOk(type, x, y) {
     if (xx < 0 || yy < 0 || xx >= G.W || yy >= G.H) return false;
     const i = yy * G.W + xx;
     const t = G.terrain[i];
-    if (t === 3 || t === 4 || G.resAt[i] || G.bldAt[i] || !G.explored[i]) return false;
+    if (G.resAt[i] || G.bldAt[i] || !G.explored[i]) return false;
+    if (BUILDINGS[type].onWater ? !(t === 3 || t === 9) : (t === 3 || t === 4 || t === 9)) return false;
   }
   return true;
 }
 function ghostCells(type, wx, wy) {
   const sz = BUILDINGS[type].size;
   const x = Math.floor(wx - sz / 2 + 0.5), y = Math.floor(wy - sz / 2 + 0.5);
-  if (type === 'wall' && UI.wallStart) {
+  if (BUILDINGS[type].line && UI.wallStart) {
     const [x0, y0] = UI.wallStart;
     const cells = [];
     const n = Math.max(Math.abs(x - x0), Math.abs(y - y0));
@@ -766,7 +791,7 @@ function setupInput() {
       return;
     }
     if (UI.mode && UI.mode.build) {
-      if (UI.mode.build === 'wall') { UI.wallStart = [Math.floor(wx), Math.floor(wy)]; return; }
+      if (BUILDINGS[UI.mode.build].line) { UI.wallStart = [Math.floor(wx), Math.floor(wy)]; return; }
       placeBuilding(e.shiftKey);
       return;
     }
@@ -809,7 +834,7 @@ function setupInput() {
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
     if (e.button === 1 || pan) { pan = null; return; }
-    if (UI.mode && UI.mode.build === 'wall' && UI.wallStart) { placeBuilding(e.shiftKey); return; }
+    if (UI.mode && BUILDINGS[UI.mode.build].line && UI.wallStart) { placeBuilding(e.shiftKey); return; }
     if (!down) return;
     const d = down; down = null;
     const box = UI.box; UI.box = null;
