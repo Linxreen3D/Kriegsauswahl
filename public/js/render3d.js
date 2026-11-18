@@ -7,6 +7,7 @@ import * as Md from './3d/models.js';
 import * as U from './3d/units.js';
 import { fabricMat, surcoatMat } from './3d/humans.js';
 import { eraBuilding } from './3d/eras.js';
+import { nationBuilding } from './3d/nations.js';
 import { rng } from './3d/textures.js';
 import { BUILDINGS } from '/shared/rules.js';
 
@@ -433,13 +434,15 @@ export class Renderer3D {
     return 'idle';
   }
   // ---------- Gebäude-Modelle ----------
-  buildingModel(type, era, color) {
+  buildingModel(type, era, color, nation) {
     era = Math.max(0, Math.min(7, era | 0));
-    const key = type + '|' + era + '|' + color;
+    // Nationaler Stil gilt ab dem Frühen Mittelalter (für Mittelalter und Industrialisierung je ein Modell)
+    const nk = nation && era >= 3 ? nation + (era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : '';
+    const key = type + '|' + era + '|' + color + '|' + nk;
     let mdl = this.bldModels.get(key);
     if (mdl) return mdl;
     const sz = BUILDINGS[type].size * S;
-    const g = eraBuilding(type, era, color);
+    const g = (nk && nationBuilding(type, era, color, nation)) || eraBuilding(type, era, color);
     const mm = mergeModel(g);
     const size = mm.box.getSize(new THREE.Vector3());
     const fit = type === 'wall' ? (sz * 1.0) / Math.max(size.x, size.z) : (sz * 0.96 * (era === 7 ? 1.55 : 1)) / Math.max(size.x, size.z);
@@ -538,7 +541,7 @@ export class Renderer3D {
       } else {
         const sz = BUILDINGS[e.def.key].size;
         if (e.x + sz < minX || e.x > maxX || e.y + sz < minY || e.y > maxY) continue;
-        const mdl = this.buildingModel(e.def.key, e.era || 0, color);
+        const mdl = this.buildingModel(e.def.key, e.era || 0, color, p ? p.nation : null);
         const X = (e.x + sz / 2) * S, Z = (e.y + sz / 2) * S;
         let h = Infinity; for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) h = Math.min(h, this.T.height(X + dx * sz * 0.4 * S, Z + dz * sz * 0.4 * S));
         const prog = (e.prog ?? 100) / 100;
@@ -656,7 +659,7 @@ export class Renderer3D {
       g.strokeRect(Math.min(b.x0, b.x1) + 0.5, Math.min(b.y0, b.y1) + 0.5, Math.abs(b.x1 - b.x0), Math.abs(b.y1 - b.y0));
     }
   }
-  buildingKey(e) { const p = this.G.players[e.owner]; return e.def.key + '|' + Math.max(0, Math.min(7, e.era | 0)) + '|' + (p ? p.color : '#888888'); }
+  buildingKey(e) { const p = this.G.players[e.owner], era = Math.max(0, Math.min(7, e.era | 0)), n = p && p.nation; const nk = n && era >= 3 ? n + (era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : ''; return e.def.key + '|' + era + '|' + (p ? p.color : '#888888') + '|' + nk; }
 
   drawMinimap(canvas, ui) {
     const G = this.G, g = canvas.getContext('2d');

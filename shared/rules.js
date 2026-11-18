@@ -38,37 +38,34 @@ export const ERAS = [
 
 // ---------------- Kulturen & Nationen ----------------
 // Kultur wird beim Erreichen der Bronzezeit gewählt, die Nation im Frühen Mittelalter.
+// Alle Nationen stehen jeder Kultur offen
+const ALL_NATIONS = ['usa', 'russia', 'germany', 'china', 'austria', 'yugoslavia', 'india'];
 export const CULTURES = {
   steppe: {
     name: 'Steppenvolk', icon: '🐎', desc: 'Reiterei ist 15 % schneller und 15 % billiger. Spezialeinheit: Steppenreiter (berittener Bogenschütze).',
-    unique: 'uq_steppe', nations: ['horde', 'riders', 'nomads'],
+    unique: 'uq_steppe', nations: ALL_NATIONS,
   },
   traders: {
     name: 'Händlerbund', icon: '⚖', desc: 'Gold und Stein werden 25 % schneller abgebaut. Spezialeinheit: Söldner (starke Infanterie gegen Gold).',
-    unique: 'uq_traders', nations: ['league', 'republic', 'guilds'],
+    unique: 'uq_traders', nations: ALL_NATIONS,
   },
   builders: {
     name: 'Baumeister', icon: '🏛', desc: 'Gebäude haben 40 % mehr Leben und werden 40 % schneller gebaut, Türme treffen härter. Spezialeinheit: Wallbrecher.',
-    unique: 'uq_builders', nations: ['empire', 'citadel', 'kingdom'],
+    unique: 'uq_builders', nations: ALL_NATIONS,
   },
   warriors: {
     name: 'Kriegerkaste', icon: '⚔', desc: 'Infanterie hat 15 % mehr Angriff und 10 % mehr Leben. Spezialeinheit: Berserker.',
-    unique: 'uq_warriors', nations: ['clans', 'legion', 'order'],
+    unique: 'uq_warriors', nations: ALL_NATIONS,
   },
 };
 export const NATIONS = {
-  horde: { name: 'Große Horde', desc: 'Militäreinheiten kosten 10 % weniger.', bonus: { armyCost: 0.9 } },
-  riders: { name: 'Reiterbund', desc: 'Reiterei hat 20 % mehr Leben.', bonus: { cavHp: 1.2 } },
-  nomads: { name: 'Nomadenreich', desc: 'Häuser geben +4 Bevölkerung.', bonus: { housePop: 4 } },
-  league: { name: 'Hansebund', desc: 'Alle Ressourcen werden 15 % schneller gesammelt.', bonus: { gather: 1.15 } },
-  republic: { name: 'Seerepublik', desc: 'Einheiten werden 25 % schneller ausgebildet.', bonus: { trainSpeed: 1.25 } },
-  guilds: { name: 'Gildenland', desc: 'Fernkämpfer haben +1 Reichweite.', bonus: { rangedRange: 1 } },
-  empire: { name: 'Kaiserreich', desc: 'Belagerungswaffen verursachen 25 % mehr Schaden.', bonus: { siegeDmg: 1.25 } },
-  citadel: { name: 'Zitadellenstaat', desc: 'Türme haben +2 Reichweite.', bonus: { towerRange: 2 } },
-  kingdom: { name: 'Königreich', desc: 'Einheiten regenerieren 1 Leben pro Sekunde.', bonus: { regen: 1 } },
-  clans: { name: 'Clanbund', desc: 'Infanterie bewegt sich 15 % schneller.', bonus: { infSpeed: 1.15 } },
-  legion: { name: 'Legionsstaat', desc: 'Militäreinheiten haben 10 % mehr Leben.', bonus: { armyHp: 1.1 } },
-  order: { name: 'Kriegsorden', desc: 'Militäreinheiten verursachen 10 % mehr Schaden.', bonus: { armyDmg: 1.1 } },
+  usa: { name: 'USA', desc: 'Alle Ressourcen werden 15 % schneller gesammelt. Weltwunder: Freiheitsstatue.', bonus: { gather: 1.15 } },
+  russia: { name: 'Russland', desc: 'Militäreinheiten haben 10 % mehr Leben. Weltwunder: Kathedrale mit Zwiebelkuppeln.', bonus: { armyHp: 1.1 } },
+  germany: { name: 'Deutschland', desc: 'Militäreinheiten verursachen 10 % mehr Schaden. Weltwunder: gotischer Dom.', bonus: { armyDmg: 1.1 } },
+  china: { name: 'China', desc: 'Einheiten werden 25 % schneller ausgebildet. Weltwunder: Himmelstempel.', bonus: { trainSpeed: 1.25 } },
+  austria: { name: 'Österreich-Ungarn', desc: 'Türme haben +2 Reichweite. Weltwunder: Parlament.', bonus: { towerRange: 2 } },
+  yugoslavia: { name: 'Jugoslawien', desc: 'Infanterie bewegt sich 15 % schneller. Weltwunder: Kuppeltempel.', bonus: { infSpeed: 1.15 } },
+  india: { name: 'Indien', desc: 'Häuser geben +4 Bevölkerung, Belagerung +25 % Schaden. Weltwunder: Marmormausoleum.', bonus: { housePop: 4, siegeDmg: 1.25 } },
 };
 
 // ---------------- Einheiten ----------------

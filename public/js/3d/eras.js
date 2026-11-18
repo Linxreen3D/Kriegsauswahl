@@ -221,3 +221,4 @@ export function eraBuilding(type, era, color) {
   return list[e](color);
 }
 export const ERA_TYPES = Object.keys(BUILDERS);
+export { E, mats };

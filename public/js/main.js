@@ -686,7 +686,7 @@ function showChoice() {
   if (!m.choice) return;
   const isCulture = m.choice === 'culture';
   $('choiceTitle').textContent = isCulture ? 'Wähle deine Kultur' : 'Wähle deine Nation';
-  $('choiceSub').textContent = isCulture ? 'Deine Kultur bestimmt Boni und eine Spezialeinheit (ab dem Frühen Mittelalter).' : `Nationen der Kultur ${CULTURES[m.culture].name} – jede mit eigenem Bonus.`;
+  $('choiceSub').textContent = isCulture ? 'Deine Kultur bestimmt Boni und eine Spezialeinheit (ab dem Frühen Mittelalter).' : 'Deine Nation bestimmt einen Bonus, den Baustil deiner Stadt und dein Weltwunder.';
   const opts = isCulture ? Object.entries(CULTURES).map(([k, c]) => ({ k, icon: c.icon, name: c.name, desc: c.desc })) : CULTURES[m.culture].nations.map(k => ({ k, icon: '🏳', name: NATIONS[k].name, desc: NATIONS[k].desc }));
   $('choiceOptions').innerHTML = opts.map(o => `<button class="choice-opt" data-choice="${o.k}"><span class="ic">${o.icon}</span><b>${esc(o.name)}</b><p>${esc(o.desc)}</p></button>`).join('');
   $('choice').classList.remove('hidden');

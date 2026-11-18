@@ -9,6 +9,7 @@ import * as W from './world.js';
 import * as Md from './models.js';
 import * as H from './humans.js';
 import { eraBuilding, wonder } from './eras.js';
+import { nationBuilding } from './nations.js';
 const q = new URLSearchParams(location.search), mode = q.get('m') || 'grid';
 W.loadTextures(); Md.initMaterials();
 const ctx = W.createWorld(document.getElementById('c'), { sunAz: 150, sunElev: 34, fogNear: 200, fogFar: 600 });
@@ -42,6 +43,16 @@ if (mode === 'grid') {
   }
   ctx.camera.fov = 30; ctx.camera.updateProjectionMatrix();
   ctx.camera.position.set(-3, 88, 92); ctx.camera.lookAt(-3, 0, -2);
+} else if (mode === 'nation') {
+  const n = q.get('n'), NAMES = { usa: 'USA', russia: 'Russland', germany: 'Deutschland', china: 'China', austria: 'Österreich-Ungarn', yugoslavia: 'Jugoslawien', india: 'Indien' };
+  fitPlace(nationBuilding('town', 7, BLUE, n), 3, 0, -8, 1.55);
+  const row = [['town', 3, 3], ['town', 5, 3], ['house', 3, 2], ['house', 5, 2], ['tower', 3, 2], ['tower', 5, 2]];
+  row.forEach(([t, e, sz], i) => fitPlace(nationBuilding(t, e, BLUE, n), sz, -22 + i * 8.8, 6 + (i % 2) * 1.5));
+  for (let k = 0; k < 4; k++) fitPlace(nationBuilding('wall', 3, BLUE, n), 1, -24 + k * 2, -4);
+  for (let k = 0; k < 4; k++) fitPlace(nationBuilding('wall', 5, BLUE, n), 1, 18 + k * 2, -4);
+  ctx.camera.fov = 34; ctx.camera.updateProjectionMatrix();
+  ctx.camera.position.set(0, 30, 44); ctx.camera.lookAt(0, 2, -1);
+  labels.push([new THREE.Vector3(0, 0, 0), NAMES[n] + ' · Mittelalter / Industrialisierung / Weltwunder', 'lbl big']);
 } else if (mode === 'era') {
   const e = +q.get('e');
   TYPES.forEach(([t, sz], i) => {
