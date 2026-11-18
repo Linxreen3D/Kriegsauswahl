@@ -26,15 +26,30 @@ export const DEFAULT_SETTINGS = {
 };
 
 // ---------------- Epochen ----------------
+// Spieltempo für Partien bis ca. 4 Stunden: frühe Epochen kurz, späte lang (Zeiten in Spielsekunden).
 export const ERAS = [
-  { name: 'Steinzeit', short: 'I', cost: null, time: 0 },
-  { name: 'Bronzezeit', short: 'II', cost: { food: 400, wood: 200 }, time: 35 },
-  { name: 'Eisenzeit', short: 'III', cost: { food: 700, wood: 350, gold: 150 }, time: 45 },
-  { name: 'Frühes Mittelalter', short: 'IV', cost: { food: 1000, gold: 500, stone: 200 }, time: 60 },
-  { name: 'Spätes Mittelalter', short: 'V', cost: { food: 1400, wood: 700, gold: 800 }, time: 70 },
-  { name: '1. Industrielle Revolution', short: 'VI', cost: { food: 1800, gold: 1200, stone: 500 }, time: 80 },
-  { name: '2. Industrielle Revolution', short: 'VII', cost: { food: 2200, wood: 1200, gold: 1600 }, time: 90 },
+  { name: 'Steinzeit', short: 'I', years: 'bis 3000 v. Chr.', cost: null, time: 0 },
+  { name: 'Bronzezeit', short: 'II', years: '3000–1200 v. Chr.', cost: { food: 500, wood: 250 }, time: 60 },
+  { name: 'Eisenzeit', short: 'III', years: '1200 v. Chr.–500', cost: { food: 900, wood: 450, gold: 200 }, time: 90 },
+  { name: 'Frühes Mittelalter', short: 'IV', years: '500–1000', cost: { food: 1400, gold: 700, stone: 300 }, time: 150 },
+  { name: 'Spätes Mittelalter', short: 'V', years: '1000–1600', cost: { food: 2000, wood: 1000, gold: 1100 }, time: 180 },
+  { name: '1. Industrielle Revolution', short: 'VI', years: '1750–1860', cost: { food: 2700, gold: 1700, stone: 800 }, time: 240 },
+  { name: '2. Industrielle Revolution', short: 'VII', years: '1860–1945', cost: { food: 3500, wood: 1800, gold: 2400 }, time: 300 },
+  { name: 'Kalter Krieg', short: 'VIII', years: '1945–1990', cost: { food: 4500, wood: 2200, gold: 3200, stone: 1200 }, time: 480 },
 ];
+// Epoche VII hat zwei Stufen: Die Forschung „Moderne Kriegsführung“ schaltet die Technik von 1914–1945 frei.
+export const LATE_STAGE = { era: 6, name: 'Moderne Kriegsführung', cost: { food: 2000, wood: 1000, gold: 2000 }, time: 240, hpMul: 1.2, atkMul: 1.2 };
+// Aufholhilfe: Wer zwei oder mehr Epochen hinter dem Führenden liegt, zahlt 15 % weniger je Rückstands-Epoche (max. 60 %).
+export function catchUpFactor(myEra, leaderEra) {
+  const gap = leaderEra - myEra;
+  return gap >= 2 ? Math.max(0.4, 1 - 0.15 * gap) : 1;
+}
+export function eraCost(targetEra, leaderEra) {
+  const base = ERAS[targetEra] && ERAS[targetEra].cost;
+  if (!base) return null;
+  const f = catchUpFactor(targetEra - 1, leaderEra);
+  return f === 1 ? base : scaleCost(base, f);
+}
 
 // ---------------- Kulturen & Nationen ----------------
 // Kultur wird beim Erreichen der Bronzezeit gewählt, die Nation im Frühen Mittelalter.
@@ -82,24 +97,24 @@ export const DMG = {
 // Linien: pro Epoche ein Name; Werte skalieren mit der Epoche.
 export const LINES = {
   worker: {
-    cls: 'wrk', at: 'town', minEra: 0, key: 'Q', names: ['Sammler', 'Arbeiter', 'Handwerker', 'Leibeigener', 'Bauer', 'Fabrikarbeiter', 'Arbeiter'],
+    cls: 'wrk', at: 'town', minEra: 0, key: 'Q', names: ['Sammler', 'Arbeiter', 'Handwerker', 'Leibeigener', 'Bauer', 'Fabrikarbeiter', 'Arbeiter', 'Ingenieur'],
     hp: 40, atk: 3, range: 0.4, cd: 1.5, speed: 1.6, sight: 6, cost: { food: 50 }, pop: 1, time: 10, grow: 0.08, costGrow: 1,
   },
   inf: {
-    cls: 'inf', at: 'barracks', minEra: 0, key: 'Q', names: ['Keulenträger', 'Speerträger', 'Schwertkämpfer', 'Hauskrieger', 'Hellebardier', 'Linieninfanterist', 'Infanterist'],
+    cls: 'inf', at: 'barracks', minEra: 0, key: 'Q', names: ['Keulenträger', 'Speerträger', 'Schwertkämpfer', 'Hauskrieger', 'Hellebardier', 'Linieninfanterist', 'Schütze', 'Mechanisierte Infanterie'], late: 'Infanterist',
     hp: 60, atk: 7, range: 0.5, cd: 1.2, speed: 1.45, sight: 6, cost: { food: 55, wood: 10 }, pop: 1, time: 16,
   },
   rng: {
-    cls: 'rng', at: 'range', minEra: 0, key: 'Q', names: ['Steinschleuderer', 'Bogenschütze', 'Bogenschütze', 'Langbogenschütze', 'Armbrustschütze', 'Jäger', 'Scharfschütze'],
+    cls: 'rng', at: 'range', minEra: 0, key: 'Q', names: ['Steinschleuderer', 'Bogenschütze', 'Bogenschütze', 'Langbogenschütze', 'Armbrustschütze', 'Jäger', 'Scharfschütze', 'Panzerabwehrtrupp'], late: 'MG-Schütze',
     hp: 38, atk: 5, range: 5, cd: 1.6, speed: 1.4, sight: 7, cost: { food: 30, wood: 35 }, pop: 1, time: 18,
   },
   cav: {
-    cls: 'cav', at: 'stable', minEra: 1, key: 'Q', names: ['', 'Streitwagen', 'Reiter', 'Panzerreiter', 'Ritter', 'Husar', 'Panzerwagen'],
+    cls: 'cav', at: 'stable', minEra: 1, key: 'Q', names: ['', 'Streitwagen', 'Reiter', 'Panzerreiter', 'Ritter', 'Husar', 'Panzerwagen', 'Kampfpanzer'], late: 'Panzer',
     hp: 110, atk: 9, range: 0.6, cd: 1.4, speed: 2.4, sight: 7, cost: { food: 70, gold: 45 }, pop: 1, time: 22,
-    eraOverride: { 5: { range: 3.5 }, 6: { range: 5, speed: 2.0, hpMul: 1.6, pop: 2 } },
+    eraOverride: { 5: { range: 3.5 }, 6: { range: 5, speed: 2.0, hpMul: 1.6, pop: 2 }, 7: { range: 6, speed: 2.2, hpMul: 1.7, pop: 2 } },
   },
   sie: {
-    cls: 'sie', at: 'workshop', minEra: 2, key: 'Q', names: ['', '', 'Torsionsgeschütz', 'Blide', 'Bombarde', 'Feldkanone', 'Feldhaubitze'],
+    cls: 'sie', at: 'workshop', minEra: 2, key: 'Q', names: ['', '', 'Torsionsgeschütz', 'Blide', 'Bombarde', 'Feldkanone', 'Feldhaubitze', 'Raketenartillerie'], late: 'Schwere Haubitze',
     hp: 120, atk: 38, range: 7, minRange: 2, cd: 4, speed: 0.95, sight: 8, cost: { wood: 160, gold: 90 }, pop: 2, time: 32, splash: 1.2,
   },
 };
@@ -128,7 +143,7 @@ export const BUILDINGS = {
 export const WONDER = { name: 'Weltwunder', cost: { food: 3000, wood: 2500, stone: 3000, gold: 3500 }, time: 240, hold: 1800, holdLarge: 3600, hpMul: 4 };
 // Große Karten (Kantenlänge ab 160 Kacheln, d. h. „Groß“/„Riesig“ oder viele Spieler) brauchen 1 Stunde
 export const wonderHold = mapW => (mapW >= 160 ? WONDER.holdLarge : WONDER.hold);
-export const WONDER_ERA = 7; // Anzeige-Epoche für das Modell
+export const WONDER_ERA = 8; // Anzeige-Epoche für das Modell (nach der letzten Epoche)
 
 export const BUILD_ORDER = ['house', 'storage', 'farm', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
 
@@ -205,11 +220,11 @@ export function unitBase(line, era, unique) {
 }
 
 // Bonus-Sammlung eines Spielers aus Kultur + Nation
-export function playerMods(culture, nation) {
+export function playerMods(culture, nation, late = false) {
   const m = {
     gather: { food: 1, wood: 1, stone: 1, gold: 1 }, armyCost: 1, cavCost: 1, cavSpeed: 1, cavHp: 1, infAtk: 1, infHp: 1, infSpeed: 1,
     bldHp: 1, buildSpeed: 1, towerAtk: 1, towerRange: 0, housePop: 0, trainSpeed: 1, rangedRange: 0, siegeDmg: 1, regen: 0,
-    armyHp: 1, armyDmg: 1,
+    armyHp: 1, armyDmg: 1, late: !!late,
   };
   if (culture === 'steppe') { m.cavSpeed = 1.15; m.cavCost = 0.85; }
   if (culture === 'traders') { m.gather.gold = 1.25; m.gather.stone = 1.25; }
@@ -235,6 +250,10 @@ export function unitStats(line, era, unique, mods) {
   if (s.cls === 'rng' && s.range > 1) s.range += mods.rangedRange;
   if (s.cls === 'sie') s.atk *= mods.siegeDmg;
   if (mil) { s.hp *= mods.armyHp; s.atk *= mods.armyDmg; s.cost = scaleCost(s.cost, mods.armyCost); }
+  if (mods.late && era === LATE_STAGE.era && s.cls !== 'wrk') {
+    s.hp *= LATE_STAGE.hpMul; s.atk *= LATE_STAGE.atkMul;
+    if (!unique && LINES[line].late) s.name = LINES[line].late;
+  }
   s.time /= mods.trainSpeed;
   s.hp = Math.round(s.hp);
   return s;

@@ -2,7 +2,7 @@
 import {
   TICK_MS, RES, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, RESOURCE_TYPES, RESOURCE_KINDS,
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
-  WONDER, WONDER_ERA, wonderHold,
+  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost,
 } from '../shared/rules.js';
 import { generateMap, blockedTerrain } from './mapgen.js';
 
@@ -55,7 +55,7 @@ export class World {
     this.P = players.map((p, i) => ({
       id: p.id, name: p.name, color: p.color, isBot: p.isBot, team: teams ? (p.team || 1) : 100 + p.id,
       res: { ...(START_RES[settings.resources] || START_RES.normal) }, era: settings.startEra || 0, culture: null, nation: null,
-      mods: playerMods(null, null), pop: 0, popCap: 0, alive: true, advancing: null, choice: null,
+      mods: playerMods(null, null), pop: 0, popCap: 0, alive: true, advancing: null, choice: null, late: false, lateResearch: null,
       stats: { gathered: 0, kills: 0, lost: 0, trained: 0, built: 0, razed: 0 }, history: [], defeatedAt: null, start: map.starts[i],
     }));
     { const byId = []; for (const pl of this.P) byId[pl.id] = pl; this.P = byId; }
@@ -384,12 +384,23 @@ export class World {
       case 'era': {
         const b = own([c.id])[0];
         if (!b || b.type !== 'town' || !b.built || pl.advancing || pl.era >= ERAS.length - 1 || pl.choice) return;
-        const next = ERAS[pl.era + 1];
-        if (!this.canAfford(pl, next.cost)) { this.notice(pid, 'Nicht genug Rohstoffe für die nächste Epoche.'); return; }
-        this.pay(pl, next.cost);
-        b.queue.unshift({ era: pl.era + 1, cost: next.cost, time: next.time });
+        if (pl.lateResearch) { this.notice(pid, 'Erst die laufende Forschung abschließen.'); return; }
+        const next = ERAS[pl.era + 1], cost = eraCost(pl.era + 1, this.leaderEra());
+        if (!this.canAfford(pl, cost)) { this.notice(pid, 'Nicht genug Rohstoffe für die nächste Epoche.'); return; }
+        this.pay(pl, cost);
+        b.queue.unshift({ era: pl.era + 1, cost, time: next.time });
         b.qProg = 0;
         pl.advancing = b.id;
+        break;
+      }
+      case 'late': {
+        const b = own([c.id])[0];
+        if (!b || b.type !== 'town' || !b.built || pl.era !== LATE_STAGE.era || pl.late || pl.lateResearch || pl.advancing) return;
+        if (!this.canAfford(pl, LATE_STAGE.cost)) { this.notice(pid, `Nicht genug Rohstoffe für „${LATE_STAGE.name}“.`); return; }
+        this.pay(pl, LATE_STAGE.cost);
+        b.queue.unshift({ late: true, cost: LATE_STAGE.cost, time: LATE_STAGE.time });
+        b.qProg = 0;
+        pl.lateResearch = b.id;
         break;
       }
       case 'wonder': {
@@ -414,6 +425,7 @@ export class World {
         if (k === 0) b.qProg = 0;
         this.refund(pl, q.cost);
         if (q.era) pl.advancing = null;
+        if (q.late) pl.lateResearch = null;
         if (q.wonder) { pl.wonderBuilding = null; this.event({ k: 'wonder', p: pid, what: 'cancel' }); }
         break;
       }
@@ -449,8 +461,9 @@ export class World {
   pay(pl, cost) { for (const k in cost) pl.res[k] -= cost[k]; }
   refund(pl, cost) { for (const k in cost) pl.res[k] += cost[k]; }
   updateMods(pl) {
-    pl.mods = playerMods(pl.culture, pl.nation);
+    pl.mods = playerMods(pl.culture, pl.nation, pl.late);
   }
+  leaderEra() { let m = 0; for (const p of this.P) if (p.alive && p.era > m) m = p.era; return m; }
   notice(pid, text) { this.events.push({ k: 'notice', to: pid, text }); }
   event(e) { this.events.push(e); }
 
@@ -690,6 +703,7 @@ export class World {
       this.removeBuilding(e);
       if (by >= 0) this.P[by].stats.razed++;
       if (pl.advancing === e.id) pl.advancing = null;
+      if (pl.lateResearch === e.id) pl.lateResearch = null;
       if (pl.wonderBuilding === e.id) pl.wonderBuilding = null;
       if (e.wonder) this.event({ k: 'wonder', p: e.owner, what: 'lost', by: by });
       this.event({ k: 'destroy', id: e.id, x: e.cx, y: e.cy, s: e.size, o: e.owner });
@@ -874,6 +888,16 @@ export class World {
         b.wonder = true; b.wonderAt = this.time; b.era = WONDER_ERA;
         const ratio = b.hp / b.maxHp; b.maxHp = Math.round(b.st.hp * WONDER.hpMul); b.hp = b.maxHp * ratio;
         this.event({ k: 'wonder', p: pl.id, what: 'done', hold: wonderHold(this.W) });
+      }
+      return;
+    }
+    if (q.late) {
+      b.qProg += dt;
+      if (b.qProg >= q.time) {
+        b.queue.shift(); b.qProg = 0;
+        pl.lateResearch = null; pl.late = true;
+        this.updateMods(pl);
+        this.event({ k: 'late', p: pl.id });
       }
       return;
     }
@@ -1063,6 +1087,51 @@ export class World {
   }
   score(pl) { return Math.round(pl.stats.gathered / 10 + pl.stats.kills * 5 + pl.stats.razed * 20 + pl.era * 100 + pl.stats.built * 5); }
 
+  // ---------------- Speichern / Laden ----------------
+  // Kompletter Spielzustand als JSON-fähiges Objekt (Wegfindung, Sicht und Raster werden beim Laden neu aufgebaut).
+  serialize() {
+    return {
+      v: 1, settings: this.settings, W: this.W, H: this.H, terrain: Buffer.from(this.terrain).toString('base64'),
+      time: this.time, tickNo: this.tickNo, nextId: this.nextId, mapInfo: this.mapInfo, meteors: this.meteors, nextMeteor: this.nextMeteor || 0,
+      P: this.P.map(({ mods, ...rest }) => rest),
+      units: this.units.filter(u => !u.dead),
+      buildings: this.buildings.filter(b => !b.dead),
+      resources: [...this.resources.values()],
+    };
+  }
+  static restore(room, d) {
+    const w = Object.create(World.prototype);
+    w.room = room; w.settings = d.settings;
+    w.time = d.time; w.tickNo = d.tickNo; w.nextId = d.nextId; w.mapInfo = d.mapInfo;
+    w.W = d.W; w.H = d.H;
+    w.terrain = new Uint8Array(Buffer.from(d.terrain, 'base64'));
+    const N = w.W * w.H;
+    w.pass = new Uint8Array(N); w.occ = new Int32Array(N);
+    for (let i = 0; i < N; i++) w.pass[i] = blockedTerrain(w.terrain[i]) ? 0 : 1;
+    w.blockVer = 1; w.fields = new Map(); w.fieldBudget = 0;
+    w.events = []; w.resChanged = new Set(); w.resRemoved = [];
+    w.meteors = d.meteors || []; w.nextMeteor = d.nextMeteor || 0;
+    w.cellsW = Math.ceil(w.W / CELL); w.cellsH = Math.ceil(w.H / CELL);
+    w.cells = Array.from({ length: w.cellsW * w.cellsH }, () => []);
+    w.bcells = Array.from({ length: w.cellsW * w.cellsH }, () => []);
+    w.resources = new Map(); w.ents = new Map();
+    for (const r of d.resources) {
+      for (let yy = r.y; yy < r.y + r.size; yy++) for (let xx = r.x; xx < r.x + r.size; xx++) { const i = w.idx(xx, yy); w.pass[i] = 0; w.occ[i] = r.id; }
+      w.resources.set(r.id, r); w.ents.set(r.id, r);
+    }
+    w.buildings = d.buildings;
+    for (const b of w.buildings) {
+      for (let yy = b.y; yy < b.y + b.size; yy++) for (let xx = b.x; xx < b.x + b.size; xx++) { const i = w.idx(xx, yy); w.occ[i] = b.id; if (!b.st.walkable) w.pass[i] = 0; }
+      w.bcells[w.cellOf(b.cx, b.cy)].push(b); w.ents.set(b.id, b);
+    }
+    w.units = d.units;
+    for (const u of w.units) w.ents.set(u.id, u);
+    w.P = [];
+    for (const pl of d.P) { pl.mods = playerMods(pl.culture, pl.nation, pl.late); w.P[pl.id] = pl; }
+    w.recount();
+    return w;
+  }
+
   // ---------------- Netzwerk ----------------
   initPayload(pid) {
     const res = [];
@@ -1080,10 +1149,11 @@ export class World {
   }
   privateState(pl) {
     const qs = [];
-    for (const b of this.buildings) if (b.owner === pl.id && b.queue.length) qs.push([b.id, b.queue.map(q => q.wonder ? 'wonder' : q.era != null ? 'era' : unitKey(q.line, Math.max(pl.era, LINES[q.line].minEra), q.unique)), +b.qProg.toFixed(1), +b.queue[0].time.toFixed(1), b.blocked ? 1 : 0]);
+    for (const b of this.buildings) if (b.owner === pl.id && b.queue.length) qs.push([b.id, b.queue.map(q => q.wonder ? 'wonder' : q.late ? 'late' : q.era != null ? 'era' : unitKey(q.line, Math.max(pl.era, LINES[q.line].minEra), q.unique)), +b.qProg.toFixed(1), +b.queue[0].time.toFixed(1), b.blocked ? 1 : 0]);
     return {
       t: 'me', res: Object.fromEntries(RES.map(k => [k, Math.floor(pl.res[k])])), pop: pl.pop, cap: pl.popCap, era: pl.era,
       culture: pl.culture, nation: pl.nation, choice: pl.choice, adv: pl.advancing, wonderB: pl.wonderBuilding, q: qs, alive: pl.alive,
+      late: pl.late, lateR: pl.lateResearch,
     };
   }
   entTuple(e, pid) {

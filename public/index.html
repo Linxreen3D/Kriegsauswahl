@@ -78,7 +78,9 @@
           <div id="settingsForm" class="settings"></div>
         </div>
       </div>
+      <div id="saveInfo" class="save-info hidden"></div>
       <div class="lobby-foot">
+        <button id="loadSaveBtn" class="btn host-only">📂 Spielstand laden</button>
         <span id="lobbyHint" class="muted"></span>
         <button id="startBtn" class="btn primary big host-only">Spiel starten</button>
       </div>
@@ -88,6 +90,15 @@
       </div>
     </div>
   </section>
+
+  <div id="savesDlg" class="modal hidden">
+    <div class="card saves-card">
+      <h2>Spielstand laden</h2>
+      <p class="muted small">Spieler werden über ihren Namen ihrem Reich zugeordnet. Wer fehlt, wird von einem Bot vertreten, bis er beitritt.</p>
+      <div id="savesList" class="saves-list"></div>
+      <button id="savesClose" class="btn">Schließen</button>
+    </div>
+  </div>
 
   <!-- Spiel-HUD -->
   <section id="hud" class="hidden">
@@ -142,10 +153,17 @@
         <h2>Menü</h2>
         <p class="muted">Raumcode: <b id="menuCode"></b></p>
         <button id="menuInvite" class="btn">Einladungslink kopieren</button>
+        <button id="pauseBtn" class="btn host-only">⏸ Pause</button>
+        <button id="saveBtn" class="btn host-only">💾 Spiel speichern</button>
+        <p class="muted small">Alle 5 Spielminuten wird automatisch gespeichert.</p>
         <button id="surrenderBtn" class="btn danger">Aufgeben</button>
         <button id="leaveGame" class="btn">Spiel verlassen</button>
         <button id="closeMenu" class="btn primary">Weiterspielen</button>
       </div>
+    </div>
+
+    <div id="pauseOverlay" class="modal hidden">
+      <div class="card"><h2>⏸ Pausiert</h2><p class="muted">Der Gastgeber hat das Spiel angehalten.</p><button id="pauseResume" class="btn primary host-only">▶ Fortsetzen</button></div>
     </div>
 
     <div id="endScreen" class="modal hidden">

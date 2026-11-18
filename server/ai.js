@@ -1,5 +1,5 @@
 // KI-Gegner: spielt über dieselbe Befehlsschnittstelle wie Menschen.
-import { ERAS, WONDER, CULTURES, BUILDINGS, LINES, RESOURCE_TYPES, unitStats, buildingStats, trainable } from '../shared/rules.js';
+import { ERAS, WONDER, CULTURES, BUILDINGS, LINES, RESOURCE_TYPES, LATE_STAGE, unitStats, buildingStats, trainable, eraCost } from '../shared/rules.js';
 
 const PROFILES = {
   easy: { think: 2.0, workers: 0.6, attackAt: 14, firstAttack: 540, aggression: 0.5, towers: 0 },
@@ -8,8 +8,9 @@ const PROFILES = {
 };
 
 export class AI {
-  constructor(world, pid, difficulty) {
-    this.w = world; this.pid = pid;
+  // defensive: Bot-Vertretung für getrennte Spieler – baut weiter und verteidigt, greift aber nicht an.
+  constructor(world, pid, difficulty, { defensive = false } = {}) {
+    this.w = world; this.pid = pid; this.defensive = defensive;
     this.prof = PROFILES[difficulty] || PROFILES.normal;
     this.next = 1 + Math.random();
     this.lastStorage = -999;
@@ -45,9 +46,11 @@ export class AI {
     }
     // Epochenaufstieg
     if (!pl.advancing && !pl.choice && pl.era < ERAS.length - 1 && towns.length && workers.length >= targetWorkers * 0.6) {
-      const cost = ERAS[pl.era + 1].cost;
+      const cost = eraCost(pl.era + 1, w.leaderEra());
       if (w.canAfford(pl, cost)) this.cmd({ c: 'era', id: towns[0].id });
     }
+    // Zweite Stufe der 2. Industriellen Revolution
+    if (pl.era === LATE_STAGE.era && !pl.late && !pl.lateResearch && !pl.advancing && towns.length && w.canAfford(pl, LATE_STAGE.cost)) this.cmd({ c: 'late', id: towns[0].id });
     // Häuser
     const houseBuilding = building.some(b => b.type === 'house');
     if (pl.popCap < 200 && pl.popCap - pl.pop < 4 + pl.era * 2 && !houseBuilding) this.build('house', workers, 1);
@@ -117,7 +120,8 @@ export class AI {
       if (defenders.length) this.cmd({ c: 'move', ids: defenders.map(u => u.id), x: threat.x, y: threat.y, amove: true });
       return;
     }
-    // Angriff
+    // Angriff (nicht als Vertretung eines getrennten Spielers)
+    if (this.defensive) return;
     const idle = army.filter(u => u.order.t === 'idle');
     const threshold = this.prof.attackAt + pl.era * 3;
     if (w.time > this.prof.firstAttack && (idle.length >= threshold || army.length >= Math.min(120, threshold * 2.5))) {

@@ -1,6 +1,15 @@
-import { TICK_MS, COLORS, DEFAULT_SETTINGS } from '../shared/rules.js';
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, renameSync } from 'node:fs';
+import { join, basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { TICK_MS, COLORS, DEFAULT_SETTINGS, ERAS } from '../shared/rules.js';
 import { World } from './world.js';
 import { AI } from './ai.js';
+
+// Spielstände liegen als JSON im Ordner saves/ (für die Desktop-Version später im Benutzerordner).
+const SAVE_DIR = process.env.FL_SAVES || fileURLToPath(new URL('../saves', import.meta.url));
+const AUTOSAVE_EVERY = 300; // Spielsekunden
+const SUB_DELAY = 20000; // ms bis ein Bot einen getrennten Spieler vertritt
+const safeFile = f => typeof f === 'string' && /^[\w.-]+\.json$/.test(f) && !f.endsWith('.meta.json') ? f : null;
 
 const BOT_NAMES = ['General Ahorn', 'Admiral Kiesel', 'Marschall Eiche', 'Oberst Birke', 'Major Linde', 'Kommandant Fels',
   'General Sturm', 'Admiral Welle', 'Feldherrin Nova', 'Generalin Aster', 'Kapitän Riff', 'Oberst Flint', 'Fürstin Mira',
@@ -19,11 +28,24 @@ export class Room {
     this.hostId = null;
     this.clients = new Set();
     this.chat = [];
+    this.paused = false;
+    this.subs = new Map(); // Spieler-ID -> Bot-Vertretung
+    this.pendingSave = null; // gewählter Spielstand in der Lobby
+    this.lastAutosave = 0;
   }
 
   // ---------- Lobby ----------
   addHuman(ws, name) {
-    if (this.phase !== 'lobby') return this.error(ws, 'Das Spiel läuft bereits.', true);
+    if (this.phase !== 'lobby') {
+      // Wiedereinstieg ohne Token (z. B. anderes Gerät): freien Platz mit gleichem Namen übernehmen
+      const n = String(name || '').trim().toLowerCase();
+      const p = n && this.players.find(x => !x.isBot && !x.connected && x.name.toLowerCase() === n);
+      if (!p) return this.error(ws, 'Das Spiel läuft bereits.', true);
+      p.token = newToken();
+      this.attach(ws, p);
+      this.sysChat(`${p.name} ist wieder da.`);
+      return;
+    }
     if (this.players.length >= this.settings.maxPlayers) return this.error(ws, 'Der Raum ist voll.', true);
     const p = this.createPlayer(name, false);
     p.token = newToken();
@@ -48,6 +70,10 @@ export class Room {
     if (this.phase === 'lobby') this.send(ws, this.lobbyState());
     else this.sendStart(ws);
     this.send(ws, { t: 'chatlog', list: this.chat.slice(-60) });
+    if (this.phase === 'play' && this.subs.has(p.id)) {
+      this.subs.delete(p.id);
+      this.sysChat(`${p.name} übernimmt wieder selbst.`);
+    }
   }
   reconnect(ws, token) {
     const p = this.players.find(x => x.token === token);
@@ -64,7 +90,10 @@ export class Room {
     if (this.phase === 'lobby') {
       setTimeout(() => { if (!p.connected && this.phase === 'lobby' && this.players.includes(p)) this.removePlayer(p); }, 15000);
       this.broadcastLobby();
-    } else this.sysChat(`${p.name} hat die Verbindung verloren.`);
+    } else {
+      this.sysChat(`${p.name} hat die Verbindung verloren.`);
+      setTimeout(() => { if (!p.connected && this.phase === 'play' && this.players.includes(p)) this.addSub(p); }, SUB_DELAY);
+    }
     this.checkEmpty();
   }
   leave(ws) {
@@ -98,9 +127,15 @@ export class Room {
       if (!this.players.some(p => !p.isBot && p.connected)) { clearInterval(this.timer); this.onEmpty(this); }
     }, this.phase === 'lobby' ? 20000 : 5 * 60000);
   }
+  addSub(p) {
+    const w = this.world;
+    if (!w || this.subs.has(p.id) || !w.P[p.id] || !w.P[p.id].alive) return;
+    this.subs.set(p.id, new AI(w, p.id, 'normal', { defensive: true }));
+    this.sysChat(`Ein Bot vertritt ${p.name}, bis er zurück ist (verteidigt nur).`);
+  }
   lobbyState() {
     return {
-      t: 'lobby', code: this.code, hostId: this.hostId, settings: this.settings,
+      t: 'lobby', code: this.code, hostId: this.hostId, settings: this.settings, save: this.pendingSave ? this.pendingSave.meta : null,
       players: this.players.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, isBot: p.isBot, connected: p.connected, difficulty: p.difficulty })),
     };
   }
@@ -145,7 +180,7 @@ export class Room {
         if (['auto', 'small', 'medium', 'large', 'huge'].includes(s.mapSize)) st.mapSize = s.mapSize;
         if (['random', 'continent', 'lakes', 'highlands', 'forest'].includes(s.mapType)) st.mapType = s.mapType;
         if (['low', 'normal', 'high'].includes(s.resources)) st.resources = s.resources;
-        if ('startEra' in s) st.startEra = Math.round(num(s.startEra, 0, 6, st.startEra));
+        if ('startEra' in s) st.startEra = Math.round(num(s.startEra, 0, ERAS.length - 1, st.startEra));
         if ('speed' in s) st.speed = num(s.speed, 0.5, 3, st.speed);
         if ('armageddonMin' in s) st.armageddonMin = Math.round(num(s.armageddonMin, 1, 90, st.armageddonMin));
         if (['easy', 'normal', 'hard'].includes(s.botDifficulty)) { st.botDifficulty = s.botDifficulty; for (const x of this.players) if (x.isBot) x.difficulty = s.botDifficulty; }
@@ -167,12 +202,35 @@ export class Room {
       }
       case 'start':
         if (!isHost || this.phase !== 'lobby') return;
+        if (this.pendingSave) return this.startGame();
         if (this.players.length < 2) return this.error(ws, 'Mindestens 2 Teilnehmer (Spieler oder Bots) nötig.');
         if (this.settings.mode === 'teams' && new Set(this.players.map(x => x.team)).size < 2) return this.error(ws, 'Im Teammodus braucht es mindestens 2 Teams.');
         return this.startGame();
       case 'cmd':
-        if (this.phase === 'play' && this.world) this.world.command(p.id, msg);
+        if (this.phase === 'play' && this.world && !this.paused) this.world.command(p.id, msg);
         return;
+      case 'pause':
+        if (!isHost || this.phase !== 'play') return;
+        this.paused = !this.paused;
+        this.broadcast({ t: 'pause', on: this.paused, by: p.name });
+        return this.sysChat(this.paused ? `${p.name} hat das Spiel pausiert.` : `${p.name} setzt das Spiel fort.`);
+      case 'save': {
+        if (!isHost || this.phase !== 'play') return;
+        try { const f = this.saveGame(false); this.sysChat(`Spiel gespeichert (${f}).`); } catch (e) { this.error(ws, 'Speichern fehlgeschlagen: ' + e.message); }
+        return;
+      }
+      case 'saves':
+        return this.send(ws, { t: 'saves', list: this.listSaves() });
+      case 'loadSave': {
+        if (!isHost || this.phase !== 'lobby') return;
+        if (msg.file == null) { this.pendingSave = null; return this.broadcastLobby(); }
+        const f = safeFile(msg.file);
+        const meta = f && this.readMeta(f);
+        if (!meta) return this.error(ws, 'Spielstand nicht gefunden.');
+        this.pendingSave = { file: f, meta };
+        this.sysChat(`Spielstand gewählt: ${meta.label}. Spieler werden über ihren Namen ihrem Reich zugeordnet.`);
+        return this.broadcastLobby();
+      }
       case 'surrender':
         if (this.phase === 'play' && this.world) this.world.defeat(this.world.P[p.id], true);
         return;
@@ -185,6 +243,7 @@ export class Room {
 
   // ---------- Spiel ----------
   startGame() {
+    if (this.pendingSave) return this.startFromSave();
     // Reihenfolge der Startpositionen mischen, Teams nebeneinander
     this.phase = 'play';
     const seed = (Math.random() * 2 ** 31) | 0;
@@ -199,6 +258,7 @@ export class Room {
     for (const pl of this.world.P) P[pl.id] = pl;
     this.world.P = P;
     this.ais = this.players.filter(p => p.isBot).map(p => new AI(this.world, p.id, p.difficulty || this.settings.botDifficulty));
+    this.subs.clear(); this.paused = false; this.lastAutosave = 0;
     for (const ws of this.clients) { ws.sent = null; this.sendStart(ws); }
     this.sysChat(`Karte: ${this.world.mapInfo.name}. Viel Erfolg!`);
     clearInterval(this.timer);
@@ -208,14 +268,16 @@ export class Room {
     if (!this.world) return;
     ws.sent = null;
     ws.pid = ws.player ? ws.player.id : -1;
-    this.send(ws, this.world.initPayload(ws.pid));
+    this.send(ws, { ...this.world.initPayload(ws.pid), hostId: this.hostId });
+    if (this.paused) this.send(ws, { t: 'pause', on: true });
     if (this.phase === 'end' && this.result) this.send(ws, this.result);
   }
   tick() {
     const w = this.world;
-    if (!w || this.phase !== 'play') return;
+    if (!w || this.phase !== 'play' || this.paused) return;
     const t0 = performance.now();
     for (const ai of this.ais) ai.update();
+    for (const ai of this.subs.values()) ai.update();
     w.tick();
     w.computeVision();
     const evs = w.events; w.events = [];
@@ -236,7 +298,11 @@ export class Room {
       if (sendPriv && ws.pid >= 0 && w.P[ws.pid]) this.send(ws, w.privateState(w.P[ws.pid]));
     }
     const win = w.winners();
-    if (win) this.endGame(win);
+    if (win) return this.endGame(win);
+    if (w.time - this.lastAutosave >= AUTOSAVE_EVERY) {
+      this.lastAutosave = w.time;
+      try { this.saveGame(true); } catch (e) { console.error('Autosave fehlgeschlagen:', e.message); }
+    }
     const ms = performance.now() - t0;
     this.load = this.load ? this.load * 0.95 + ms * 0.05 : ms;
   }
@@ -245,6 +311,7 @@ export class Room {
     w.recordStats();
     this.phase = 'end';
     clearInterval(this.timer); this.timer = null;
+    this.subs.clear(); this.paused = false;
     this.result = {
       t: 'end', reason: w.winReason || 'Sieg', winners: winners.map(p => p.id), duration: Math.round(w.time), mode: this.settings.mode,
       players: w.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, culture: p.culture, nation: p.nation, stats: p.stats, score: w.score(p), history: p.history, defeatedAt: p.defeatedAt })),
@@ -259,6 +326,72 @@ export class Room {
     if (!this.players.some(p => p.id === this.hostId && !p.isBot)) { const h = this.players.find(p => !p.isBot); this.hostId = h ? h.id : null; }
     for (const p of this.players) if (p.ws) this.send(p.ws, { t: 'welcome', token: p.token, id: p.id, code: this.code });
     this.broadcastLobby();
+  }
+
+  // ---------- Speichern / Laden ----------
+  saveGame(auto) {
+    const w = this.world;
+    mkdirSync(SAVE_DIR, { recursive: true });
+    const d = new Date(), pad = n => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
+    const file = auto ? `auto_${this.code}.json` : `${stamp}_${this.code}.json`;
+    const mins = Math.floor(w.time / 60);
+    const meta = {
+      file, auto, date: d.toISOString(), time: Math.round(w.time), map: w.mapInfo.name, code: this.code,
+      label: `${auto ? 'Autosave' : 'Spielstand'} ${d.toLocaleDateString('de-DE')} ${pad(d.getHours())}:${pad(d.getMinutes())} · ${w.mapInfo.name} · ${Math.floor(mins / 60)} h ${mins % 60} min`,
+      players: this.players.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, isBot: p.isBot, difficulty: p.difficulty, era: w.P[p.id] ? w.P[p.id].era : 0, alive: w.P[p.id] ? w.P[p.id].alive : false })),
+    };
+    // erst in Temp-Datei schreiben, dann umbenennen: kein halber Spielstand bei Absturz
+    const tmp = join(SAVE_DIR, file + '.tmp');
+    writeFileSync(tmp, JSON.stringify({ meta, world: w.serialize() }));
+    renameSync(tmp, join(SAVE_DIR, file));
+    writeFileSync(join(SAVE_DIR, file.replace(/\.json$/, '.meta.json')), JSON.stringify(meta));
+    return file;
+  }
+  readMeta(file) {
+    const m = join(SAVE_DIR, file.replace(/\.json$/, '.meta.json'));
+    if (!existsSync(m) || !existsSync(join(SAVE_DIR, file))) return null;
+    try { return JSON.parse(readFileSync(m, 'utf8')); } catch { return null; }
+  }
+  listSaves() {
+    if (!existsSync(SAVE_DIR)) return [];
+    return readdirSync(SAVE_DIR).filter(f => f.endsWith('.meta.json')).map(f => this.readMeta(basename(f).replace(/\.meta\.json$/, '.json'))).filter(Boolean)
+      .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40)
+      .map(m => ({ file: m.file, label: m.label, players: m.players.map(p => ({ name: p.name, isBot: p.isBot, alive: p.alive, era: p.era })) }));
+  }
+  startFromSave() {
+    let data;
+    try { data = JSON.parse(readFileSync(join(SAVE_DIR, this.pendingSave.file), 'utf8')); } catch { this.pendingSave = null; this.broadcastLobby(); return this.sysChat('Spielstand konnte nicht gelesen werden.'); }
+    const slots = data.meta.players;
+    const humans = this.players.filter(p => !p.isBot);
+    const used = new Set();
+    const host = this.players[this.hostId];
+    const np = slots.map((s, i) => {
+      const p = { id: i, name: s.name, color: s.color, team: s.team, isBot: s.isBot, difficulty: s.difficulty, token: null, ws: null, connected: s.isBot };
+      if (!s.isBot) {
+        const h = humans.find(x => !used.has(x) && x.name.toLowerCase() === s.name.toLowerCase());
+        if (h) { used.add(h); p.token = h.token; p.ws = h.ws; p.connected = h.connected; }
+      }
+      return p;
+    });
+    if (!used.size) return this.sysChat('Kein Spielername passt zum Spielstand. Tretet mit denselben Namen bei wie beim Speichern.');
+    // Lobby-Spieler ohne Platz im Spielstand schauen zu
+    for (const h of humans) if (!used.has(h) && h.ws) { h.ws.player = null; this.send(h.ws, { t: 'welcome', token: null, id: -1, code: this.code }); }
+    this.players = np;
+    const hostP = np.find(p => p.ws && host && p.ws === host.ws) || np.find(p => p.ws);
+    this.hostId = hostP ? hostP.id : null;
+    for (const p of np) if (p.ws) { p.ws.player = p; this.send(p.ws, { t: 'welcome', token: p.token, id: p.id, code: this.code }); }
+    this.settings = { ...this.settings, ...data.world.settings };
+    this.world = World.restore(this, data.world);
+    this.phase = 'play';
+    this.ais = np.filter(p => p.isBot).map(p => new AI(this.world, p.id, p.difficulty || this.settings.botDifficulty));
+    this.subs.clear(); this.paused = false; this.lastAutosave = this.world.time;
+    for (const p of np) if (!p.isBot && !p.connected) this.addSub(p);
+    this.pendingSave = null;
+    for (const ws of this.clients) { ws.sent = null; this.sendStart(ws); }
+    this.sysChat(`Spielstand geladen: ${data.meta.label}. Weiter geht's!`);
+    clearInterval(this.timer);
+    this.timer = setInterval(() => this.tick(), TICK_MS);
   }
 
   // ---------- Netzwerk ----------

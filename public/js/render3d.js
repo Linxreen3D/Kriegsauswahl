@@ -9,7 +9,7 @@ import { fabricMat, surcoatMat } from './3d/humans.js';
 import { eraBuilding } from './3d/eras.js';
 import { nationBuilding } from './3d/nations.js';
 import { rng } from './3d/textures.js';
-import { BUILDINGS } from '/shared/rules.js';
+import { BUILDINGS, WONDER_ERA } from '/shared/rules.js';
 
 export const S = 2; // Meter pro Kachel
 const QUALITY = (() => { try { return localStorage.getItem('fl_quality') || 'high'; } catch { return 'high'; } })();
@@ -436,7 +436,7 @@ export class Renderer3D {
   }
   // ---------- Gebäude-Modelle ----------
   buildingModel(type, era, color, nation) {
-    era = Math.max(0, Math.min(7, era | 0));
+    era = modelEra(era);
     // Nationaler Stil gilt ab dem Frühen Mittelalter (für Mittelalter und Industrialisierung je ein Modell)
     const nk = nation && era >= 3 ? nation + (era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : '';
     const key = type + '|' + era + '|' + color + '|' + nk;
@@ -537,7 +537,7 @@ export class Renderer3D {
           this.drawFigure('rider' + Math.max(1, Math.min(5, era)), rm, color, e.id + 1);
         } else {
           const pose = this.poseOf(e, now);
-          const v = line === 'worker' ? 'worker_' + pose : (line === 'rng' ? 'rng' : 'inf') + era + '_' + pose;
+          const v = line === 'worker' ? 'worker_' + pose : (line === 'rng' ? 'rng' : 'inf') + Math.min(6, era) + '_' + pose;
           this.drawFigure(v, m4, color, e.id);
         }
       } else {
@@ -661,7 +661,7 @@ export class Renderer3D {
       g.strokeRect(Math.min(b.x0, b.x1) + 0.5, Math.min(b.y0, b.y1) + 0.5, Math.abs(b.x1 - b.x0), Math.abs(b.y1 - b.y0));
     }
   }
-  buildingKey(e) { const p = this.G.players[e.owner], era = Math.max(0, Math.min(7, e.era | 0)), n = p && p.nation; const nk = n && era >= 3 ? n + (era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : ''; return e.def.key + '|' + era + '|' + (p ? p.color : '#888888') + '|' + nk; }
+  buildingKey(e) { const p = this.G.players[e.owner], era = modelEra(e.era), n = p && p.nation; const nk = n && era >= 3 ? n + (era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : ''; return e.def.key + '|' + era + '|' + (p ? p.color : '#888888') + '|' + nk; }
 
   drawMinimap(canvas, ui) {
     const G = this.G, g = canvas.getContext('2d');
@@ -688,6 +688,10 @@ function tank(color) {
   add(new THREE.BoxGeometry(0.9, 0.08, 0.5), cloth, 0, 1.57, -0.5);
   return g;
 }
+// Gebäude-Epoche -> vorhandenes Modell: Weltwunder (WONDER_ERA) nutzt das Wundermodell (7),
+// der Kalte Krieg vorerst die Modelle der 2. Industriellen Revolution, bis eigene Modelle (Blender) kommen.
+function modelEra(era) { era = era | 0; return era >= WONDER_ERA ? 7 : Math.max(0, Math.min(6, era)); }
+
 function cannon(era, color) {
   const g = new THREE.Group(), modern = era >= 5, wood = U.wood(), metal = U.mat(modern ? '#3a3d30' : '#2e2e2e', 0.4, 0.7);
   const add = (geo, m, x, y, z, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = o.receiveShadow = true; g.add(o); return o; };

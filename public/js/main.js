@@ -2,7 +2,7 @@ import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -10,11 +10,11 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 
 // ---------------- Symbole ----------------
 const UNIT_ICONS = {
-  worker: ['👷', '👷', '👷', '👷', '👷', '👷', '👷'],
-  inf: ['🪓', '🔱', '🛡', '⚔', '🗡', '🪖', '🪖'],
-  rng: ['🪨', '🏹', '🏹', '🏹', '🔫', '🔫', '🔫'],
-  cav: ['', '🛞', '🐎', '🏇', '🏇', '🏇', '🚜'],
-  sie: ['', '', '🪨', '🪵', '💣', '💣', '💥'],
+  worker: ['👷', '👷', '👷', '👷', '👷', '👷', '👷', '👷'],
+  inf: ['🪓', '🔱', '🛡', '⚔', '🗡', '🪖', '🪖', '🪖'],
+  rng: ['🪨', '🏹', '🏹', '🏹', '🔫', '🔫', '🔫', '🚀'],
+  cav: ['', '🛞', '🐎', '🏇', '🏇', '🏇', '🚜', '🚜'],
+  sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
 const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
@@ -83,6 +83,8 @@ function handle(m) {
     case 'me': onMe(m); break;
     case 'end': onEnd(m); break;
     case 'chat': addChat(m); break;
+    case 'pause': G.paused = m.on; $('pauseOverlay').classList.toggle('hidden', !m.on); $('pauseBtn').textContent = m.on ? '▶ Fortsetzen' : '⏸ Pause'; break;
+    case 'saves': showSaves(m.list); break;
     case 'chatlog': $('lobbyChatLog').innerHTML = ''; m.list.forEach(c => addChat(c, true)); break;
     case 'error':
       if (m.fatal) { wantSession = null; sessionStorage.removeItem('fl_session'); showScreen('home'); $('homeError').textContent = m.text; }
@@ -94,6 +96,12 @@ function handle(m) {
       break;
     default:
   }
+}
+
+function fmtDur(s) { s = Math.round(s); return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min${s % 60 ? ' ' + (s % 60) + ' s' : ''}`; }
+function showSaves(list) {
+  $('savesList').innerHTML = list.length ? list.map(x => `<button class="btn" data-file="${esc(x.file)}">${esc(x.label)}<span class="who">${x.players.map(p => esc(p.name) + ' · ' + esc(ERAS[p.era] ? ERAS[p.era].short : '') + (p.alive ? '' : ' ☠')).join(' | ')}</span></button>`).join('') : '<p class="muted">Noch keine Spielstände vorhanden.</p>';
+  $('savesDlg').classList.remove('hidden');
 }
 
 function showScreen(name) {
@@ -156,12 +164,16 @@ function onLobby(m) {
     el.value = String(v);
     if (d.type === 'range') $('o_' + d.key).textContent = d.fmt(v);
   }
-  $('lobbyHint').textContent = host ? (m.players.length < 2 ? 'Lade Freunde ein oder füge Bots hinzu.' : 'Bereit, wenn du es bist.') : 'Warte, bis der Gastgeber das Spiel startet…';
+  $('saveInfo').classList.toggle('hidden', !m.save);
+  if (m.save) $('saveInfo').innerHTML = `📂 <b>${esc(m.save.label)}</b><br><span class="muted small">Reiche: ${m.save.players.map(p => esc(p.name) + (p.isBot ? ' (Bot)' : '')).join(', ')}. Tritt mit demselben Namen bei, um dein Reich zu übernehmen.</span>` + (host ? ' <button id="unloadSave" class="btn small">Neues Spiel statt Spielstand</button>' : '');
+  $('lobbyHint').textContent = m.save ? (host ? 'Starten setzt den Spielstand fort.' : 'Der Gastgeber setzt einen Spielstand fort.') : host ? (m.players.length < 2 ? 'Lade Freunde ein oder füge Bots hinzu.' : 'Bereit, wenn du es bist.') : 'Warte, bis der Gastgeber das Spiel startet…';
 }
 
 // ---------------- Spielstart ----------------
 function onStart(m) {
   G.phase = 'play';
+  if (m.hostId != null) { G.hostId = m.hostId; document.body.classList.toggle('is-host', m.hostId === m.you); }
+  G.paused = false; $('pauseOverlay').classList.add('hidden'); $('pauseBtn').textContent = '⏸ Pause';
   G.you = m.you; G.settings = m.settings; G.players = m.players;
   G.W = m.w; G.H = m.h; G.wonderHold = m.wonderHold;
   const bin = atob(m.terrain);
@@ -305,6 +317,10 @@ function onEvent(e, now) {
       if (e.what === 'cancel' && !mine) chatLine(`${pname(e.p)} hat den Bau des Weltwunders abgebrochen.`, true);
       break;
     }
+    case 'late':
+      if (e.p === G.you) { notice(`🔬 ${LATE_STAGE.name} erforscht – deine Armee rüstet auf!`, 'good'); sfx.win(); updateCmdCard(true); }
+      else chatLine(`${pname(e.p)} hat „${LATE_STAGE.name}“ erforscht.`, true);
+      break;
     case 'era':
       if (e.p === G.you) { notice(`${ERAS[e.era].name} erreicht!`, 'good'); sfx.win(); updateCmdCard(true); }
       else chatLine(`${pname(e.p)} erreicht die ${ERAS[e.era].name}.`, true);
@@ -386,7 +402,7 @@ function addChat(c, silent) {
 // ---------------- Auswahl-Hilfen ----------------
 function myStats(e) {
   const p = G.players[e.owner];
-  const mods = p ? playerMods(p.culture, p.nation) : null;
+  const mods = p ? playerMods(p.culture, p.nation, p.id === G.you && G.me.late) : null;
   if (e.def.kind === 'u') return unitStats(e.def.line, e.def.era, e.def.unique || null, mods);
   return buildingStats(e.def.key, e.era || 0, mods);
 }
@@ -490,7 +506,7 @@ function ghostCells(type, wx, wy) {
 function enterBuildMode(type) {
   const workers = selectedOwn().filter(e => e.def.kind === 'u' && e.def.cls === 'wrk');
   if (!workers.length) return;
-  const st = buildingStats(type, G.me.era, playerMods(G.me.culture, G.me.nation));
+  const st = buildingStats(type, G.me.era, playerMods(G.me.culture, G.me.nation, G.me.late));
   if (!affordable(st.cost)) { notice('Nicht genug Rohstoffe.', 'bad'); return; }
   UI.mode = { build: type };
   UI.wallStart = null;
@@ -523,7 +539,7 @@ function updateCmdCard(force) {
   const own = selectedOwn();
   const slots = new Array(15).fill(null);
   const put = (key, b) => { const i = SLOT_KEYS.indexOf(key); if (i >= 0) slots[i] = { ...b, key }; };
-  const mods = playerMods(G.me.culture, G.me.nation);
+  const mods = playerMods(G.me.culture, G.me.nation, G.me.late);
   const era = G.me.era;
   if (UI.mode && UI.mode.build) {
     put('C', { icon: '✕', title: 'Abbrechen (Esc)', fn: cancelMode });
@@ -563,16 +579,24 @@ function updateCmdCard(force) {
           });
         });
         if (type === 'town' && era < ERAS.length - 1) {
-          const next = ERAS[era + 1];
+          const next = ERAS[era + 1], leader = Math.max(0, ...Object.values(G.players).filter(p => p && p.alive).map(p => p.era));
+          const cost = eraCost(era + 1, leader), help = cost !== next.cost;
           put('W', {
-            icon: '⬆', title: `Aufstieg: ${next.name}`, cost: next.cost, desc: `Dauer ${next.time} s. Schaltet neue Einheiten und Gebäude frei` + (era + 1 === 1 ? ' – danach wählst du eine Kultur.' : era + 1 === 3 ? ' – danach wählst du eine Nation.' : '.'),
-            off: !affordable(next.cost) || !!G.me.adv || !!G.me.choice, fn: () => {
+            icon: '⬆', title: `Aufstieg: ${next.name}`, cost, desc: `Dauer ${fmtDur(next.time)}. Schaltet neue Einheiten und Gebäude frei` + (era + 1 === 1 ? ' – danach wählst du eine Kultur.' : era + 1 === 3 ? ' – danach wählst du eine Nation.' : '.') + (help ? ' Aufholhilfe: billiger, weil du hinter dem Führenden liegst.' : ''),
+            off: !affordable(cost) || !!G.me.adv || !!G.me.choice || !!G.me.lateR, fn: () => {
               if (G.me.choice) { G.choiceDismissed = false; showChoice(); return; }
               cmd({ c: 'era', id: same[0].id });
             },
           });
         }
-        if (type === 'town' && era === ERAS.length - 1 && !same.some(b => b.era === 7)) {
+        if (type === 'town' && era === LATE_STAGE.era && !G.me.late) {
+          put('R', {
+            icon: '🔬', title: `Forschung: ${LATE_STAGE.name}`, cost: LATE_STAGE.cost,
+            desc: `Dauer ${fmtDur(LATE_STAGE.time)}. Zweite Stufe der Epoche (1914–1945): Militäreinheiten dieser Epoche werden zu Panzern, MG-Schützen und schweren Haubitzen (+20 % Leben und Angriff).`,
+            off: !affordable(LATE_STAGE.cost) || !!G.me.adv || !!G.me.lateR, fn: () => cmd({ c: 'late', id: same[0].id }),
+          });
+        }
+        if (type === 'town' && era === ERAS.length - 1 && !same.some(b => b.era === WONDER_ERA)) {
           put('W', {
             icon: '🏛', title: 'Weltwunder errichten', cost: WONDER.cost,
             desc: `Baut dieses Haupthaus in ${Math.round(WONDER.time / 60)} Minuten zum Weltwunder aus. Hältst du es danach ${Math.round((G.wonderHold || WONDER.hold) / 60)} Minuten, gewinnst du das Spiel. Alle Spieler werden gewarnt!`,
@@ -635,7 +659,7 @@ function updateSelInfo() {
     if (e.def.kind === 'b' && e.owner === G.you) {
       const q = (G.me.q || []).find(x => x[0] === e.id);
       if (q) {
-        queue = '<div class="queue">' + q[1].map((k, i) => `<div class="qi ${i === 0 && q[4] ? 'blocked' : ''}" data-cancel="${e.id}:${i}" title="${i === 0 && q[4] ? 'Bevölkerungslimit erreicht – baue Häuser! ' : ''}Klicken zum Abbrechen">${k === 'era' ? '⬆' : k === 'wonder' ? '🏛' : keyIcon(k)}${i === 0 ? `<span class="bar" style="width:${Math.min(100, q[2] / q[3] * 100)}%"></span>` : ''}</div>`).join('') + '</div>';
+        queue = '<div class="queue">' + q[1].map((k, i) => `<div class="qi ${i === 0 && q[4] ? 'blocked' : ''}" data-cancel="${e.id}:${i}" title="${i === 0 && q[4] ? 'Bevölkerungslimit erreicht – baue Häuser! ' : ''}Klicken zum Abbrechen">${k === 'era' ? '⬆' : k === 'wonder' ? '🏛' : k === 'late' ? '🔬' : keyIcon(k)}${i === 0 ? `<span class="bar" style="width:${Math.min(100, q[2] / q[3] * 100)}%"></span>` : ''}</div>`).join('') + '</div>';
       }
     }
     html = `<div class="sel-main"><div class="portrait" style="border-color:${p ? p.color : '#888'}">${iconOf(e.def)}</div>
@@ -943,6 +967,13 @@ function setupUi() {
   $('soundBtn').textContent = sfx.enabled ? '🔊' : '🔇';
   $('menuBtn').onclick = () => $('menu').classList.toggle('hidden');
   $('closeMenu').onclick = () => $('menu').classList.add('hidden');
+  $('pauseBtn').onclick = () => send({ t: 'pause' });
+  $('pauseResume').onclick = () => send({ t: 'pause' });
+  $('saveBtn').onclick = () => { send({ t: 'save' }); $('menu').classList.add('hidden'); };
+  $('loadSaveBtn').onclick = () => send({ t: 'saves' });
+  $('savesClose').onclick = () => $('savesDlg').classList.add('hidden');
+  $('savesList').onclick = e => { const b = e.target.closest('[data-file]'); if (b) { send({ t: 'loadSave', file: b.dataset.file }); $('savesDlg').classList.add('hidden'); } };
+  $('saveInfo').onclick = e => { if (e.target.id === 'unloadSave') send({ t: 'loadSave', file: null }); };
   $('scoreBtn').onclick = () => { $('scorePanel').classList.toggle('hidden'); updateScore(); };
   $('idleBtn').onclick = cycleIdle;
   $('surrenderBtn').onclick = () => { if (confirm('Wirklich aufgeben?')) { send({ t: 'surrender' }); $('menu').classList.add('hidden'); } };
