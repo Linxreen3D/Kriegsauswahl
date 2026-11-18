@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Frontlinien 3D Vorschau</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; font-family: Inter, sans-serif; color: #e6ebf5; }
+  #c { display: block; width: 1920px; height: 1080px; }
+  .title { position: absolute; left: 48px; bottom: 44px; font-family: Rajdhani, sans-serif; text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+  .title .t { font-size: 64px; font-weight: 700; letter-spacing: .12em; }
+  .title .t span { color: #e6483d; }
+  .title .s { font-size: 28px; font-weight: 600; letter-spacing: .06em; opacity: .92; }
+  .lbl { position: absolute; transform: translateX(-50%); font-family: Rajdhani, sans-serif; font-size: 30px; font-weight: 700; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+  .labels { position: absolute; left: 0; right: 0; top: 860px; display: flex; justify-content: center; gap: 0; font-family: Rajdhani, sans-serif; }
+  .labels div { width: 236px; text-align: center; font-size: 26px; font-weight: 700; color: #2a2a2a; text-shadow: 0 1px 0 rgba(255,255,255,.6); }
+  /* HUD */
+  .hud { position: absolute; inset: 0; pointer-events: none; }
+  .top { position: absolute; top: 0; left: 0; right: 0; height: 56px; background: linear-gradient(180deg, rgba(10,14,24,.92), rgba(10,14,24,.7)); border-bottom: 1px solid rgba(255,255,255,.12); display: flex; align-items: center; gap: 10px; padding: 0 16px; font-family: Rajdhani, sans-serif; }
+  .res { display: flex; align-items: center; gap: 8px; padding: 4px 14px; border-radius: 10px; background: rgba(255,255,255,.07); font-size: 24px; font-weight: 700; }
+  .era { margin-left: auto; padding: 5px 16px; border-radius: 99px; background: #1e2b45; color: #f2b134; font-size: 20px; font-weight: 700; letter-spacing: .05em; }
+  .bottom { position: absolute; left: 14px; right: 14px; bottom: 14px; height: 230px; display: flex; gap: 12px; }
+  .panel { background: rgba(13,20,34,.86); border: 1px solid rgba(148,170,210,.2); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+  .mini { width: 230px; height: 230px; padding: 0; overflow: hidden; }
+  .sel { flex: 1; padding: 16px; display: flex; gap: 16px; }
+  .portrait { width: 110px; height: 110px; border-radius: 14px; border: 2px solid #2f6fd8; background: #0c1424; display: grid; place-items: center; font-size: 56px; }
+  .sel h3 { margin: 0; font-family: Rajdhani, sans-serif; font-size: 30px; }
+  .sel .sub { color: #8d9ab3; font-size: 15px; }
+  .grid { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .grid div { width: 54px; height: 54px; border-radius: 10px; background: #172238; border: 1px solid #2b3b5a; display: grid; place-items: center; font-size: 26px; position: relative; }
+  .grid div b { position: absolute; right: 4px; bottom: 0; font-family: Rajdhani; font-size: 15px; color: #f2b134; }
+  .cmd { width: 360px; padding: 10px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+  .cmd div { border-radius: 12px; background: #172238; border: 1px solid #2b3b5a; display: grid; place-items: center; font-size: 28px; position: relative; }
+  .cmd div i { position: absolute; top: 2px; left: 6px; font-size: 11px; font-style: normal; color: #8d9ab3; }
+  .notice { position: absolute; top: 74px; left: 50%; transform: translateX(-50%); padding: 10px 22px; border-radius: 12px; background: rgba(74,29,29,.92); border: 1px solid #7a2c2c; font-size: 18px; }
+</style>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="overlay"></div>
+<script type="module">
+import { setup, SCENES } from './scenes.js';
+const name = new URLSearchParams(location.search).get('scene') || 'stone';
+const S = SCENES[name];
+const ctx = setup(document.getElementById('c'), S.opts);
+S.fn(ctx);
+ctx.composer.render();
+const ov = document.getElementById('overlay');
+const titles = {
+  stone: ['Steinzeit', 'Sammeln, siedeln, überleben'],
+  medieval: ['Mittelalter', 'Belagerung der roten Burg'],
+  modern: ['Moderne', 'Panzer rollen an die Front'],
+  eras: ['Sieben Epochen', 'Von der Keule bis zum Panzer'],
+};
+if (titles[name]) ov.innerHTML = `<div class="title"><div class="t"><span>◆</span> FRONTLINIEN</div><div class="s">${titles[name][0]} · ${titles[name][1]}</div></div>`;
+if (name === 'eras') ['Steinzeit', 'Bronzezeit', 'Antike', 'Mittelalter', 'Renaissance', 'Industriezeit', 'Moderne'].forEach((t, i) => {
+  const p = ctx.labelPts[i].clone().project(ctx.camera);
+  ov.innerHTML += `<div class="lbl" style="left:${(p.x + 1) / 2 * 1920}px;top:${(1 - p.y) / 2 * 1080}px">${t}</div>`;
+});
+if (name === 'hud') ov.innerHTML = `<div class="hud">
+  <div class="top"><div class="res">🍖 1240</div><div class="res">🪵 860</div><div class="res">🪨 410</div><div class="res">🪙 975</div><div class="res">👥 84/100</div><div class="era">🐎 Mittelalter · Reiterbund</div></div>
+  <div class="notice">⚠ Deine Burg wird angegriffen!</div>
+  <div class="bottom">
+    <div class="panel mini"><canvas id="mm" width="230" height="230"></canvas></div>
+    <div class="panel sel"><div class="portrait">🏇</div><div><h3>Ritter ×12</h3><div class="sub">Blaues Königreich · Angriff 15 · Leben 220 · Tempo 2.8</div>
+      <div class="grid"><div>🏇<b>12</b></div><div>⚔<b>16</b></div><div>🏹<b>12</b></div><div>🪵<b>2</b></div></div></div></div>
+    <div class="panel cmd">${['⚔', '✋', '🛡', '🚩', '🗑', '', '', '', '', '', '', '', '', '', ''].map((c, i) => `<div>${c ? `<i>${'QWERTASDFGYXCVB'[i]}</i>` : ''}${c}</div>`).join('')}</div>
+  </div></div>`;
+if (name === 'hud') {
+  const g = document.getElementById('mm').getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 230, 230); gr.addColorStop(0, '#5d8c3a'); gr.addColorStop(1, '#6f9a44'); g.fillStyle = gr; g.fillRect(0, 0, 230, 230);
+  g.fillStyle = '#3fb0d0'; g.beginPath(); g.moveTo(0, 30); g.bezierCurveTo(40, 60, 60, 110, 20, 230); g.lineTo(0, 230); g.fill();
+  g.fillStyle = '#2f5a2a'; for (let i = 0; i < 160; i++) { g.fillRect(140 + Math.random() * 80, 10 + Math.random() * 60, 3, 3); g.fillRect(20 + Math.random() * 60, 150 + Math.random() * 60, 3, 3); }
+  g.fillStyle = '#d8402f'; g.fillRect(80, 70, 30, 26); g.fillStyle = '#2f6fd8'; g.fillRect(110, 110, 24, 18); g.fillRect(180, 170, 14, 12);
+  g.fillStyle = '#e2b12e'; g.fillRect(30, 20, 12, 10); g.fillStyle = '#3aa24a'; g.fillRect(190, 200, 12, 10);
+  g.strokeStyle = '#fff'; g.lineWidth = 2; g.strokeRect(70, 60, 90, 60);
+}
+window.__ready = true;
+</script>
+</body>
+</html>
