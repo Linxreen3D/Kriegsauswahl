@@ -79,6 +79,27 @@ Danach http://localhost:3000 öffnen. Den Port änderst du mit `PORT=8080 npm st
 Im Spiel: **Neuen Raum erstellen** → **Einladungslink kopieren** → Freunde treten bei → Bots und
 Einstellungen wählen → **Spiel starten**.
 
+## 3D-Grafik
+
+Der Client rendert das Spiel in 3D mit Three.js. Der Spielserver ist unverändert.
+
+- **Gelände** entsteht aus der Serverkarte, mit überblendeten Texturen für Gras, Erde, Fels und Sand, dazu Wasser,
+  Gras und Bäume.
+- **Einheiten** sind vorberechnete, detaillierte Figuren mit etwa 3.000 Dreiecken. Sie haben eine Lauf-, Angriffs- und
+  Zielhaltung und werden pro Typ in einem Durchgang gezeichnet (Instancing). Sie tragen Kleidung und Wappen in der
+  Teamfarbe.
+- **Gebäude** wachsen beim Bau aus dem Boden, ab halbem Schaden brennen sie.
+- **Nebel des Krieges** wird im Shader berechnet: Unerkundetes ist dunkel, Erkundetes entsättigt.
+- **Grafikqualität**: In der Browser-Konsole `localStorage.fl_quality = 'low' | 'medium' | 'high'` setzen und neu laden.
+
+Einheiten neu erzeugen (nach Änderungen an `prototype3d/v2/humans.js`):
+
+```bash
+cd prototype3d && npm install
+python3 -m http.server 8099 &
+node bake.cjs
+```
+
 ## Technik
 
 - Der Server ist autoritativ und rechnet mit 10 Ticks pro Sekunde.

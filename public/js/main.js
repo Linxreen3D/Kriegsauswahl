@@ -1,4 +1,4 @@
-import { Renderer, TS } from './render.js';
+import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
@@ -186,7 +186,7 @@ function onStart(m) {
   $('menuCode').textContent = G.code;
   renderer.setMap(G);
   renderer.resize();
-  renderer.cam.z = 1.1;
+  renderer.cam.z = 1.7;
   renderer.cam.x = m.start.x + 0.5; renderer.cam.y = m.start.y + 2;
   renderer.clampCam();
   G.home = { x: m.start.x + 0.5, y: m.start.y + 0.5 };
@@ -388,6 +388,7 @@ function setSelection(ids, add = false) {
   updateCmdCard(true);
 }
 function entAt(wx, wy) {
+  if (mouse.inside && renderer.pickUnit) { const pu = renderer.pickUnit(mouse.x, mouse.y); if (pu) return pu; }
   let best = null, bd = Infinity;
   for (const e of G.ents.values()) {
     if (e.def.kind !== 'u') continue;
@@ -688,6 +689,7 @@ function setupInput() {
       pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
       down = null; UI.box = null; return;
     }
+    mouse.x = e.clientX; mouse.y = e.clientY; mouse.inside = true;
     const [wx, wy] = renderer.toWorld(e.clientX, e.clientY);
     if (e.button === 1) { pan = { x: e.clientX, y: e.clientY }; e.preventDefault(); return; }
     if (e.button === 2) {
@@ -713,14 +715,14 @@ function setupInput() {
     if (pinch && pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y), cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
-      const s = renderer.cam.z * TS;
+      const s = renderer.pxPerTile();
       renderer.cam.x -= (cx - pinch.cx) / s; renderer.cam.y -= (cy - pinch.cy) / s;
       renderer.zoomAt(cx, cy, d / pinch.d);
       pinch = { d, cx, cy };
       return;
     }
     if (pan) {
-      const s = renderer.cam.z * TS;
+      const s = renderer.pxPerTile();
       renderer.cam.x -= (e.clientX - pan.x) / s; renderer.cam.y -= (e.clientY - pan.y) / s; renderer.clampCam();
       pan = { x: e.clientX, y: e.clientY }; return;
     }
@@ -728,7 +730,7 @@ function setupInput() {
       if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) down.moved = true;
       if (down.moved) {
         if (down.touch) { // Touch: Kamera verschieben
-          const s = renderer.cam.z * TS;
+          const s = renderer.pxPerTile();
           renderer.cam.x -= (e.clientX - (down.lx ?? down.x)) / s; renderer.cam.y -= (e.clientY - (down.ly ?? down.y)) / s; renderer.clampCam();
           down.lx = e.clientX; down.ly = e.clientY;
         } else UI.box = { x0: down.x, y0: down.y, x1: e.clientX, y1: e.clientY };
@@ -744,15 +746,15 @@ function setupInput() {
     const d = down; down = null;
     const box = UI.box; UI.box = null;
     if (box && d.moved && !d.touch) {
-      const [ax, ay] = renderer.toWorld(Math.min(box.x0, box.x1), Math.min(box.y0, box.y1));
-      const [bx, by] = renderer.toWorld(Math.max(box.x0, box.x1), Math.max(box.y0, box.y1));
-      const inBox = [...G.ents.values()].filter(x => x.owner === G.you && x.def.kind === 'u' && x.rx >= ax && x.rx <= bx && x.ry >= ay && x.ry <= by);
+      const bx0 = Math.min(box.x0, box.x1), bx1 = Math.max(box.x0, box.x1), by0 = Math.min(box.y0, box.y1), by1 = Math.max(box.y0, box.y1);
+      const inScr = (wx, wy, up = 1) => { const [sx, sy] = renderer.toScreen(wx, wy, up); return sx >= bx0 && sx <= bx1 && sy >= by0 && sy <= by1; };
+      const inBox = [...G.ents.values()].filter(x => x.owner === G.you && x.def.kind === 'u' && inScr(x.rx, x.ry));
       // Militär bevorzugen, wenn gemischt
       const mil = inBox.filter(x => x.def.cls !== 'wrk');
       const pickList = mil.length && mil.length < inBox.length && !d.shift ? mil : inBox;
       if (pickList.length) setSelection(pickList.map(x => x.id), d.shift);
       else {
-        const blds = [...G.ents.values()].filter(x => x.owner === G.you && x.def.kind === 'b' && x.x + 1 >= ax && x.x <= bx && x.y + 1 >= ay && x.y <= by);
+        const blds = [...G.ents.values()].filter(x => x.owner === G.you && x.def.kind === 'b' && inScr(x.x + 1, x.y + 1, 1.5));
         if (blds.length) setSelection(blds.map(x => x.id), d.shift); else if (!d.shift) setSelection([]);
       }
       return;
@@ -768,8 +770,7 @@ function setupInput() {
       const now = performance.now();
       if (now - lastClick.t < 350 && lastClick.id === t.id && t.owner === G.you) {
         // Doppelklick: alle gleichen auf dem Bildschirm
-        const [x0, y0] = renderer.toWorld(0, 0), [x1, y1] = renderer.toWorld(renderer.vw, renderer.vh);
-        setSelection([...G.ents.values()].filter(x => x.owner === G.you && x.def.key === t.def.key && x.rx >= x0 && x.rx <= x1 && x.ry >= y0 && x.ry <= y1).map(x => x.id));
+        setSelection([...G.ents.values()].filter(x => { if (x.owner !== G.you || x.def.key !== t.def.key) return false; const [sx, sy, sz] = renderer.toScreen(x.rx ?? x.x, x.ry ?? x.y); return sz < 1 && sx >= 0 && sy >= 0 && sx <= renderer.vw && sy <= renderer.vh; }).map(x => x.id));
       } else if (d.shift && t.owner === G.you) {
         if (G.selected.has(t.id)) { G.selected.delete(t.id); updateCmdCard(true); } else setSelection([t.id], true);
       } else setSelection([t.id]);
@@ -942,7 +943,7 @@ function loop(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
   if ((G.phase === 'play' || G.phase === 'end') && G.terrain) {
     // Kamera: Pfeiltasten & Bildschirmrand
-    const sp = 22 / renderer.cam.z * dt;
+    const sp = 26 / renderer.cam.z * dt;
     let dx = 0, dy = 0;
     if (keys.has('ArrowLeft')) dx -= 1; if (keys.has('ArrowRight')) dx += 1; if (keys.has('ArrowUp')) dy -= 1; if (keys.has('ArrowDown')) dy += 1;
     if (mouse.inside && document.hasFocus() && !UI.box) {
@@ -964,8 +965,7 @@ function loop(now) {
     if (now - lastHud > 200) { lastHud = now; updateHud(); }
     if (now - lastMini > 250) { lastMini = now; renderer.drawMinimap($('minimap'), UI); }
   } else if (G.phase === 'home' || G.phase === 'lobby') {
-    const c = renderer.ctx; c.setTransform(1, 0, 0, 1, 0, 0);
-    if (!G.bgDrawn) { G.bgDrawn = true; drawMenuBackground(); }
+    /* Menühintergrund per CSS */
   }
 }
 function drawMenuBackground() {
@@ -983,7 +983,8 @@ function drawMenuBackground() {
 
 async function init() {
   setupUi();
-  renderer = new Renderer($('game'));
+  renderer = new Renderer3D($('game'), $('overlay'));
+  await renderer.init();
   window.__G = G; window.__R = renderer; // Debug-Zugriff
   setupInput();
   requestAnimationFrame(loop);

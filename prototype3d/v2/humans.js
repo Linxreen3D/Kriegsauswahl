@@ -51,14 +51,14 @@ const HAIRC = ['#2a1d14', '#4a3018', '#6a4a24', '#151210', '#8a6a3a'];
 // ---------- Skelett je Haltung ----------
 function skeleton(pose, weapon, hasShield) {
   const J = { hip: [0, 0.95, 0] };
-  const walk = pose === 'walk' ? 0.32 : pose === 'charge' ? 0.42 : 0;
+  const walk = pose === 'walk' || pose === 'walk2' ? 0.32 : pose === 'charge' ? 0.42 : 0;
   for (const s of [-1, 1]) {
     const k = s > 0 ? 'R' : 'L';
     const hip = [s * 0.095, 0.93, 0];
     let knee, ankle;
     if (pose === 'ride') { knee = [s * 0.21, 0.9, 0.3]; ankle = [s * 0.23, 0.5, 0.24]; }
     else if (walk) {
-      const fwd = s > 0;
+      const fwd = pose === 'walk2' ? s < 0 : s > 0;
       knee = fwd ? [s * 0.1, 0.52, 0.17] : [s * 0.1, 0.51, -0.12];
       ankle = fwd ? [s * 0.1, 0.09, 0.26] : [s * 0.1, 0.16, -0.36];
     } else { knee = [s * 0.105, 0.51, 0.02]; ankle = [s * 0.11, 0.09, -0.01]; }
@@ -143,6 +143,7 @@ function outfitFor(era, weapon) {
   if (era === 5) return 'coat';
   return 'modern';
 }
+export { fabricMat, surcoatMat };
 export function soldierR(o = {}) {
   const { color = '#1f4fa8', era = 3, weapon = 'sword', seed = 1, pose = 'idle', shield: hasShield = false, helmet = true, greatHelm = null, civilian = false } = o;
   const r = rng(seed * 11 + 7);
@@ -150,17 +151,17 @@ export function soldierR(o = {}) {
   const gHelm = greatHelm ?? (outfit === 'mail' && weapon === 'sword' && seed % 3 === 0);
   const skinC = SKIN[seed % SKIN.length], hairC = HAIRC[(seed * 3) % HAIRC.length];
   const beard = seed % 3 !== 1;
-  const key = [outfit, pose, weapon, hasShield, helmet, gHelm, color, seed % 5, era].join('|');
+  const key = [outfit, pose, weapon, hasShield, helmet, gHelm, color, seed % 5, era, o.cell || 0].join('|');
   let layers = geoCache.get(key);
   if (!layers) {
     const J = skeleton(pose, weapon, hasShield), L = parts(J);
     const all = Object.values(J).filter(Array.isArray);
-    const B = bounds(all, 0.14), cell = 0.014;
+    const B = bounds(all, 0.14), cell = o.cell || 0.014, fine = o.cell ? o.cell * 0.6 : 0.007;
     const headB = bounds([J.head, J.neck], 0.16);
     layers = [];
     const add = (sdf, matKey, b = B, c = cell, uvScale = 1) => { const g = S.mesh(sdf, b, c, { uvScale }); if (g.index.count) layers.push([g, matKey]); };
     // Haut: Kopf fein, Rest gröber
-    add(p => smax(L.body(p), 1.45 - p[1], 0.02), 'skin', headB, 0.007);
+    add(p => smax(L.body(p), 1.45 - p[1], 0.02), 'skin', headB, fine);
     add(p => smax(L.body(p), p[1] - 1.47, 0.02), 'skin');
     // Haare & Bart
     const H = J.head;
@@ -237,7 +238,7 @@ export function soldierR(o = {}) {
     olive: fabricMat('#566040'), webbing: U.mat('#3e3a2a', 0.8), shako: U.mat('#15151c', 0.5),
   };
   const g = new THREE.Group();
-  for (const [geo, mk] of layers) { const m = new THREE.Mesh(geo, M[mk]); m.castShadow = true; m.receiveShadow = true; g.add(m); }
+  for (const [geo, mk] of layers) { const m = new THREE.Mesh(geo, M[mk]); m.userData.mk = mk; m.castShadow = true; m.receiveShadow = true; g.add(m); }
   // Waffen & Schild an den Händen
   const J = skeleton(pose, weapon, hasShield);
   const hand = new THREE.Group(); hand.position.set(...J.handR); g.add(hand);
@@ -300,9 +301,9 @@ export function horseR({ color = '#1f4fa8', seed = 1, barding = true, rider = nu
   const coat = COATS[seed % COATS.length];
   const M = { coat: U.mat(coat, 0.55), hoof: U.mat('#1a120c', 0.6), mane: U.mat(seed % COATS.length === 3 ? '#cfc6b8' : '#1e140c', 0.9), barding: surcoatMat(color, U.emblemFor(color)), saddle: U.mat('#3a2414', 0.6), chanfron: U.mat('#aeb3ba', 0.28, 0.92) };
   const g = new THREE.Group();
-  for (const [geo, mk] of layers) { const m = new THREE.Mesh(geo, M[mk]); m.castShadow = m.receiveShadow = true; g.add(m); }
+  for (const [geo, mk] of layers) { const m = new THREE.Mesh(geo, M[mk]); m.userData.mk = mk === 'barding' ? 'surcoat' : mk === 'coat' ? 'horsecoat' : mk; m.castShadow = m.receiveShadow = true; g.add(m); }
   const tail = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0, 1.45, -0.82), new THREE.Vector3(0, 1.3, -1.0), new THREE.Vector3(0, 0.95, -1.05), new THREE.Vector3(0, 0.62, -0.98)]), 12, 0.055, 8), M.mane);
-  tail.castShadow = true; g.add(tail);
+  tail.castShadow = true; tail.userData.mk = 'mane'; g.add(tail);
   if (rider) { const rd = soldierR({ ...rider, color, pose: 'ride' }); rd.position.set(0, 0.62, -0.1); g.add(rd); }
   return g;
 }

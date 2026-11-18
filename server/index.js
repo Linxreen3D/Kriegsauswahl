@@ -11,7 +11,7 @@ const PORT = Number(process.env.PORT) || 3000;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
+  '.json': 'application/json', '.bin': 'application/octet-stream', '.mjs': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
 };
 const cache = new Map();
 function serveFile(req, res, file) {
@@ -37,9 +37,11 @@ const server = http.createServer((req, res) => {
   let path = decodeURIComponent(url.pathname);
   if (path === '/health') { res.writeHead(200); return res.end('ok'); }
   if (path === '/') path = '/index.html';
-  const isShared = path.startsWith('/shared/');
-  const base = isShared ? join(ROOT, 'shared') : join(ROOT, 'public');
-  const file = normalize(join(base, isShared ? path.slice(7) : path));
+  // /shared/* -> shared/, /vendor/three/* -> node_modules/three/, sonst public/
+  const routes = [['/shared/', join(ROOT, 'shared')], ['/vendor/three/', join(ROOT, 'node_modules', 'three')]];
+  const route = routes.find(([pre]) => path.startsWith(pre));
+  const base = route ? route[1] : join(ROOT, 'public');
+  const file = normalize(join(base, route ? path.slice(route[0].length) : path));
   if (!file.startsWith(base) || !existsSync(file) || !statSync(file).isFile()) {
     res.writeHead(404, { 'Content-Type': 'text/plain' }); return res.end('Nicht gefunden');
   }

@@ -16,6 +16,7 @@
   },
   "homepage": "https://github.com/Linxreen3D/Kriegsauswahl#readme",
   "dependencies": {
+    "three": "^0.170.0",
     "ws": "^8.23.0"
   },
   "type": "module",

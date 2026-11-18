@@ -1,0 +1,79 @@
+<!doctype html><html><head><meta charset="utf-8"><script type="importmap">{ "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }</script></head><body><script type="module">
+// Erzeugt alle Einheiten-Varianten, vereinfacht sie und gibt kompakte Puffer zurück.
+import * as THREE from 'three';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { MeshoptSimplifier } from '../node_modules/meshoptimizer/index.module.js';
+import * as H from './humans.js';
+import * as U from './units.js';
+await MeshoptSimplifier.ready;
+const SENT = '#808080';
+const known = new Map([[U.steel(), 'steel'], [U.wood(), 'wood'], [U.gold(), 'gold'], [U.leather(), 'leather'], [U.darkPlate(), 'darkplate'], [U.darkLeather(), 'darkleather'], [U.plate(), 'plate'], [U.chainmail(), 'mail']]);
+const hex = c => '#' + c.getHexString();
+function classify(mesh, era) {
+  if (mesh.userData.mk) return mesh.userData.mk;
+  const m = mesh.material;
+  if (known.has(m)) return known.get(m);
+  if (m.map) return era >= 3 ? 'shield3' : era === 2 ? 'shieldR:chevron' : 'shieldR:stripes';
+  return `c:${hex(m.color)}:${m.roughness.toFixed(2)}:${m.metalness.toFixed(2)}`;
+}
+const SKINKEYS = new Set(['skin', 'hair']);
+function bake(group, era, budget) {
+  group.updateMatrixWorld(true);
+  const byKey = new Map();
+  group.traverse(o => {
+    if (!o.isMesh) return;
+    const k = classify(o, era);
+    let g = o.geometry.clone();
+    for (const n of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(n)) g.deleteAttribute(n);
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    if (!g.index) g = mergeVertices(g, 1e-5);
+    g.applyMatrix4(o.matrixWorld);
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(g);
+  });
+  const layers = [];
+  let total = 0; const tri = [];
+  for (const [k, list] of byKey) { const g = mergeGeometries(list); const t = g.index.count / 3; tri.push([k, g, t]); total += t; }
+  const big = tri.filter(x => x[2] > 300).reduce((s, x) => s + x[2], 0), small = total - big;
+  const ratio = Math.min(1, Math.max(0.01, (budget - small) / Math.max(1, big)));
+  for (const [k, g, t] of tri) {
+    let idx = new Uint32Array(g.index.array), pos = g.attributes.position.array;
+    if (t > 300) {
+      const target = Math.max(60, Math.floor(t * ratio)) * 3;
+      const [ni] = MeshoptSimplifier.simplify(idx, new Float32Array(pos), 3, target, 0.02, ['LockBorder']);
+      idx = ni;
+    }
+    // Vertices kompaktieren
+    const remap = new Int32Array(pos.length / 3).fill(-1); let n = 0; const out = new Uint16Array(idx.length);
+    for (let i = 0; i < idx.length; i++) { let v = remap[idx[i]]; if (v < 0) { v = remap[idx[i]] = n++; } out[i] = v; }
+    const P = new Float32Array(n * 3), N = new Float32Array(n * 3), T = new Float32Array(n * 2);
+    const sp = g.attributes.position.array, sn = g.attributes.normal.array, st = g.attributes.uv.array;
+    for (let i = 0; i < remap.length; i++) { const v = remap[i]; if (v < 0) continue; P.set(sp.subarray(i * 3, i * 3 + 3), v * 3); N.set(sn.subarray(i * 3, i * 3 + 3), v * 3); T.set(st.subarray(i * 2, i * 2 + 2), v * 2); }
+    layers.push({ mk: k, P, N, T, I: out });
+  }
+  return layers;
+}
+const variants = [];
+const INF_W = ['club', 'spear', 'spear', 'sword', 'pike', 'musket', 'rifle'];
+const RNG_W = ['sling', 'bow', 'bow', 'bow', 'musket', 'rifle', 'rifle'];
+for (const pose of ['idle', 'walk', 'walk2', 'attack']) variants.push([`worker_${pose}`, 1, { civilian: true, weapon: 'tool', era: 1, pose, seed: 4, helmet: false }]);
+for (let e = 0; e < 7; e++) for (const pose of ['idle', 'walk', 'walk2', 'attack']) variants.push([`inf${e}_${pose}`, e, { era: e, weapon: INF_W[e], shield: e >= 1 && e <= 3, pose, seed: 3 + e, greatHelm: false }]);
+for (let e = 0; e < 7; e++) for (const pose of ['idle', 'walk', 'walk2', 'aim']) variants.push([`rng${e}_${pose}`, e, { era: e, weapon: RNG_W[e], pose, seed: 20 + e }]);
+for (let e = 1; e < 6; e++) variants.push([`rider${e}`, e, { era: e, weapon: e <= 3 ? 'spear' : 'sword', shield: e >= 2 && e <= 3, pose: 'ride', seed: 30 + e }]);
+const out = { variants: {} }, chunks = [];
+let off = 0;
+const push = (arr) => { const b = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength); const pad = (4 - (off % 4)) % 4; if (pad) { chunks.push(new Uint8Array(pad)); off += pad; } chunks.push(b.slice()); const o = off; off += b.byteLength; return o; };
+const t0 = performance.now();
+const stats = [];
+const store = (key, layers) => {
+  out.variants[key] = layers.map(l => ({ mk: l.mk, n: l.P.length / 3, i: l.I.length, P: push(l.P), N: push(l.N), T: push(l.T), I: push(l.I) }));
+  stats.push(key + ':' + layers.reduce((s, l) => s + l.I.length / 3, 0));
+};
+for (const [key, era, o] of variants) store(key, bake(H.soldierR({ color: SENT, cell: 0.02, ...o }), era, 2400));
+for (const bard of [false, true]) store(bard ? 'horse_barded' : 'horse', bake(H.horseR({ color: SENT, seed: 2, barding: bard }), 3, 2600));
+out.ms = Math.round(performance.now() - t0); out.stats = stats;
+const total = new Uint8Array(off); let p = 0; for (const c of chunks) { total.set(c, p); p += c.byteLength; }
+let bin = ''; for (let i = 0; i < total.length; i += 0x8000) bin += String.fromCharCode.apply(null, total.subarray(i, i + 0x8000));
+window.__result = { json: JSON.stringify(out), b64: btoa(bin) };
+window.__ready = true;
+</script></body></html>

@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta charset="utf-8"><script type="importmap">{ "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }</script></head><body><script type="module">
+import * as H from './humans.js';
+const out = [];
+for (const cell of [0.014, 0.02, 0.026]) { const t = performance.now(); let tris = 0; for (let k = 0; k < 3; k++) { const f = H.soldierR({ era: 3, weapon: 'sword', shield: true, seed: k * 5 + 1, pose: ['idle', 'walk', 'attack'][k], cell }); f.traverse(m => { if (m.isMesh && m.geometry.index) tris += m.geometry.index.count / 3; }); } out.push(`cell ${cell}: ${((performance.now() - t) / 3).toFixed(0)} ms/Figur, ${(tris / 3).toFixed(0)} Dreiecke`); }
+document.title = out.join(' | '); window.__ready = true;
+</script></body></html>
