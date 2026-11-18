@@ -13,7 +13,7 @@ function classify(mesh, era) {
   if (mesh.userData.mk) return mesh.userData.mk;
   const m = mesh.material;
   if (known.has(m)) return known.get(m);
-  if (m.map) return era >= 3 ? 'shield3' : era === 2 ? 'shieldR:chevron' : 'shieldR:stripes';
+  if (m.map) return era >= 4 ? 'shield3' : era === 3 ? 'shieldR:stripes' : era === 2 ? 'shieldO' : 'shieldR:chevron';
   return `c:${hex(m.color)}:${m.roughness.toFixed(2)}:${m.metalness.toFixed(2)}`;
 }
 const SKINKEYS = new Set(['skin', 'hair']);
@@ -54,12 +54,12 @@ function bake(group, era, budget) {
   return layers;
 }
 const variants = [];
-const INF_W = ['club', 'spear', 'spear', 'sword', 'pike', 'musket', 'rifle'];
-const RNG_W = ['sling', 'bow', 'bow', 'bow', 'musket', 'rifle', 'rifle'];
+const INF_W = ['club', 'spear', 'sword', 'spear', 'halberd', 'musket', 'rifle'];
+const RNG_W = ['sling', 'bow', 'bow', 'bow', 'crossbow', 'rifle', 'rifle'];
 for (const pose of ['idle', 'walk', 'walk2', 'attack']) variants.push([`worker_${pose}`, 1, { civilian: true, weapon: 'tool', era: 1, pose, seed: 4, helmet: false }]);
 for (let e = 0; e < 7; e++) for (const pose of ['idle', 'walk', 'walk2', 'attack']) variants.push([`inf${e}_${pose}`, e, { era: e, weapon: INF_W[e], shield: e >= 1 && e <= 3, pose, seed: 3 + e, greatHelm: false }]);
 for (let e = 0; e < 7; e++) for (const pose of ['idle', 'walk', 'walk2', 'aim']) variants.push([`rng${e}_${pose}`, e, { era: e, weapon: RNG_W[e], pose, seed: 20 + e }]);
-for (let e = 1; e < 6; e++) variants.push([`rider${e}`, e, { era: e, weapon: e <= 3 ? 'spear' : 'sword', shield: e >= 2 && e <= 3, pose: 'ride', seed: 30 + e }]);
+for (let e = 1; e < 6; e++) variants.push([`rider${e}`, e, { era: e, weapon: e <= 4 ? 'spear' : 'sword', shield: e >= 1 && e <= 4, pose: 'ride', seed: 30 + e }]);
 const out = { variants: {} }, chunks = [];
 let off = 0;
 const push = (arr) => { const b = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength); const pad = (4 - (off % 4)) % 4; if (pad) { chunks.push(new Uint8Array(pad)); off += pad; } chunks.push(b.slice()); const o = off; off += b.byteLength; return o; };

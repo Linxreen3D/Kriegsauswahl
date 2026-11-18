@@ -2,6 +2,7 @@
 import {
   TICK_MS, RES, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, RESOURCE_TYPES, RESOURCE_KINDS,
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
+  WONDER, WONDER_ERA,
 } from '../shared/rules.js';
 import { generateMap, blockedTerrain } from './mapgen.js';
 
@@ -391,6 +392,18 @@ export class World {
         pl.advancing = b.id;
         break;
       }
+      case 'wonder': {
+        const b = own([c.id])[0];
+        if (!b || b.type !== 'town' || !b.built || b.wonder || pl.era < ERAS.length - 1 || pl.wonderBuilding) return;
+        if (this.buildings.some(x => !x.dead && x.owner === pid && x.wonder)) { this.notice(pid, 'Du besitzt bereits ein Weltwunder.'); return; }
+        if (!this.canAfford(pl, WONDER.cost)) { this.notice(pid, 'Nicht genug Rohstoffe für das Weltwunder.'); return; }
+        this.pay(pl, WONDER.cost);
+        b.queue.unshift({ wonder: true, cost: WONDER.cost, time: WONDER.time });
+        b.qProg = 0;
+        pl.wonderBuilding = b.id;
+        this.event({ k: 'wonder', p: pid, what: 'start' });
+        break;
+      }
       case 'cancel': {
         const b = own([c.id])[0];
         if (!b || b.kind !== 'b') return;
@@ -401,6 +414,7 @@ export class World {
         if (k === 0) b.qProg = 0;
         this.refund(pl, q.cost);
         if (q.era) pl.advancing = null;
+        if (q.wonder) { pl.wonderBuilding = null; this.event({ k: 'wonder', p: pid, what: 'cancel' }); }
         break;
       }
       case 'rally': {
@@ -676,6 +690,8 @@ export class World {
       this.removeBuilding(e);
       if (by >= 0) this.P[by].stats.razed++;
       if (pl.advancing === e.id) pl.advancing = null;
+      if (pl.wonderBuilding === e.id) pl.wonderBuilding = null;
+      if (e.wonder) this.event({ k: 'wonder', p: e.owner, what: 'lost', by: by });
       this.event({ k: 'destroy', id: e.id, x: e.cx, y: e.cy, s: e.size, o: e.owner });
       if (e.type === 'farm' && e.worker) { /* Arbeiter wird idle */ }
     }
@@ -851,6 +867,16 @@ export class World {
     // Ausbildung / Epochenaufstieg
     const q = b.queue[0];
     if (!q) { b.qProg = 0; return; }
+    if (q.wonder) {
+      b.qProg += dt;
+      if (b.qProg >= q.time) {
+        b.queue.shift(); b.qProg = 0; pl.wonderBuilding = null;
+        b.wonder = true; b.wonderAt = this.time; b.era = WONDER_ERA;
+        const ratio = b.hp / b.maxHp; b.maxHp = Math.round(b.st.hp * WONDER.hpMul); b.hp = b.maxHp * ratio;
+        this.event({ k: 'wonder', p: pl.id, what: 'done', hold: WONDER.hold });
+      }
+      return;
+    }
     if (q.era != null) {
       b.qProg += dt;
       if (b.qProg >= q.time) {
@@ -863,7 +889,8 @@ export class World {
         for (const x of this.buildings) if (x.owner === pl.id && !x.dead) {
           const st = buildingStats(x.type, pl.era, pl.mods);
           const ratio = x.hp / x.maxHp;
-          x.st = st; x.maxHp = st.hp; x.hp = st.hp * ratio;
+          x.st = st; x.maxHp = Math.round(st.hp * (x.wonder ? WONDER.hpMul : 1)); x.hp = x.maxHp * ratio;
+          if (!x.wonder) x.era = pl.era; // Gebäude wechseln zum Baustil der neuen Epoche
         }
       }
       return;
@@ -1021,6 +1048,10 @@ export class World {
     this.event({ k: 'defeat', p: pl.id, s: surrendered });
   }
   winners() {
+    for (const b of this.buildings) if (b.wonder && !b.dead && this.time - b.wonderAt >= WONDER.hold) {
+      this.winReason = 'Weltwunder';
+      return this.P.filter(p => p.team === this.P[b.owner].team);
+    }
     const alive = this.P.filter(p => p.alive);
     if (!alive.length) return [];
     const teams = new Set(alive.map(p => p.team));
@@ -1043,14 +1074,16 @@ export class World {
     };
   }
   playersPublic() {
-    return this.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, pop: p.pop, culture: p.culture, nation: p.nation, score: this.score(p), isBot: p.isBot }));
+    const won = {};
+    for (const b of this.buildings) if (b.wonder && !b.dead) won[b.owner] = Math.max(0, Math.ceil(WONDER.hold - (this.time - b.wonderAt)));
+    return this.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, pop: p.pop, culture: p.culture, nation: p.nation, score: this.score(p), isBot: p.isBot, wonder: won[p.id] ?? null }));
   }
   privateState(pl) {
     const qs = [];
-    for (const b of this.buildings) if (b.owner === pl.id && b.queue.length) qs.push([b.id, b.queue.map(q => q.era != null ? 'era' : unitKey(q.line, Math.max(pl.era, LINES[q.line].minEra), q.unique)), +b.qProg.toFixed(1), +b.queue[0].time.toFixed(1), b.blocked ? 1 : 0]);
+    for (const b of this.buildings) if (b.owner === pl.id && b.queue.length) qs.push([b.id, b.queue.map(q => q.wonder ? 'wonder' : q.era != null ? 'era' : unitKey(q.line, Math.max(pl.era, LINES[q.line].minEra), q.unique)), +b.qProg.toFixed(1), +b.queue[0].time.toFixed(1), b.blocked ? 1 : 0]);
     return {
       t: 'me', res: Object.fromEntries(RES.map(k => [k, Math.floor(pl.res[k])])), pop: pl.pop, cap: pl.popCap, era: pl.era,
-      culture: pl.culture, nation: pl.nation, choice: pl.choice, adv: pl.advancing, q: qs, alive: pl.alive,
+      culture: pl.culture, nation: pl.nation, choice: pl.choice, adv: pl.advancing, wonderB: pl.wonderBuilding, q: qs, alive: pl.alive,
     };
   }
   entTuple(e, pid) {

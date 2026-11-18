@@ -2,7 +2,7 @@ import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX,
+  RESOURCE_KINDS, TYPES, WONDER, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -110,7 +110,7 @@ const SETTINGS_DEF = [
   { key: 'mapType', label: 'Kartentyp', type: 'select', options: [['random', 'Zufällig'], ['continent', 'Kontinent'], ['lakes', 'Seenplatte'], ['highlands', 'Hochland'], ['forest', 'Urwald']] },
   { key: 'mapSize', label: 'Kartengröße', type: 'select', options: [['auto', 'Automatisch'], ['small', 'Klein'], ['medium', 'Mittel'], ['large', 'Groß'], ['huge', 'Riesig']] },
   { key: 'resources', label: 'Startressourcen', type: 'select', options: [['low', 'Wenig'], ['normal', 'Normal'], ['high', 'Viel']] },
-  { key: 'startEra', label: 'Startepoche', type: 'select', options: ERAS.slice(0, 5).map((e, i) => [String(i), e.name]) },
+  { key: 'startEra', label: 'Startepoche', type: 'select', options: ERAS.map((e, i) => [String(i), e.name]) },
   { key: 'speed', label: 'Spieltempo', type: 'range', min: 0.5, max: 3, step: 0.25, fmt: v => v + '×' },
   { key: 'armageddonMin', label: 'Meteore ab (Armageddon)', type: 'range', min: 1, max: 60, step: 1, fmt: v => v + ' min' },
   { key: 'botDifficulty', label: 'Bot-Schwierigkeit', type: 'select', options: [['easy', 'Leicht'], ['normal', 'Normal'], ['hard', 'Schwer']] },
@@ -296,6 +296,14 @@ function onEvent(e, now) {
       notice('⚠ Du wirst angegriffen! (Leertaste)', 'bad'); sfx.alert();
       break;
     case 'built': sfx.build(); updateCmdCard(true); break;
+    case 'wonder': {
+      const who = G.players[e.p], mine = e.p === G.you;
+      if (e.what === 'start') { notice(mine ? 'Der Bau deines Weltwunders hat begonnen!' : `⚠ ${who ? who.name : '?'} beginnt mit dem Bau eines Weltwunders!`, mine ? 'good' : 'bad'); sfx.alert(); }
+      if (e.what === 'done') { notice(mine ? `🏛 Dein Weltwunder steht! Halte es ${Math.round(e.hold / 60)} Minuten.` : `⚠ ${who ? who.name : '?'} hat ein Weltwunder vollendet – zerstört es!`, mine ? 'good' : 'bad'); sfx.win(); }
+      if (e.what === 'lost') notice(mine ? 'Dein Weltwunder wurde zerstört!' : `Das Weltwunder von ${who ? who.name : '?'} ist gefallen!`, mine ? 'bad' : 'good');
+      if (e.what === 'cancel' && !mine) chatLine(`${pname(e.p)} hat den Bau des Weltwunders abgebrochen.`, true);
+      break;
+    }
     case 'era':
       if (e.p === G.you) { notice(`${ERAS[e.era].name} erreicht!`, 'good'); sfx.win(); updateCmdCard(true); }
       else chatLine(`${pname(e.p)} erreicht die ${ERAS[e.era].name}.`, true);
@@ -320,7 +328,7 @@ function onEnd(m) {
   $('endTitle').textContent = won ? 'SIEG!' : 'NIEDERLAGE';
   $('endTitle').style.color = won ? 'var(--accent)' : '#ff8b80';
   const mm = Math.floor(m.duration / 60), ss = String(m.duration % 60).padStart(2, '0');
-  $('endReason').textContent = `Sieger: ${m.winners.map(w => m.players[w].name).join(', ')} · Spielzeit ${mm}:${ss}`;
+  $('endReason').textContent = `${m.reason === 'Weltwunder' ? 'Sieg durch Weltwunder · ' : ''}Sieger: ${m.winners.map(w => m.players[w].name).join(', ')} · Spielzeit ${mm}:${ss}`;
   const rows = [...m.players].sort((a, b) => (m.winners.includes(b.id) - m.winners.includes(a.id)) || b.score - a.score);
   $('endTable').innerHTML = '<tr><th>Nation</th><th>Epoche</th><th>Kultur</th><th>Gesammelt</th><th>Getötet</th><th>Verloren</th><th>Punkte</th></tr>' +
     rows.map(p => `<tr><td><span class="sw" style="background:${p.color}"></span>${esc(p.name)}${m.winners.includes(p.id) ? ' 👑' : ''}</td><td>${ERAS[p.era].name}</td><td>${p.culture ? CULTURES[p.culture].icon + ' ' + CULTURES[p.culture].name : '–'}</td><td>${p.stats.gathered}</td><td>${p.stats.kills}</td><td>${p.stats.lost}</td><td><b>${p.score}</b></td></tr>`).join('');
@@ -563,6 +571,13 @@ function updateCmdCard(force) {
             },
           });
         }
+        if (type === 'town' && era === ERAS.length - 1 && !same.some(b => b.era === 7)) {
+          put('W', {
+            icon: '🏛', title: 'Weltwunder errichten', cost: WONDER.cost,
+            desc: `Baut dieses Haupthaus in ${Math.round(WONDER.time / 60)} Minuten zum Weltwunder aus. Hältst du es danach ${Math.round(WONDER.hold / 60)} Minuten, gewinnst du das Spiel. Alle Spieler werden gewarnt!`,
+            off: !affordable(WONDER.cost) || !!G.me.wonderB, fn: () => cmd({ c: 'wonder', id: same[0].id }),
+          });
+        }
       }
       put('B', { icon: '🗑', title: 'Löschen (Entf)', fn: deleteSelection });
     }
@@ -619,7 +634,7 @@ function updateSelInfo() {
     if (e.def.kind === 'b' && e.owner === G.you) {
       const q = (G.me.q || []).find(x => x[0] === e.id);
       if (q) {
-        queue = '<div class="queue">' + q[1].map((k, i) => `<div class="qi ${i === 0 && q[4] ? 'blocked' : ''}" data-cancel="${e.id}:${i}" title="${i === 0 && q[4] ? 'Bevölkerungslimit erreicht – baue Häuser! ' : ''}Klicken zum Abbrechen">${k === 'era' ? '⬆' : keyIcon(k)}${i === 0 ? `<span class="bar" style="width:${Math.min(100, q[2] / q[3] * 100)}%"></span>` : ''}</div>`).join('') + '</div>';
+        queue = '<div class="queue">' + q[1].map((k, i) => `<div class="qi ${i === 0 && q[4] ? 'blocked' : ''}" data-cancel="${e.id}:${i}" title="${i === 0 && q[4] ? 'Bevölkerungslimit erreicht – baue Häuser! ' : ''}Klicken zum Abbrechen">${k === 'era' ? '⬆' : k === 'wonder' ? '🏛' : keyIcon(k)}${i === 0 ? `<span class="bar" style="width:${Math.min(100, q[2] / q[3] * 100)}%"></span>` : ''}</div>`).join('') + '</div>';
       }
     }
     html = `<div class="sel-main"><div class="portrait" style="border-color:${p ? p.color : '#888'}">${iconOf(e.def)}</div>
@@ -646,6 +661,12 @@ function updateHud() {
   const cult = m.culture ? CULTURES[m.culture].icon + ' ' : '';
   $('eraLabel').textContent = `${cult}${ERAS[m.era].name}${m.adv ? ' ⬆' : ''}${m.choice ? ' · Wahl offen!' : ''}`;
   const t = G.time;
+  const wl = G.players.filter(p => p.wonder != null && p.alive);
+  let wb = $('wonderBanner');
+  if (wl.length) {
+    if (!wb) { wb = document.createElement('div'); wb.id = 'wonderBanner'; $('hud').appendChild(wb); }
+    wb.innerHTML = wl.map(p => `<div><span style="color:${p.color}">🏛 ${esc(p.name)}</span> · Weltwunder-Sieg in <b>${Math.floor(p.wonder / 60)}:${String(p.wonder % 60).padStart(2, '0')}</b></div>`).join('');
+  } else if (wb) wb.remove();
   $('timeLabel').textContent = `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
   const idle = idleWorkers();
   $('idleCount').textContent = idle.length; $('idleCount').classList.toggle('hidden', !idle.length);
@@ -665,7 +686,7 @@ function showChoice() {
   if (!m.choice) return;
   const isCulture = m.choice === 'culture';
   $('choiceTitle').textContent = isCulture ? 'Wähle deine Kultur' : 'Wähle deine Nation';
-  $('choiceSub').textContent = isCulture ? 'Deine Kultur bestimmt Boni und eine Spezialeinheit (ab Mittelalter).' : `Nationen der Kultur ${CULTURES[m.culture].name} – jede mit eigenem Bonus.`;
+  $('choiceSub').textContent = isCulture ? 'Deine Kultur bestimmt Boni und eine Spezialeinheit (ab dem Frühen Mittelalter).' : `Nationen der Kultur ${CULTURES[m.culture].name} – jede mit eigenem Bonus.`;
   const opts = isCulture ? Object.entries(CULTURES).map(([k, c]) => ({ k, icon: c.icon, name: c.name, desc: c.desc })) : CULTURES[m.culture].nations.map(k => ({ k, icon: '🏳', name: NATIONS[k].name, desc: NATIONS[k].desc }));
   $('choiceOptions').innerHTML = opts.map(o => `<button class="choice-opt" data-choice="${o.k}"><span class="ic">${o.icon}</span><b>${esc(o.name)}</b><p>${esc(o.desc)}</p></button>`).join('');
   $('choice').classList.remove('hidden');

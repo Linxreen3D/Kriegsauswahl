@@ -29,15 +29,15 @@ export const DEFAULT_SETTINGS = {
 export const ERAS = [
   { name: 'Steinzeit', short: 'I', cost: null, time: 0 },
   { name: 'Bronzezeit', short: 'II', cost: { food: 400, wood: 200 }, time: 35 },
-  { name: 'Antike', short: 'III', cost: { food: 700, wood: 350, gold: 150 }, time: 45 },
-  { name: 'Mittelalter', short: 'IV', cost: { food: 1000, gold: 500, stone: 200 }, time: 60 },
-  { name: 'Renaissance', short: 'V', cost: { food: 1400, wood: 700, gold: 800 }, time: 70 },
-  { name: 'Industriezeit', short: 'VI', cost: { food: 1800, gold: 1200, stone: 500 }, time: 80 },
-  { name: 'Moderne', short: 'VII', cost: { food: 2200, wood: 1200, gold: 1600 }, time: 90 },
+  { name: 'Eisenzeit', short: 'III', cost: { food: 700, wood: 350, gold: 150 }, time: 45 },
+  { name: 'Frühes Mittelalter', short: 'IV', cost: { food: 1000, gold: 500, stone: 200 }, time: 60 },
+  { name: 'Spätes Mittelalter', short: 'V', cost: { food: 1400, wood: 700, gold: 800 }, time: 70 },
+  { name: '1. Industrielle Revolution', short: 'VI', cost: { food: 1800, gold: 1200, stone: 500 }, time: 80 },
+  { name: '2. Industrielle Revolution', short: 'VII', cost: { food: 2200, wood: 1200, gold: 1600 }, time: 90 },
 ];
 
 // ---------------- Kulturen & Nationen ----------------
-// Kultur wird beim Erreichen der Bronzezeit gewählt, die Nation im Mittelalter.
+// Kultur wird beim Erreichen der Bronzezeit gewählt, die Nation im Frühen Mittelalter.
 export const CULTURES = {
   steppe: {
     name: 'Steppenvolk', icon: '🐎', desc: 'Reiterei ist 15 % schneller und 15 % billiger. Spezialeinheit: Steppenreiter (berittener Bogenschütze).',
@@ -85,24 +85,24 @@ export const DMG = {
 // Linien: pro Epoche ein Name; Werte skalieren mit der Epoche.
 export const LINES = {
   worker: {
-    cls: 'wrk', at: 'town', minEra: 0, key: 'Q', names: ['Sammler', 'Arbeiter', 'Arbeiter', 'Leibeigener', 'Handwerker', 'Arbeiter', 'Ingenieur'],
+    cls: 'wrk', at: 'town', minEra: 0, key: 'Q', names: ['Sammler', 'Arbeiter', 'Handwerker', 'Leibeigener', 'Bauer', 'Fabrikarbeiter', 'Arbeiter'],
     hp: 40, atk: 3, range: 0.4, cd: 1.5, speed: 1.6, sight: 6, cost: { food: 50 }, pop: 1, time: 10, grow: 0.08, costGrow: 1,
   },
   inf: {
-    cls: 'inf', at: 'barracks', minEra: 0, key: 'Q', names: ['Keulenträger', 'Speerkämpfer', 'Hoplit', 'Schwertkämpfer', 'Pikenier', 'Infanterist', 'Soldat'],
+    cls: 'inf', at: 'barracks', minEra: 0, key: 'Q', names: ['Keulenträger', 'Speerträger', 'Schwertkämpfer', 'Hauskrieger', 'Hellebardier', 'Linieninfanterist', 'Infanterist'],
     hp: 60, atk: 7, range: 0.5, cd: 1.2, speed: 1.45, sight: 6, cost: { food: 55, wood: 10 }, pop: 1, time: 16,
   },
   rng: {
-    cls: 'rng', at: 'range', minEra: 0, key: 'Q', names: ['Steinschleuderer', 'Bogenschütze', 'Kompositbogner', 'Armbrustschütze', 'Musketier', 'Gewehrschütze', 'MG-Schütze'],
+    cls: 'rng', at: 'range', minEra: 0, key: 'Q', names: ['Steinschleuderer', 'Bogenschütze', 'Bogenschütze', 'Langbogenschütze', 'Armbrustschütze', 'Jäger', 'Scharfschütze'],
     hp: 38, atk: 5, range: 5, cd: 1.6, speed: 1.4, sight: 7, cost: { food: 30, wood: 35 }, pop: 1, time: 18,
   },
   cav: {
-    cls: 'cav', at: 'stable', minEra: 1, key: 'Q', names: ['', 'Streitwagen', 'Reiter', 'Ritter', 'Kürassier', 'Dragoner', 'Panzer'],
+    cls: 'cav', at: 'stable', minEra: 1, key: 'Q', names: ['', 'Streitwagen', 'Reiter', 'Panzerreiter', 'Ritter', 'Husar', 'Panzerwagen'],
     hp: 110, atk: 9, range: 0.6, cd: 1.4, speed: 2.4, sight: 7, cost: { food: 70, gold: 45 }, pop: 1, time: 22,
     eraOverride: { 5: { range: 3.5 }, 6: { range: 5, speed: 2.0, hpMul: 1.6, pop: 2 } },
   },
   sie: {
-    cls: 'sie', at: 'workshop', minEra: 2, key: 'Q', names: ['', '', 'Katapult', 'Tribok', 'Kanone', 'Haubitze', 'Artillerie'],
+    cls: 'sie', at: 'workshop', minEra: 2, key: 'Q', names: ['', '', 'Torsionsgeschütz', 'Blide', 'Bombarde', 'Feldkanone', 'Feldhaubitze'],
     hp: 120, atk: 38, range: 7, minRange: 2, cd: 4, speed: 0.95, sight: 8, cost: { wood: 160, gold: 90 }, pop: 2, time: 32, splash: 1.2,
   },
 };
@@ -127,6 +127,10 @@ export const BUILDINGS = {
   workshop: { name: 'Werkstatt', size: 3, hp: 900, cost: { wood: 200, gold: 50 }, time: 40, sight: 6, minEra: 2, key: 'V', desc: 'Baut Belagerungswaffen.' },
   wall: { name: 'Palisade', size: 1, hp: 350, cost: { wood: 4 }, time: 3, sight: 2, minEra: 0, key: 'C', desc: 'Günstiges Hindernis (ab Mittelalter Steinmauer).' },
 };
+// Weltwunder: Ausbau des Haupthauses in der letzten Epoche. Wer es WONDER.hold Sekunden hält, gewinnt.
+export const WONDER = { name: 'Weltwunder', cost: { food: 3000, wood: 2500, stone: 3000, gold: 3500 }, time: 240, hold: 600, hpMul: 4 };
+export const WONDER_ERA = 7; // Anzeige-Epoche für das Modell
+
 export const BUILD_ORDER = ['house', 'storage', 'farm', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
 
 // ---------------- Rohstoffe auf der Karte ----------------

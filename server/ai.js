@@ -1,5 +1,5 @@
 // KI-Gegner: spielt über dieselbe Befehlsschnittstelle wie Menschen.
-import { ERAS, CULTURES, BUILDINGS, LINES, RESOURCE_TYPES, unitStats, buildingStats, trainable } from '../shared/rules.js';
+import { ERAS, WONDER, CULTURES, BUILDINGS, LINES, RESOURCE_TYPES, unitStats, buildingStats, trainable } from '../shared/rules.js';
 
 const PROFILES = {
   easy: { think: 2.0, workers: 0.6, attackAt: 14, firstAttack: 540, aggression: 0.5, towers: 0 },
@@ -64,6 +64,10 @@ export class AI {
     }
     if (pl.era >= 3 && workers.length > 35 && count('range') < 2 && pl.res.wood > 400) this.build('range', workers, 1);
     if (this.prof.towers && pl.era >= 1 && count('tower') < this.prof.towers * (1 + Math.floor(pl.era / 2)) && pl.res.stone > 250) this.build('tower', workers, 1, 6, 10);
+    // Weltwunder in der letzten Epoche
+    if (pl.era === ERAS.length - 1 && !pl.wonderBuilding && towns.length && !blds.some(b => b.wonder) && this.prof.aggression >= 0.8) {
+      const wc = WONDER.cost; if (w.canAfford(pl, wc)) this.cmd({ c: 'wonder', id: towns[towns.length - 1].id });
+    }
     if (pl.era >= 3 && towns.length < 2 && workers.length > 40 && pl.res.wood > 500 && pl.res.stone > 300) this.build('town', workers, 3, 14, 22);
 
     // Baustellen ohne Bauarbeiter besetzen

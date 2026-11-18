@@ -232,3 +232,57 @@ export function cobbleTex(N = 512) {
     return [base[0], base[1], base[2], gap ? 0 : Math.min(1, edge / 10)];
   }, 5);
 }
+
+// ---------- Epochen-Materialien ----------
+export function brickTex(N = 512, tint = '#9a4a32', mortar = '#b8ad98') {
+  const r = rng(300 + tint.length), f = fbm(301, N, 16, 4), base = hex(tint), mo = hex(mortar);
+  const rows = 16, rh = N / rows, bw = N / 6;
+  const sh = []; for (let k = 0; k < 400; k++) sh.push(0.78 + r() * 0.32);
+  return build(N, (x, y) => {
+    const row = Math.floor(y / rh), off = row % 2 ? bw / 2 : 0, col = Math.floor(((x + off) % N) / bw);
+    const u = ((x + off) % N) - col * bw, v = y - row * rh;
+    const m2 = u < 2.5 || v < 2.5;
+    if (m2) return [mo[0] * 0.9, mo[1] * 0.9, mo[2] * 0.9, 0];
+    const k = sh[(row * 7 + col) % 400] * (0.88 + f(x, y) * 0.24);
+    return [base[0] * k, base[1] * k, base[2] * k, 0.8 + f(x, y) * 0.2];
+  }, 4);
+}
+export function adobeTex(N = 512) {
+  const f = fbm(310, N, 6, 5), r = rng(311), a = hex('#b58a5a'), b = hex('#d6b083');
+  const t = build(N, (x, y) => { const v = f(x, y); const c = mix(a, b, v); const n = (Math.random() - 0.5) * 14; return [c[0] + n, c[1] + n, c[2] + n, v]; }, 2.5);
+  const g = t.canvas.getContext('2d');
+  for (let k = 0; k < 120; k++) { g.strokeStyle = `rgba(90,60,30,${0.15 + r() * 0.2})`; g.lineWidth = 1; g.beginPath(); const x = r() * N, y = r() * N; g.moveTo(x, y); g.lineTo(x + (r() - 0.5) * 40, y + r() * 25); g.stroke(); }
+  t.map.needsUpdate = true; return t;
+}
+export function hideTex(N = 256) {
+  const f = fbm(320, N, 4, 4), a = hex('#7a5a3a'), b = hex('#b08a5c');
+  const t = build(N, (x, y) => { const v = f(x, y); const c = mix(a, b, v); return [c[0], c[1], c[2], v]; }, 2);
+  const g = t.canvas.getContext('2d'); g.strokeStyle = 'rgba(50,30,15,0.5)'; g.lineWidth = 2;
+  for (let y = 40; y < N; y += 64) { g.beginPath(); for (let x = 0; x <= N; x += 8) g.lineTo(x, y + Math.sin(x * 0.1) * 3); g.stroke(); for (let x = 0; x < N; x += 12) { g.beginPath(); g.moveTo(x, y - 4); g.lineTo(x + 4, y + 4); g.stroke(); } }
+  t.map.needsUpdate = true; return t;
+}
+export function wattleTex(N = 256) {
+  const f = fbm(330, N, 8, 3), a = hex('#8a6a44'), b = hex('#c2a578');
+  return build(N, (x, y) => {
+    const band = Math.floor(y / 16), w = Math.sin((x / N) * Math.PI * 12 + band * Math.PI) * 0.5 + 0.5;
+    const v = f(x, y); const c = mix(a, b, v * 0.6 + w * 0.4);
+    return [c[0], c[1], c[2], w * 0.7 + v * 0.3];
+  }, 3);
+}
+export function metalTex(N = 256, tint = '#6e7378') {
+  const f = fbm(340, N, 8, 3), base = hex(tint), r = rng(341);
+  const t = build(N, (x, y) => { const w = Math.sin(x / N * Math.PI * 24) * 0.5 + 0.5, v = f(x, y); const k = 0.75 + w * 0.3 + (v - 0.5) * 0.2; return [base[0] * k, base[1] * k, base[2] * k, w]; }, 3);
+  const g = t.canvas.getContext('2d'); for (let k = 0; k < 60; k++) { g.fillStyle = `rgba(${120 + r() * 60},${60 + r() * 30},20,0.25)`; g.beginPath(); g.ellipse(r() * N, r() * N, 3 + r() * 14, 2 + r() * 6, 0, 0, 7); g.fill(); }
+  t.map.needsUpdate = true; return t;
+}
+export function concreteTex(N = 256) {
+  const f = fbm(350, N, 8, 5), a = hex('#8f8c86'), b = hex('#b5b2aa');
+  return build(N, (x, y) => { const v = f(x, y); const c = mix(a, b, v); const seam = (y % 64) < 2 ? 0.75 : 1; const n = (Math.random() - 0.5) * 10; return [c[0] * seam + n, c[1] * seam + n, c[2] * seam + n, seam < 1 ? 0 : v]; }, 2);
+}
+export function shingleTex(N = 512) { // Holzschindeln
+  const r = rng(360), f = fbm(361, N, 8, 3), base = hex('#6e5236'), rows = 14, rh = N / rows, cw = N / 10;
+  const sh = []; for (let k = 0; k < 200; k++) sh.push(0.7 + r() * 0.45);
+  return build(N, (x, y) => { const row = Math.floor(y / rh), off = row % 2 ? cw / 2 : 0, col = Math.floor(((x + off) % N) / cw), v = (y - row * rh) / rh, u = (((x + off) % N) - col * cw) / cw;
+    const k = sh[(row * 11 + col) % 200] * (0.85 + f(x, y) * 0.3) * (v > 0.85 || u < 0.05 ? 0.5 : 1);
+    return [base[0] * k, base[1] * k, base[2] * k, v]; }, 3);
+}

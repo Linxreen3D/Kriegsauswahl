@@ -1,0 +1,78 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><style>html,body{margin:0;background:#000;overflow:hidden}#c{width:1920px;height:1080px;display:block}
+.lbl{position:absolute;transform:translate(-100%,-50%);font-family:Georgia,serif;font-weight:700;font-size:21px;color:#f6dc8c;text-shadow:0 2px 4px #000,0 0 8px #000;white-space:nowrap}
+.big{font-size:44px;transform:none;left:40px!important;top:auto!important;bottom:36px}
+.col{position:absolute;transform:translate(-50%,0);font-family:Georgia,serif;font-size:15px;color:#fff;text-shadow:0 2px 3px #000}</style>
+<script type="importmap">{ "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }</script></head>
+<body><canvas id="c"></canvas><div id="ui"></div><script type="module">
+import * as THREE from 'three';
+import * as W from './world.js';
+import * as Md from './models.js';
+import * as H from './humans.js';
+import { eraBuilding, wonder } from './eras.js';
+const q = new URLSearchParams(location.search), mode = q.get('m') || 'grid';
+W.loadTextures(); Md.initMaterials();
+const ctx = W.createWorld(document.getElementById('c'), { sunAz: 150, sunElev: 34, fogNear: 200, fogFar: 600 });
+const T = W.createTerrain(ctx.scene, { size: 320, seg: 160, seed: 9, hills: 0.25, flats: [[0, 0, 110, 0.9]] });
+const BLUE = '#1f4fa8';
+const TYPES = [['town', 3], ['house', 2], ['storage', 2], ['farm', 2], ['barracks', 3], ['range', 3], ['stable', 3], ['tower', 2], ['workshop', 3], ['wall', 1]];
+const ERAS = ['Steinzeit', 'Bronzezeit', 'Eisenzeit', 'Frühes Mittelalter', 'Spätes Mittelalter', '1. Industrielle Revolution', '2. Industrielle Revolution'];
+const INF_W = ['club', 'spear', 'sword', 'spear', 'halberd', 'musket', 'rifle'], RNG_W = ['sling', 'bow', 'bow', 'bow', 'crossbow', 'rifle', 'rifle'];
+function fitPlace(obj, sz, x, z, mul = 1) {
+  const box = new THREE.Box3().setFromObject(obj), s = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const k = sz * 2 * 0.96 * mul / Math.max(s.x, s.z);
+  const g = new THREE.Group(); obj.position.set(-c.x, -box.min.y, -c.z); g.add(obj); g.scale.setScalar(k); g.position.set(x, T.height(x, z) - 0.05, z); ctx.scene.add(g); return g;
+}
+const labels = [];
+const DX = 9.5, DZ = 11.5;
+if (mode === 'grid') {
+  for (let e = 0; e < 7; e++) {
+    const z = -36 + e * DZ;
+    TYPES.forEach(([t, sz], i) => {
+      const x = -52 + i * DX;
+      if (t === 'wall') { for (let k = 0; k < 3; k++) fitPlace(eraBuilding('wall', e, BLUE), 1, x - 2 + k * 2, z); return; }
+      if ((t === 'stable' && e < 1) || (t === 'workshop' && e < 2)) return;
+      fitPlace(eraBuilding(t, e, BLUE), sz, x, z);
+    });
+    const ux = -52 + TYPES.length * DX;
+    const put = (o, x) => { o.position.set(x, T.height(x, z), z + 1.5); o.rotation.y = 0.3; o.scale.setScalar(1.25); ctx.scene.add(o); };
+    put(H.soldierR({ color: BLUE, era: e, weapon: INF_W[e], shield: e >= 1 && e <= 3, seed: 3 + e, cell: 0.02 }), ux - 1.5);
+    put(H.soldierR({ color: BLUE, era: e, weapon: RNG_W[e], seed: 20 + e, cell: 0.02, pose: 'aim' }), ux);
+    if (e >= 1 && e <= 5) put(H.horseR({ color: BLUE, seed: e, barding: e >= 2, rider: { era: e, weapon: e <= 4 ? 'spear' : 'sword', shield: e <= 4, seed: 30 + e, cell: 0.02 } }), ux + 2.6);
+    labels.push([new THREE.Vector3(-58, 1, z), ERAS[e], 'lbl']);
+  }
+  ctx.camera.fov = 30; ctx.camera.updateProjectionMatrix();
+  ctx.camera.position.set(-3, 88, 92); ctx.camera.lookAt(-3, 0, -2);
+} else if (mode === 'era') {
+  const e = +q.get('e');
+  TYPES.forEach(([t, sz], i) => {
+    const x = -22 + (i % 5) * 11, z = -8 + Math.floor(i / 5) * 12;
+    if (t === 'wall') { for (let k = 0; k < 4; k++) fitPlace(eraBuilding('wall', e, BLUE), 1, x - 3 + k * 2, z); return; }
+    if ((t === 'stable' && e < 1) || (t === 'workshop' && e < 2)) return;
+    fitPlace(eraBuilding(t, e, BLUE), sz, x, z);
+  });
+  const put = (o, x, z, ry = 0.3) => { o.position.set(x, T.height(x, z), z); o.rotation.y = ry; o.scale.setScalar(1.2); ctx.scene.add(o); };
+  for (let k = 0; k < 5; k++) put(H.soldierR({ color: BLUE, era: e, weapon: INF_W[e], shield: e >= 1 && e <= 3, seed: 3 + e + k * 7, cell: 0.02, pose: k % 2 ? 'attack' : 'idle' }), -12 + k * 1.6, 13);
+  for (let k = 0; k < 4; k++) put(H.soldierR({ color: BLUE, era: e, weapon: RNG_W[e], seed: 20 + e + k * 5, cell: 0.02, pose: 'aim' }), -3 + k * 1.6, 13.5);
+  if (e >= 1 && e <= 5) for (let k = 0; k < 2; k++) put(H.horseR({ color: BLUE, seed: e + k, barding: e >= 2, rider: { era: e, weapon: e <= 4 ? 'spear' : 'sword', shield: e <= 4, seed: 30 + e, cell: 0.02 } }), 5 + k * 3, 13.5, 0.5);
+  ctx.camera.fov = 34; ctx.camera.updateProjectionMatrix();
+  ctx.camera.position.set(0, 30, 46); ctx.camera.lookAt(0, 0, 3);
+  labels.push([new THREE.Vector3(-20, 0, 18), ERAS[e], 'lbl big']);
+} else {
+  fitPlace(wonder(BLUE), 3, 0, 0, 1.6);
+  fitPlace(eraBuilding('house', 6, BLUE), 2, -13, 6); fitPlace(eraBuilding('workshop', 6, BLUE), 3, 14, 4); fitPlace(eraBuilding('town', 6, BLUE), 3, -14, -8);
+  for (let k = 0; k < 10; k++) { const o = H.soldierR({ color: BLUE, era: 6, weapon: 'rifle', seed: 40 + k, cell: 0.02, pose: k % 3 ? 'idle' : 'walk' }); const x = -5 + (k % 5) * 2.2, z = 12 + Math.floor(k / 5) * 2; o.position.set(x, T.height(x, z), z); o.rotation.y = 0.2; o.scale.setScalar(1.2); ctx.scene.add(o); }
+  ctx.camera.fov = 34; ctx.camera.updateProjectionMatrix();
+  ctx.camera.position.set(16, 24, 40); ctx.camera.lookAt(0, 5, 0);
+}
+const kinds = W.makeTreeKinds();
+W.plantForest(ctx.scene, T, kinds, W.forestSpots(T, 0, -95, 70, 900, 4, (x, z) => z > -55, 0.5));
+W.plantGrass(ctx.scene, T, 30000, [-110, -60, 110, 60], (x, z) => false);
+ctx.scene.updateMatrixWorld(true);
+const sprites = []; ctx.scene.traverse(o => { if (o.isSprite) sprites.push(o); }); sprites.forEach(o => ctx.fx.attach(o));
+const sc = ctx.sun.shadow.camera; sc.left = sc.bottom = -90; sc.right = sc.top = 90; sc.updateProjectionMatrix();
+ctx.sun.target.position.set(0, 0, 0); ctx.sun.position.copy(ctx.sunDir).multiplyScalar(200);
+ctx.composer.render();
+const ui = document.getElementById('ui');
+for (const [v, t, c] of labels) { if (c.includes('big')) { ui.innerHTML += `<div class="${c}" style="left:40px;top:960px">${t}</div>`; continue; } const p = v.clone().project(ctx.camera); ui.innerHTML += `<div class="${c}" style="left:${(p.x + 1) / 2 * 1920}px;top:${(1 - p.y) / 2 * 1080}px">${t}</div>`; }
+window.__ready = true;
+</script></body></html>

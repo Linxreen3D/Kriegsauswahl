@@ -193,19 +193,27 @@ function musket(len = 1.25, modern = false) {
 }
 function shield(team, era, emblem) {
   const g = new THREE.Group();
-  if (era >= 3) {
+  if (era >= 4) { // Spätes Mittelalter: Dreiecksschild mit Wappen
     const s = new THREE.Shape(); s.moveTo(-0.24, 0.32); s.quadraticCurveTo(0, 0.4, 0.24, 0.32); s.quadraticCurveTo(0.26, -0.1, 0, -0.42); s.quadraticCurveTo(-0.26, -0.1, -0.24, 0.32);
     const geo = new THREE.ExtrudeGeometry(s, { depth: 0.035, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 2 });
-    // UV auf Wappenfläche
     const p = geo.attributes.position, uv = geo.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + 0.27) / 0.54, (p.getY(i) + 0.45) / 0.88);
-    // leicht gewölbt
     for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) - Math.pow(p.getX(i) / 0.27, 2) * 0.05);
     geo.computeVertexNormals();
     g.add(M(geo, heraldry(team, emblem)));
-  } else {
-    g.add(at(M(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 20), heraldry(team, era === 2 ? 'chevron' : 'stripes')), 0, 0, 0, Math.PI / 2));
-    g.add(at(M(new THREE.TorusGeometry(0.3, 0.018, 6, 24), era === 2 ? bronze() : wood()), 0, 0, 0.01));
-    g.add(at(M(new THREE.SphereGeometry(0.06, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), era === 2 ? bronze() : darkPlate()), 0, 0, 0.03, Math.PI / 2));
+  } else if (era === 2) { // Eisenzeit: hoher ovaler Schild
+    const s = new THREE.Shape(); s.absellipse(0, 0, 0.27, 0.52, 0, Math.PI * 2, false, 0);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.012, bevelSegments: 2, curveSegments: 24 });
+    const p = geo.attributes.position, uv = geo.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + 0.28) / 0.56, (p.getY(i) + 0.53) / 1.06);
+    for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) - Math.pow(p.getX(i) / 0.28, 2) * 0.09);
+    geo.computeVertexNormals();
+    g.add(M(geo, heraldry(team, emblem)));
+    g.add(at(M(new THREE.SphereGeometry(0.075, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), darkPlate()), 0, 0, 0.04, Math.PI / 2));
+    g.add(at(M(new THREE.BoxGeometry(0.03, 0.9, 0.02), darkPlate()), 0, 0, 0.035));
+  } else { // Bronzezeit / Frühes Mittelalter: Rundschild
+    const early = era === 3;
+    g.add(at(M(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 24), heraldry(team, early ? 'stripes' : 'chevron')), 0, 0, 0, Math.PI / 2));
+    g.add(at(M(new THREE.TorusGeometry(0.32, 0.018, 6, 28), early ? darkPlate() : bronze()), 0, 0, 0.01));
+    g.add(at(M(new THREE.SphereGeometry(0.07, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), early ? darkPlate() : bronze()), 0, 0, 0.03, Math.PI / 2));
   }
   return g;
 }

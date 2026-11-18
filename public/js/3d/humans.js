@@ -136,10 +136,13 @@ const hemWave = (p, y0, amp = 0.015, f = 9) => (y0 + Math.sin(Math.atan2(p[0], p
 // ---------- Figur ----------
 // outfit je Epoche/Waffe
 function outfitFor(era, weapon) {
+  const ranged = weapon === 'bow' || weapon === 'sling' || weapon === 'crossbow';
+  if (weapon === 'none' || weapon === 'tool') return 'civil';
   if (era === 0) return 'fur';
-  if (era <= 2) return weapon === 'bow' || weapon === 'sling' ? 'tunic' : 'bronze';
-  if (era === 3) return weapon === 'bow' ? 'gambeson' : weapon === 'none' || weapon === 'tool' ? 'civil' : 'mail';
-  if (era === 4) return weapon === 'musket' ? 'musketeer' : 'pike';
+  if (era === 1) return ranged ? 'tunic' : 'bronze';
+  if (era === 2) return ranged ? 'tunic' : 'iron';
+  if (era === 3) return ranged ? 'gambeson' : 'earlymail';
+  if (era === 4) return ranged ? 'gambeson' : 'mail';
   if (era === 5) return 'coat';
   return 'modern';
 }
@@ -148,7 +151,7 @@ export function soldierR(o = {}) {
   const { color = '#1f4fa8', era = 3, weapon = 'sword', seed = 1, pose = 'idle', shield: hasShield = false, helmet = true, greatHelm = null, civilian = false } = o;
   const r = rng(seed * 11 + 7);
   const outfit = civilian ? 'civil' : outfitFor(era, weapon);
-  const gHelm = greatHelm ?? (outfit === 'mail' && weapon === 'sword' && seed % 3 === 0);
+  const gHelm = greatHelm ?? (outfit === 'mail');
   const skinC = SKIN[seed % SKIN.length], hairC = HAIRC[(seed * 3) % HAIRC.length];
   const beard = seed % 3 !== 1;
   const key = [outfit, pose, weapon, hasShield, helmet, gHelm, color, seed % 5, era, o.cell || 0].join('|');
@@ -186,6 +189,16 @@ export function soldierR(o = {}) {
         add(p => smax(smax(L.torso(p) - 0.03, 0.98 - p[1], 0.01), p[1] - 1.5, 0.01), 'bronze');
         add(p => smax(smax(L.legs(p) - 0.012, p[1] - 0.48, 0.01), 0.14 - p[1], 0.01), 'bronze');
         break;
+      case 'iron':
+        add(p => smax(smin(torsoArms(p), legs(p), 0.05) - 0.016, hemWave(p, 0.6, 0.02, 9), 0.02), 'teamcloth');
+        add(p => smax(smax(L.torso(p) - 0.03, hemWave(p, 0.82, 0.01, 12), 0.01), p[1] - 1.47, 0.02), 'mail');
+        add(belt, 'leather');
+        break;
+      case 'earlymail':
+        add(p => smax(smin(L.torso(p), legs(p), 0.05) - 0.02, hemWave(p, 0.5, 0.02, 8), 0.02), 'teamcloth');
+        add(p => smax(smin(torsoArms(p), legs(p), 0.05) - 0.03, hemWave(p, 0.6, 0.015, 10), 0.02), 'mail');
+        add(belt, 'leather');
+        break;
       case 'mail':
         add(p => smax(smin(torsoArms(p), legs(p), 0.05) - 0.014, hemWave(p, 0.6, 0.015, 10), 0.02), 'mail');
         add(p => smax(smax(smin(L.torso(p), legs(p), 0.05) - 0.032, hemWave(p, 0.56, 0.02, 7), 0.02), p[1] - 1.47, 0.02), 'surcoat');
@@ -217,10 +230,14 @@ export function soldierR(o = {}) {
     if (helmet && outfit !== 'civil') {
       const hb = bounds([H], 0.2), hc = 0.007;
       if (outfit === 'mail' && gHelm) add(p => smax(smax(S.cylY(p, [H[0], H[1] + 0.02, H[2]], 0.122, 0.13) - 0.004, -S.box(p, [H[0], H[1] + 0.02, H[2] + 0.12], [0.09, 0.008, 0.06]), 0.003), -S.box(p, [H[0], H[1] - 0.04, H[2] + 0.13], [0.006, 0.04, 0.05]) * 0 - 1, 0.002), 'plate', hb, hc);
-      else if (outfit === 'mail' || outfit === 'gambeson') {
+      else if (outfit === 'iron') {
+        add(p => smin(smax(L.head(p) - 0.018, H[1] + 0.005 - p[1], 0.01), S.sphere(p, [H[0], H[1] + 0.13, H[2] - 0.005], 0.022), 0.015), 'bronze', hb, hc);
+        for (const s2 of [-1, 1]) add(p => S.box(p, [H[0] + s2 * 0.092, H[1] - 0.03, H[2] + 0.03], [0.006, 0.045, 0.035], 0.004), 'bronze', hb, hc);
+      } else if (outfit === 'gambeson' && era >= 4) add(p => smin(smax(L.head(p) - 0.016, H[1] + 0.02 - p[1], 0.01), S.ellipsoid(p, [H[0], H[1] + 0.03, H[2]], [0.17, 0.012, 0.17]), 0.02), 'plate', hb, hc);
+      else if (outfit === 'earlymail' || outfit === 'gambeson') {
         add(p => smax(smax(L.head(p) - 0.018, H[1] + 0.03 - p[1], 0.01), -(L.head(p) - 0.004), 0.003), 'plate', hb, hc); // Kalotte
         add(p => smax(S.box(p, [H[0], H[1] + 0.0, H[2] + 0.112], [0.008, 0.045, 0.008]), 0, 0), 'plate', hb, hc); // Nasal
-        if (outfit === 'mail') add(p => smax(smax(smax(smin(L.head(p), L.neck(p), 0.04) - 0.02, p[1] - (H[1] + 0.04), 0.01), 1.42 - p[1], 0.01), -S.ellipsoid(p, [H[0], H[1] - 0.02, H[2] + 0.09], [0.07, 0.07, 0.08]), 0.01), 'mail', hb, hc);
+        if (outfit === 'earlymail') add(p => smax(smax(smax(smin(L.head(p), L.neck(p), 0.04) - 0.02, p[1] - (H[1] + 0.04), 0.01), 1.42 - p[1], 0.01), -S.ellipsoid(p, [H[0], H[1] - 0.02, H[2] + 0.09], [0.07, 0.07, 0.08]), 0.01), 'mail', hb, hc);
       } else if (outfit === 'bronze') add(p => smin(smax(L.head(p) - 0.016, H[1] - 0.02 - p[1] + (p[2] - H[2] > 0.04 && Math.abs(p[0] - H[0]) < 0.05 && p[1] < H[1] + 0.02 ? 1 : 0), 0.01), S.box(p, [H[0], H[1] + 0.15, H[2] - 0.01], [0.012, 0.04, 0.11], 0.01), 0.01), 'bronze', hb, hc);
       else if (outfit === 'pike') add(p => smin(smax(L.head(p) - 0.016, H[1] + 0.02 - p[1], 0.01), smax(S.ellipsoid(p, [H[0], H[1] + 0.035, H[2]], [0.16, 0.012, 0.19]), -0.0, 0), 0.02), 'plate', hb, hc);
       else if (outfit === 'coat' || outfit === 'musketeer') add(p => smax(S.cylY(p, [H[0], H[1] + 0.1, H[2]], 0.105, 0.09) - 0.004, H[1] + 0.02 - p[1], 0.005), 'shako', hb, hc);
@@ -244,6 +261,24 @@ export function soldierR(o = {}) {
   const hand = new THREE.Group(); hand.position.set(...J.handR); g.add(hand);
   if (weapon === 'sword') { const w = U.sword(); w.rotation.x = pose === 'attack' ? -0.6 : pose === 'charge' || pose === 'ride' ? 1.2 : 0.3; hand.add(w); }
   if (weapon === 'spear' || weapon === 'pike') { const sp = U.spear(weapon === 'pike' ? 3.6 : 2.3, weapon === 'pike'); sp.rotation.x = pose === 'attack' || pose === 'charge' || pose === 'ride' ? 1.35 : 0.08; hand.add(sp); }
+  if (weapon === 'halberd') {
+    const hb = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.021, 2.3, 6), U.wood()); pole.position.y = 0.65; hb.add(pole);
+    const blade = new THREE.Shape(); blade.moveTo(0, 0); blade.quadraticCurveTo(0.2, 0.02, 0.24, 0.16); blade.lineTo(0.22, -0.12); blade.quadraticCurveTo(0.12, -0.02, 0, -0.06);
+    const bm = new THREE.Mesh(new THREE.ExtrudeGeometry(blade, { depth: 0.012, bevelEnabled: false }), U.steel()); bm.position.set(0.012, 1.62, -0.006); hb.add(bm);
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.32, 4), U.steel()); spike.position.y = 1.95; hb.add(spike);
+    const hook = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.14, 4), U.steel()); hook.position.set(-0.07, 1.62, 0); hook.rotation.z = Math.PI / 2; hb.add(hook);
+    hb.rotation.x = pose === 'attack' || pose === 'charge' ? 1.3 : 0.08; hand.add(hb);
+  }
+  if (weapon === 'crossbow') {
+    const cb = new THREE.Group();
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.78), U.mat('#5a3a20', 0.6)); stock.position.z = 0.2; cb.add(stock);
+    const pts = []; for (let k = 0; k <= 10; k++) { const t = k / 10 - 0.5; pts.push(new THREE.Vector3(t * 0.7, 0, -Math.abs(t) * 0.18)); }
+    const arms = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.018, 5), U.darkPlate()); arms.position.z = 0.58; cb.add(arms);
+    const str = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([pts[0], new THREE.Vector3(0, 0, -0.12), pts[10]]), 4, 0.004, 3), U.mat('#e8e0c8', 0.9)); str.position.z = 0.58; cb.add(str);
+    if (pose === 'aim') { cb.position.set(-0.05, 0.02, -0.12); } else { cb.rotation.set(-0.9, 0, 0); cb.position.set(0, -0.05, 0); }
+    hand.add(cb);
+  }
   if (weapon === 'musket' || weapon === 'rifle') { const mu = U.musket(weapon === 'rifle' ? 1.05 : 1.3, weapon === 'rifle'); if (pose === 'aim') { mu.rotation.y = -Math.PI / 2; mu.position.set(0.04, -0.06, -0.25); } else { mu.rotation.set(0, -Math.PI / 2, Math.PI / 2 - 0.15); mu.position.set(0, -0.15, 0); } hand.add(mu); }
   if (weapon === 'tool') { const t = new THREE.Group(); t.add(new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.8, 6), U.wood())); t.children[0].position.y = 0.3; const hd = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.06, 0.22), U.darkPlate()); hd.position.set(0, 0.68, 0.06); t.add(hd); t.rotation.x = pose === 'attack' ? -0.6 : 0.3; hand.add(t); }
   if (weapon === 'bow') {

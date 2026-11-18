@@ -6,6 +6,7 @@ import * as W from './3d/world.js';
 import * as Md from './3d/models.js';
 import * as U from './3d/units.js';
 import { fabricMat, surcoatMat } from './3d/humans.js';
+import { eraBuilding } from './3d/eras.js';
 import { rng } from './3d/textures.js';
 import { BUILDINGS } from '/shared/rules.js';
 
@@ -93,7 +94,7 @@ class Pool {
 }
 
 // ---------- Einheiten-Daten (vorberechnet) ----------
-const TEAM_MK = new Set(['teamcloth', 'civtunic', 'surcoat', 'stripes', 'shield3', 'shieldR:chevron', 'shieldR:stripes']);
+const TEAM_MK = new Set(['teamcloth', 'civtunic', 'surcoat', 'stripes', 'shield3', 'shieldO', 'shieldR:chevron', 'shieldR:stripes']);
 const TINT_MK = new Set(['skin', 'hair', 'horsecoat']);
 const SKINS = ['#e3b08e', '#cf9a74', '#a8714c', '#7a4e32', '#edc4a2'].map(c => new THREE.Color(c));
 const HAIRS = ['#2a1d14', '#4a3018', '#6a4a24', '#151210', '#8a6a3a'].map(c => new THREE.Color(c));
@@ -129,7 +130,7 @@ function figureMaterial(mk, team) {
     case 'wood': return U.wood();
     case 'gold': return U.gold();
     case 'darkleather': return U.darkLeather();
-    case 'shield3': return U.heraldry(team, U.emblemFor(team));
+    case 'shield3': case 'shieldO': return U.heraldry(team, U.emblemFor(team));
     case 'shieldR:chevron': return U.heraldry(team, 'chevron');
     case 'shieldR:stripes': return U.heraldry(team, 'stripes');
     default: {
@@ -433,32 +434,18 @@ export class Renderer3D {
   }
   // ---------- Gebäude-Modelle ----------
   buildingModel(type, era, color) {
-    const style = type === 'house' || type === 'town' || type === 'storage' ? (era <= 1 ? 0 : 1) : 0;
-    const key = type + '|' + style + '|' + color;
+    era = Math.max(0, Math.min(7, era | 0));
+    const key = type + '|' + era + '|' + color;
     let mdl = this.bldModels.get(key);
     if (mdl) return mdl;
     const sz = BUILDINGS[type].size * S;
-    let g;
-    switch (type) {
-      case 'town': g = style ? Md.keep(color) : Md.halfTimberHouse(color, 3, { w: 5.6, d: 4.6, floors: 1, roof: 'thatch' }); break;
-      case 'house': g = style ? Md.townhouse(color, 7) : Md.cottage(color, 2); break;
-      case 'storage': { g = new THREE.Group(); const h = Md.cottage(color, 5); g.add(h); const w = Md.woodpile(); w.position.set(1.6, 0, 2.2); w.scale.setScalar(0.8); g.add(w); for (let k = 0; k < 3; k++) { const b = Md.barrel(); b.position.set(-1.6 + k * 0.7, 0, 2.2); g.add(b); } break; }
-      case 'farm': g = Md.field(4, 4, 3, true); break;
-      case 'barracks': g = Md.barracksB(color); break;
-      case 'range': { g = Md.halfTimberHouse(color, 11, { w: 5, d: 3.6, floors: 1, roof: 'slate' }); for (let k = 0; k < 3; k++) { const t = new THREE.Group(); const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.12, 16), U.heraldry('#e8dcc4', 'cross')); disc.rotation.x = Math.PI / 2; disc.position.y = 1.1; t.add(disc); const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.1, 0.08), U.wood()); leg.position.y = 0.55; t.add(leg); t.position.set(-1.8 + k * 1.8, 0, 3.2); g.add(t); } break; }
-      case 'stable': { g = Md.cottage(color, 9); const hs = Md.haystack(); hs.position.set(2.2, 0, 1.6); hs.scale.setScalar(0.7); g.add(hs); break; }
-      case 'tower': g = Md.roundTower(color, 8, 1.6); break;
-      case 'workshop': g = Md.blacksmith(Md.fire); break;
-      case 'wall': g = Md.wallSeg(2, 3.2, 2); break;
-      default: g = Md.crate();
-    }
+    const g = eraBuilding(type, era, color);
     const mm = mergeModel(g);
     const size = mm.box.getSize(new THREE.Vector3());
-    const fit = type === 'wall' ? 1 : (sz * 0.96) / Math.max(size.x, size.z);
+    const fit = type === 'wall' ? (sz * 1.0) / Math.max(size.x, size.z) : (sz * 0.96 * (era === 7 ? 1.55 : 1)) / Math.max(size.x, size.z);
     const ctr = mm.box.getCenter(new THREE.Vector3());
     const tf = new THREE.Matrix4().makeScale(fit, fit, fit).multiply(new THREE.Matrix4().makeTranslation(-ctr.x, -mm.box.min.y, -ctr.z));
     for (const p of mm.parts) { p.geo.applyMatrix4(tf); fowify(p.mat); }
-    // Feuer der Schmiede u. ä. (Sprites) werden nicht mitgeführt
     mdl = { parts: mm.parts, h: size.y * fit, key };
     this.bldModels.set(key, mdl);
     return mdl;
@@ -669,7 +656,7 @@ export class Renderer3D {
       g.strokeRect(Math.min(b.x0, b.x1) + 0.5, Math.min(b.y0, b.y1) + 0.5, Math.abs(b.x1 - b.x0), Math.abs(b.y1 - b.y0));
     }
   }
-  buildingKey(e) { const type = e.def.key, era = e.era || 0; const style = type === 'house' || type === 'town' || type === 'storage' ? (era <= 1 ? 0 : 1) : 0; const p = this.G.players[e.owner]; return type + '|' + style + '|' + (p ? p.color : '#888888'); }
+  buildingKey(e) { const p = this.G.players[e.owner]; return e.def.key + '|' + Math.max(0, Math.min(7, e.era | 0)) + '|' + (p ? p.color : '#888888'); }
 
   drawMinimap(canvas, ui) {
     const G = this.G, g = canvas.getContext('2d');

@@ -605,3 +605,4 @@ export function hoardingTower(color) {
   g.add(put(m(cylT(2.15, 2.15, 1.2, 16, 1.2, true), M.planks), 0, 7.6, 0));
   return g;
 }
+export { m, put, coneT, gableRoof, windowAt, door, M };

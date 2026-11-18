@@ -145,7 +145,7 @@ export class Room {
         if (['auto', 'small', 'medium', 'large', 'huge'].includes(s.mapSize)) st.mapSize = s.mapSize;
         if (['random', 'continent', 'lakes', 'highlands', 'forest'].includes(s.mapType)) st.mapType = s.mapType;
         if (['low', 'normal', 'high'].includes(s.resources)) st.resources = s.resources;
-        if ('startEra' in s) st.startEra = Math.round(num(s.startEra, 0, 4, st.startEra));
+        if ('startEra' in s) st.startEra = Math.round(num(s.startEra, 0, 6, st.startEra));
         if ('speed' in s) st.speed = num(s.speed, 0.5, 3, st.speed);
         if ('armageddonMin' in s) st.armageddonMin = Math.round(num(s.armageddonMin, 1, 90, st.armageddonMin));
         if (['easy', 'normal', 'hard'].includes(s.botDifficulty)) { st.botDifficulty = s.botDifficulty; for (const x of this.players) if (x.isBot) x.difficulty = s.botDifficulty; }
@@ -246,7 +246,7 @@ export class Room {
     this.phase = 'end';
     clearInterval(this.timer); this.timer = null;
     this.result = {
-      t: 'end', winners: winners.map(p => p.id), duration: Math.round(w.time), mode: this.settings.mode,
+      t: 'end', reason: w.winReason || 'Sieg', winners: winners.map(p => p.id), duration: Math.round(w.time), mode: this.settings.mode,
       players: w.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, culture: p.culture, nation: p.nation, stats: p.stats, score: w.score(p), history: p.history, defeatedAt: p.defeatedAt })),
     };
     this.broadcast(this.result);
