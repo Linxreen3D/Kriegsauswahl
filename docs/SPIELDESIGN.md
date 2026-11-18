@@ -1,13 +1,14 @@
-# Frontlinien – Spieldesign (Entwurf 4)
+# Frontlinien – Spieldesign (Entwurf 5)
 
 Stand: Konzept zur Diskussion. Zahlen sind Startwerte und werden mit Bot-gegen-Bot-Simulationen nachgestellt.
 
-**Was sich gegenüber Entwurf 3 geändert hat:**
-- **Atomwaffen deutlich stärker** und schwerer abzufangen. Gegenspiel bleibt über Aufklärung, Sabotage und Zweitschlag (Kapitel 7).
-- **Neu:** Diplomatie mit Botschaftern, privatem Verhandlungs-Chat und Tauschverträgen für Gebiete, Rohstoffe und Truppen (Kapitel 12).
-- **Neu:** Staatsführer zur Auswahl in den letzten beiden Epochen, dargestellt als Schattenriss (Kapitel 13).
-- **Fest übernommen:** Speichern/Fortsetzen mit Bot-Vertretung, Veteranenränge, Gelände mit Taktik (Kapitel 14).
-- **Im Ideenspeicher:** Brennstoff, LKW (mit Sinn und Zweck) und die übrigen Ideen (Kapitel 16).
+**Was sich gegenüber Entwurf 4 geändert hat:**
+- **Staatsführer deutlich stärker:** je zwei Dauerboni plus eine aktive Fähigkeit.
+- **Porträts** für alle Führer; nur A.H. erscheint als Schattenriss (Kapitel 13).
+- **Neu: Friedenskonferenz.** Mitten im Krieg kann man eine Verhandlungsrunde einberufen. Das Spiel pausiert, alle anderen sehen am Verhandlungstisch zu und können Seiten unterstützen (Kapitel 12.4).
+- **Haltung zu Symbolik:** Es geht um das historische Spielerlebnis. Wir distanzieren uns klar von NS- und SS-Symbolik; sie kommt im Spiel nirgends vor (Kapitel 13).
+
+Unverändert aus Entwurf 4: Atomwaffen mit Gegenspiel, Diplomatie mit Botschaftern, Speichern/Bot-Vertretung, Veteranen und Gelände.
 
 Weiterhin gilt: 8 Epochen, die Weltkriege gehören zur 2. Industriellen Revolution, und die USA haben in IV–V keine eigenen Einheiten.
 
@@ -404,11 +405,11 @@ Bewusst **ohne** Flammenwerfer.
 3. **Privater Chat:** Bei Zustimmung öffnet sich ein Chat nur zwischen den beiden. Mehrere solcher Chats gleichzeitig sind möglich, Dreier-Gespräche für Bündnisse auch.
 4. **Vertragsfenster neben dem Chat:** Beide stellen ihr Angebot zusammen. Ändert einer etwas, muss der andere neu zustimmen. Erst wenn **beide** auf „Unterzeichnen“ drücken, führt der Server den Tausch aus, alles auf einmal oder gar nicht.
 
-### Was man tauschen kann
+### 12.3 Was man tauschen kann
 
 | Gegenstand | Wie es funktioniert |
 |---|---|
-| **Gebiete** | Die Karte ist in **Provinzen** eingeteilt (Kapitel 12.4). Eine Provinz wechselt den Besitzer, mitsamt Gebäuden, Rohstoffvorkommen und Bahnhöfen darin. Eigene Truppen dort müssen sie binnen 60 Sekunden verlassen |
+| **Gebiete** | Die Karte ist in **Provinzen** eingeteilt (Kapitel 12.5). Eine Provinz wechselt den Besitzer, mitsamt Gebäuden, Rohstoffvorkommen und Bahnhöfen darin. Eigene Truppen dort müssen sie binnen 60 Sekunden verlassen |
 | **Rohstoffe** | Einmalig („500 Gold jetzt“) oder als Tribut („50 Holz pro Minute für 20 Minuten“) |
 | **Truppen** | Ausgewählte Einheiten wechseln den Besitzer. Ausnahmen: Signatur-Einheiten und Atomraketen |
 | **Bündnis** | Gemeinsame Sicht, gemeinsamer Sieg, keine Angriffe aufeinander. Auf Wunsch mit Schutzversprechen |
@@ -423,41 +424,183 @@ Bewusst **ohne** Flammenwerfer.
 - **Kündigen ist erlaubt:** Bündnisse und Pakte laufen nach Kündigung noch 2 Minuten weiter. Das ist dann kein Vertragsbruch.
 - **Niedriges Ansehen:** Verträge mit diesem Spieler brauchen eine Sicherheit (zum Beispiel Rohstoffe als Pfand), und bei Bündnissen gibt es keine gemeinsame Sicht. Verrat bleibt möglich, hat aber einen Preis.
 
-### 12.4 Provinzen (Voraussetzung für Gebietstausch)
+### 12.4 Friedenskonferenz (Verhandlungsrunde im Krieg)
+
+**Idee:** Zwei Kriegsparteien setzen sich mitten im Krieg an einen Tisch, wie bei echten Friedenskonferenzen (Wien 1815, Brest-Litowsk 1918, Paris 1919). Das Spiel pausiert, und alle anderen Spieler schauen zu und können Partei ergreifen.
+
+**1. Einberufen**
+- Eine Kriegspartei schickt ihren **Botschafter mit einem Konferenzantrag** zum Gegner.
+- Im Krieg ist das riskant: Der Gegner kann den Botschafter abschießen, verliert dann aber Ansehen.
+- Kommt der Botschafter an, kann der Gegner **annehmen oder ablehnen**. Ablehnen kostet nichts.
+- Bismarck kann mit seiner Fähigkeit eine Konferenz erzwingen (Kapitel 13).
+
+**2. Pause und Verhandlungstisch**
+- Allen Spielern wird angekündigt: „Friedenskonferenz zwischen X und Y in 10 Sekunden“. Dann **pausiert das Spiel für alle**.
+- Alle wechseln in den **Konferenzsaal**:
+  - In der Mitte der Tisch mit den Porträts der Staatsführer beider Seiten.
+  - Daneben die Karte mit den Provinzen beider Parteien.
+  - Dazu das Vertragsfenster und ein Chat der Verhandelnden.
+- **Zuschauer** sitzen auf der Galerie. Sie sehen alles und haben einen eigenen Galerie-Chat.
+- **Zeitlimit:** 5 Minuten, einstellbar 3, 5 oder 8. Läuft die Zeit ohne Unterschrift ab, ist die Konferenz gescheitert.
+
+**3. Was am Tisch verhandelt werden kann** (zusätzlich zu allem aus Kapitel 12.3):
+
+| Gegenstand | Wirkung |
+|---|---|
+| **Frieden** | Krieg endet. Neuer Angriff vor Ablauf von 20 min gilt als Vertragsbruch |
+| **Waffenstillstand** | 10 Minuten Kampfpause, dann geht es weiter, wenn nichts vereinbart wird |
+| **Gebietsabtretung** | Provinzen wechseln den Besitzer |
+| **Reparationen** | Rohstoffe pro Minute über eine festgelegte Zeit |
+| **Entmilitarisierte Zone** | Ausgewählte Provinzen: 20 min keine Militäreinheiten und keine Türme |
+| **Abrüstung** | Eine Seite entlässt einen Teil ihrer Truppen und bekommt 50 % der Kosten zurück |
+| **Rüstungsbeschränkung** | Eine Seite darf 15 min keine Signatur-Einheiten oder Atomraketen bauen |
+
+**4. Was Zuschauer tun können**
+
+| Möglichkeit | Wirkung |
+|---|---|
+| **Seite unterstützen** | Rohstoffe oder Truppen für eine Seite zusagen. Wird nach der Konferenz automatisch übergeben, egal wie sie ausgeht |
+| **Garantie geben** | „Scheitert die Konferenz, trete ich auf Seite X in den Krieg ein.“ Ist bindend: Bei Scheitern herrscht automatisch Krieg mit der Gegenseite |
+| **Sanktionen androhen** | Wenn eine Seite nicht unterschreibt, bekommt sie 20 min kein Handels- und Tributangebot von diesem Zuschauer. Druckmittel ohne Krieg |
+| **Vermitteln** | Beide Parteien können einen Zuschauer als Vermittler annehmen. Er darf am Tisch mitschreiben und Vorschläge ins Vertragsfenster legen. Bei Erfolg: +Ansehen und 5 % der vereinbarten Reparationen als Provision |
+| **Beitreten** | Mit Zustimmung beider Seiten wird der Zuschauer selbst Vertragspartei (zum Beispiel ein Verbündeter, der mit Frieden schließen will) |
+
+Jede Unterstützung, Garantie und Drohung ist **für alle sichtbar**. So entsteht Druck, aber auch Transparenz: Jeder weiß, wer hinter wem steht.
+
+**5. Ausgang**
+- **Unterschrieben:** Der Vertrag tritt in Kraft, das Spiel läuft weiter. Bruch eines Friedensvertrags senkt das Ansehen sofort auf „niedrig“, und alle Garantiemächte treten gegen den Brecher in den Krieg ein.
+- **Gescheitert:** Garantien greifen, und der Krieg geht weiter.
+
+**6. Schutz vor Missbrauch** (damit keiner das Spiel ständig anhält)
+- Jede Kriegspartei kann höchstens **1 Konferenz alle 20 Minuten** beantragen.
+- Insgesamt pausiert das Spiel höchstens **15 Minuten pro Spielstunde** für Konferenzen. Danach finden Konferenzen ohne Pause statt (siehe unten).
+- **Lobby-Einstellung „Konferenzen“:**
+  - **„Pause für alle“** (Standard): wie beschrieben.
+  - **„Ohne Pause“** für sehr große Runden: Das Spiel läuft weiter, aber zwischen den beiden Parteien herrscht Waffenruhe, solange verhandelt wird. Zuschauen und Unterstützen geht trotzdem.
+  - **„Aus“.**
+- **Bots** nehmen Konferenzen an, wenn sie verlieren, und verlangen viel, wenn sie gewinnen.
+
+### 12.5 Provinzen (Voraussetzung für Gebietstausch)
 - **Einteilung:** Der Kartengenerator teilt die Karte in Provinzen, etwa 6–8 pro Spieler, mit Namen und sichtbaren Grenzen.
 - **Besitz:** Eine Provinz gehört dem, der dort ein Haupthaus, einen **Außenposten** (neues, günstiges Gebäude) oder eine Festung hat. Bei mehreren gehört sie dem mit den meisten Gebäudepunkten.
 - **Sammelbonus:** In eigenen Provinzen sammeln Arbeiter 10 % schneller.
-- **Gebietstausch** im Vertrag überträgt genau diese Provinzen.
+- **Gebietstausch** im Vertrag oder am Konferenztisch überträgt genau diese Provinzen.
 
 ## 13. Staatsführer (Epoche VII und VIII)
 
-- **Auswahl beim Erreichen von VII:** Jede Nation wählt einen von 2–3 historischen Staatsführern.
-- **Neue Wahl beim Erreichen von VIII**, aus den Führern des Kalten Kriegs.
+- **Wahl:** Beim Erreichen von VII wählt jede Nation einen von 2–3 historischen Staatsführern. Beim Erreichen von VIII wählt sie erneut, aus den Führern des Kalten Kriegs.
+- **Stärke:** Jeder Führer hat **zwei Dauerboni** und **eine aktive Fähigkeit** (Abklingzeit 10 min, sofern nicht anders angegeben). Ein Führer ist damit etwa so stark wie der Nationsbonus, die Wahl prägt also den Spielstil der Spätphase.
 - **Darstellung wie in Hearts of Iron IV:**
-  - Ein dunkler **Schattenriss** des Führers mit Namen und Amtszeit.
-  - Daneben steht sein Bonus.
-  - Keine Fotos, keine Symbole von Regimen.
-- **Jeder Führer gibt einen Bonus**, bei starken Boni zusätzlich einen kleinen Nachteil. Führer sind Seitenwege, keine Pflichtwahl. Gleich stark wie Nationsbonus mal 0,5.
+  - Gemaltes **Porträt** mit Namen und Amtszeit, daneben die Boni.
+  - **A.H. erscheint als dunkler Schattenriss** ohne Gesicht.
+- **Haltung:** Es geht um das historische Spielerlebnis, nicht um Verherrlichung. Wir distanzieren uns klar von NS- und SS-Symbolik.
+  - Hakenkreuz, SS-Runen, Totenkopf-Abzeichen und ähnliche Zeichen kommen **nirgends** vor: nicht auf Fahnen, Uniformen, Fahrzeugen oder im Interface.
+  - Boni sind rein militärisch oder wirtschaftlich formuliert, nie ideologisch.
+- **Porträts und Bildrechte:**
+  - **Gemalte Porträts im einheitlichen Stil**, selbst erstellt oder beauftragt. Das sieht wie aus einem Guss aus und vermeidet Rechteprobleme.
+  - Fotos neuerer Personen (etwa Thatcher, Gorbatschow, Deng) sind meist urheberrechtlich geschützt.
+  - Gemeinfrei sind ältere Bilder und offizielle Porträts der US-Regierung.
+- **Release in Deutschland:** Eine Figur wie A.H. ist in Spielen seit 2018 im Einzelfall möglich, wenn die USK sie prüft (Sozialadäquanz, § 86a StGB). Vor dem Steam-Release lassen wir das gezielt prüfen.
 
-**Hinweis zum Release in Deutschland:**
-- Führer wie Hitler oder Mussolini sind in Strategiespielen üblich, auch in Hearts of Iron IV. In Deutschland ist das seit 2018 im Einzelfall mit USK-Prüfung möglich (Sozialadäquanzklausel, § 86a StGB).
-- **Verboten bleiben verfassungsfeindliche Symbole** wie das Hakenkreuz und SS-Runen. Deshalb kommen sie nirgends vor, auch nicht auf Fahnen.
-- Der Schattenriss mit sachlichem Bonus (Rüstungsproduktion statt Ideologie) ist dafür die richtige Form. Vor dem Steam-Release sollten wir das noch einmal gezielt prüfen.
+### Deutschland
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Otto von Bismarck** (1871–90) | Botschafter +50 % Tempo; Verträge nie mit Pfand; Verbündete +10 % Schaden | **Kongress:** erzwingt eine Friedenskonferenz, die der Gegner nicht ablehnen kann (1× pro Epoche) |
+| VII | **Wilhelm II.** (1888–1918) | Schiffe 25 % billiger und 20 % schneller gebaut; Artillerie +1 Reichweite | **Flottenparade:** 60 s lang alle Schiffe +30 % Schaden |
+| VII | **A.H.** (1933–45), *Schattenriss* | Panzer und Flugzeuge 30 % schneller gebaut; Panzer +10 % Schaden | **Blitzkrieg:** 60 s lang Fahrzeuge +40 % Tempo und +15 % Schaden. *Nachteil: Ansehen fällt bei Wahl auf „niedrig“, Verträge nur mit Pfand* |
+| VIII | **Konrad Adenauer** (1949–63) | Wirtschaftswunder: +20 % Sammeltempo; Gebäude 25 % schneller gebaut | **Westbindung:** 5 min lang deckt die Raketenabwehr eines Verbündeten auch das eigene Gebiet |
+| VIII | **Helmut Schmidt** (1974–82) | Verteidigungsgebäude +30 % Leben; Flugabwehr +20 % Schaden | **Doppelbeschluss:** 3 min lang +25 % Abfangchance (über die Obergrenze hinaus bis 75 %) |
 
-| Nation | Epoche VII (1860–1945) | Epoche VIII (1945–1990) |
-|---|---|---|
-| **Deutschland** | **Otto von Bismarck** (1871–90): Verträge kosten kein Pfand, Botschafter +30 % Tempo · **Wilhelm II.** (1888–1918): Schiffe 15 % billiger · **Adolf Hitler** (1933–45): Panzer und Flugzeuge 15 % schneller gebaut; Nachteil: Ansehen sinkt bei Wahl auf „niedrig“ | **Konrad Adenauer** (1949–63): Wirtschaftswunder, +10 % Sammeltempo · **Helmut Schmidt** (1974–82): Verteidigungsgebäude 20 % mehr Leben |
-| **Österreich-Ungarn / Österreich** | **Franz Joseph I.** (1848–1916): Gebäude 15 % mehr Leben · **Karl I.** (1916–18): Friedensverträge geben +Ansehen | **Bruno Kreisky** (1970–83): Neutralität, Nichtangriffspakte doppelt so lang, +Ansehen · **Julius Raab** (1953–61): Staatsvertrag, Außenposten 30 % billiger |
-| **Russland / UdSSR** | **Alexander II.** (1855–81): Reformen, Arbeiter 15 % billiger · **Josef Stalin** (1924–53): Panzer 15 % billiger; Nachteil: Botschafter langsamer | **Nikita Chruschtschow** (1953–64): Atomrakete 25 % schneller gebaut · **Michail Gorbatschow** (1985–91): Glasnost, Verträge geben +Ansehen, Tribute 20 % günstiger |
-| **China** | **Sun Yat-sen** (1912): Infanterie 10 % billiger · **Chiang Kai-shek** (1928–49): Befestigungen 20 % billiger | **Mao Zedong** (1949–76): Volkskrieg, Infanterie 20 % schneller ausgebildet; Nachteil: Sammeltempo −5 % · **Deng Xiaoping** (1978–89): Reform und Öffnung, +12 % Sammeltempo |
-| **Indien** | **Mahatma Gandhi** (Unabhängigkeitsbewegung): Ansehen kann nicht unter neutral sinken, Verteidigungsbonus in eigenen Provinzen · **Subhas Chandra Bose** (Indische Nationalarmee, 1943): Infanterie 10 % billiger | **Jawaharlal Nehru** (1947–64): Blockfreiheit, Verträge mit allen Seiten ohne Pfand · **Indira Gandhi** (1966–77, 80–84): Panzer und Artillerie 10 % stärker |
-| **Jugoslawien** | **Peter I.** (Serbien 1903–21): Infanterie +10 % Leben · **Josip Broz Tito** (Partisanenführer, 1941–45): Partisanen 25 % billiger | **Josip Broz Tito** (1945–80): Blockfreiheit, Bündnisse mit beiden Seiten möglich, +Ansehen · **Territorialverteidigung als Doktrin:** Abklingzeit der Fähigkeit halbiert |
-| **USA** | **Abraham Lincoln** (1861–65): Eisenbahnbau 30 % billiger · **Theodore Roosevelt** (1901–09): Schiffe 15 % schneller gebaut · **Franklin D. Roosevelt** (1933–45): Fließband, alle Fahrzeuge 15 % schneller gebaut | **Dwight D. Eisenhower** (1953–61): Bündnisse geben beiden Partnern +5 % Schaden · **John F. Kennedy** (1961–63): Spezialkräfte 20 % billiger · **Ronald Reagan** (1981–89): Raketenabwehr 30 % besser |
-| **Frankreich** | **Napoleon III.** (1852–70): Artillerie 10 % stärker · **Georges Clemenceau** (1917–20): Befestigungen und Bunker 20 % mehr Leben | **Charles de Gaulle** (1959–69): Atomrakete 25 % billiger · **François Mitterrand** (1981–95): Bündnisse halten nach Kündigung doppelt so lange |
-| **Großbritannien** | **Königin Victoria** (1837–1901): Werften 20 % schneller · **Winston Churchill** (1940–45): Verteidigung in eigenen Provinzen +15 % Schaden | **Winston Churchill** (1951–55): Spezialkräfte +20 % Leben · **Margaret Thatcher** (1979–90): Landungsschiffe und Flugzeugträger 20 % billiger |
-| **Italien** | **Viktor Emanuel II.** (1861–78): Infanterie 10 % schneller · **Benito Mussolini** (1922–43): Flugzeuge 10 % billiger; Nachteil: Infanterie −5 % Leben | **Alcide De Gasperi** (1945–53): Wiederaufbau, Gebäude 20 % schneller gebaut · **Bettino Craxi** (1983–87): Tribute und Handel 15 % günstiger |
-| **Japan** | **Kaiser Meiji** (1867–1912): Aufstiegsforschung 10 % schneller · **Hideki Tōjō** (1941–44): Schiffe und Flugzeuge 10 % stärker; Nachteil: Ansehen sinkt bei Wahl auf „niedrig“ | **Shigeru Yoshida** (1946–54): Wirtschaft zuerst, +12 % Sammeltempo · **Yasuhiro Nakasone** (1982–87): Flugabwehr 20 % stärker |
-| **Osmanisches Reich / Türkei** | **Abdülhamid II.** (1876–1909): Eisenbahnbau 20 % billiger · **Mustafa Kemal Atatürk** (1923–38): Infanterie +10 % Leben, Gebäude 10 % schneller | **İsmet İnönü** (1938–50): Neutralität, Nichtangriffspakte doppelt so lang · **Turgut Özal** (1983–89): Tribute und Handel 15 % günstiger |
+### Österreich-Ungarn / Österreich
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Franz Joseph I.** (1848–1916) | Gebäude +25 % Leben; Türme +15 % Schaden | **Viribus Unitis:** 90 s lang alle Einheiten in eigenen Provinzen +20 % Leben |
+| VII | **Karl I.** (1916–18) | Infanterie 15 % billiger; Friedensverträge geben +Ansehen | **Sixtus-Brief:** geheime Konferenz mit einem Gegner, ohne Zuschauer und ohne Pause |
+| VIII | **Bruno Kreisky** (1970–83) | Nichtangriffspakte doppelt so lang; +20 % auf Tribut- und Handelseinnahmen | **Wiener Gipfel:** Kreisky lädt zu einer fremden Konferenz als Vermittler ein; bei Erfolg 10 % Provision statt 5 % |
+| VIII | **Julius Raab** (1953–61) | Außenposten 50 % billiger; +15 % Sammeltempo in eigenen Provinzen | **Staatsvertrag:** eine eigene Provinz ist 5 min lang unangreifbar (Abklingzeit 20 min) |
+
+### Russland / UdSSR
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Alexander II.** (1855–81) | Arbeiter 25 % billiger; Eisenbahnbau 25 % billiger | **Große Reformen:** die nächste Aufstiegsforschung ist 30 % schneller (1× pro Epoche) |
+| VII | **Josef Stalin** (1924–53) | Panzer 25 % billiger; Infanterie 20 % schneller ausgebildet | **Kein Schritt zurück:** 90 s lang Infanterie in eigenen Provinzen +30 % Leben. *Nachteil: Botschafter −25 % Tempo* |
+| VIII | **Nikita Chruschtschow** (1953–64) | Atomrakete 40 % schneller und 25 % billiger gebaut | **Kuba-Krise:** der nächste Atomstart erfolgt ohne Vorwarnung |
+| VIII | **Leonid Breschnew** (1964–82) | Panzer +15 % Leben; Panzer 15 % billiger | **Breschnew-Doktrin:** 3 min lang +20 % Schaden in Provinzen von Verbündeten |
+| VIII | **Michail Gorbatschow** (1985–91) | Verträge geben +Ansehen; Tribute 30 % günstiger | **Perestroika:** 3 min lang alle Gebäude 50 % schneller gebaut |
+
+### China
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Sun Yat-sen** (1912) | Infanterie 20 % billiger; Aufstiegsforschung 15 % schneller | **Drei Volksprinzipien:** 3 min lang +25 % Sammeltempo |
+| VII | **Chiang Kai-shek** (1928–49) | Befestigungen 30 % billiger; Bunker +25 % Leben | **Verbrannte Erde:** eigene Gebäude in einer Provinz sprengen; Gegner dort 2 min −50 % Tempo |
+| VIII | **Mao Zedong** (1949–76) | Infanterie 30 % schneller ausgebildet; Infanterie +10 % Leben | **Volkskrieg:** 2 min lang bilden alle Kasernen Infanterie kostenlos aus. *Nachteil: −10 % Sammeltempo* |
+| VIII | **Deng Xiaoping** (1978–89) | +20 % Sammeltempo; Handel +20 % | **Sonderwirtschaftszone:** eine Provinz 5 min lang +50 % Sammeltempo |
+
+### Indien
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Mahatma Gandhi** (Unabhängigkeitsbewegung) | Ansehen sinkt nie unter neutral; Gegner in eigenen Provinzen −15 % Schaden | **Salzmarsch:** 2 min lang können Gegner in deinen Provinzen nicht sammeln und sind 25 % langsamer |
+| VII | **Subhas Chandra Bose** (Indische Nationalarmee, 1943) | Infanterie 20 % billiger; Infanterie +10 % Schaden | **Delhi Chalo:** 60 s lang Infanterie +30 % Tempo |
+| VIII | **Jawaharlal Nehru** (1947–64) | Verträge mit allen Seiten ohne Pfand; Häuser +2 Bevölkerung | **Bandung-Konferenz:** alle Nicht-Atommächte erhalten sofort eine Bündnisanfrage, ohne Botschafter |
+| VIII | **Indira Gandhi** (1966–77, 1980–84) | Panzer und Artillerie +15 % Schaden | **Feldzug 1971:** 2 min lang alle Einheiten +20 % Tempo |
+
+### Jugoslawien
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Peter I.** (Serbien, 1903–21) | Infanterie +15 % Leben; Gebirgsbatterie 25 % billiger | **Rückzug über Albanien:** 30 s lang alle Einheiten +50 % Tempo |
+| VII | **Josip Broz Tito** (Partisanenführer, 1941–45) | Partisanen 40 % billiger; Infanterie im Wald +15 % Schaden | **Partisanenkrieg:** 2 min lang ist alle Infanterie im Wald unsichtbar |
+| VIII | **Josip Broz Tito** (1945–80) | Blockfreiheit: Bündnisse mit beiden Lagern gleichzeitig; Handel +20 % | **Totale Volksverteidigung:** Abklingzeit der Signatur-Fähigkeit halbiert, Miliz hält 4 statt 2 min |
+| VIII | **Kollektives Staatspräsidium** (1980–91) | Gebäude +20 % Leben; Infanterie 15 % billiger | **Rotation:** Fähigkeiten aller Gebäude laden 3 min lang doppelt so schnell |
+
+### USA
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Abraham Lincoln** (1861–65) | Eisenbahnbau 40 % billiger; Züge +30 % Tempo | **Union:** 3 min lang +20 % Leben für alle Einheiten in eigenen Provinzen |
+| VII | **Theodore Roosevelt** (1901–09) | Schiffe 20 % schneller gebaut; Verträge mit Rohstoffforderungen −10 % Kosten | **Große Weiße Flotte:** 2 min lang Schiffe +25 % Tempo |
+| VII | **Franklin D. Roosevelt** (1933–45) | Fließband: Fahrzeuge, Flugzeuge und Schiffe 25 % schneller gebaut | **Leih- und Pachtgesetz:** Geschenke an Verbündete kommen ohne Botschafter an und zählen +50 % |
+| VIII | **Dwight D. Eisenhower** (1953–61) | Verbündete +10 % Schaden; Straßen +40 % statt +25 % Tempo | **Operation Overlord:** 2 min lang Landungsschiffe und Fallschirmjäger +30 % Leben |
+| VIII | **John F. Kennedy** (1961–63) | Spezialkräfte 30 % billiger; Aufklärer +2 Sicht | **Seeblockade:** ein Gegner kann 3 min lang keine Schiffe bewegen |
+| VIII | **Ronald Reagan** (1981–89) | Raketenabwehr +20 % Abfangchance (Obergrenze 70 %) | **Rüstungswettlauf:** 3 min lang alle Produktionsgebäude +30 % Tempo |
+
+### Frankreich
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Napoleon III.** (1852–70) | Artillerie +15 % Schaden; Eisenbahnbau 20 % billiger | **Haussmann:** 3 min lang Gebäude 50 % schneller gebaut |
+| VII | **Georges Clemenceau** (1917–20) | Befestigungen +30 % Leben; Infanterie in Stellungen +15 % Schaden | **Der Tiger:** 2 min lang alle Einheiten +20 % Schaden in eigenen Provinzen |
+| VIII | **Charles de Gaulle** (1959–69) | Force de frappe: Atomrakete 30 % billiger; +Ansehen bei Neutralität | **Politik der Größe:** einen Bündnisvertrag kündigen ohne Ansehensverlust (Abklingzeit 20 min) |
+| VIII | **François Mitterrand** (1981–95) | Bündnisse halten nach Kündigung doppelt so lange; Züge +40 % Tempo (TGV) | **Achse Paris–Bonn:** 3 min lang +15 % Sammeltempo für dich und einen Verbündeten |
+
+### Großbritannien
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Königin Victoria** (1837–1901) | Werften 30 % schneller; Schiffe +10 % Leben | **Weltreich:** 3 min lang +10 % Sammeltempo pro eigener Küstenprovinz (max. +40 %) |
+| VII | **Winston Churchill** (1940–45) | Verteidigung in eigenen Provinzen +20 % Schaden; Jäger +15 % Schaden | **Wir werden niemals kapitulieren:** 2 min lang alle Einheiten in eigenen Provinzen +30 % Leben |
+| VIII | **Clement Attlee** (1945–51) | Arbeiter +20 % Leben; Häuser +2 Bevölkerung | **Wiederaufbau:** zerstörte eigene Gebäude der letzten 5 min kehren mit 50 % Leben zurück (Abklingzeit 20 min) |
+| VIII | **Margaret Thatcher** (1979–90) | Flugzeugträger und Landungsschiffe 30 % billiger; Spezialkräfte +20 % Leben | **Falkland:** 2 min lang Flotte +25 % Tempo und +15 % Schaden |
+
+### Italien
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Giuseppe Garibaldi** (Risorgimento) | Infanterie +20 % Tempo; Infanterie +10 % Schaden auf Hügeln | **Zug der Tausend:** sofort 10 Infanteristen kostenlos (1× pro Epoche) |
+| VII | **Benito Mussolini** (1922–43) | Flugzeuge 20 % billiger; Schiffe 10 % billiger | **Mare Nostrum:** 2 min lang Schiffe +20 % Schaden. *Nachteil: Infanterie −5 % Leben* |
+| VIII | **Alcide De Gasperi** (1945–53) | Gebäude 30 % schneller gebaut; +15 % Sammeltempo | **Marshallplan:** 3 min lang +50 % auf Geschenke und Tribute, die du erhältst |
+| VIII | **Bettino Craxi** (1983–87) | Tribute und Handel 25 % günstiger; Gebirgshaubitze 20 % billiger | **Sigonella:** fremde Truppen in deinen Provinzen sind 1 min lang bewegungsunfähig |
+
+### Japan
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Kaiser Meiji** (1867–1912) | Aufstiegsforschung 20 % schneller; Infanterie 15 % billiger | **Meiji-Restauration:** alle eigenen Einheiten kostenlos auf die aktuelle Epoche nachrüsten (1× pro Epoche) |
+| VII | **Hideki Tōjō** (1941–44) | Schiffe und Flugzeuge +15 % Schaden | **Pazifikoffensive:** 2 min lang Flugzeuge +30 % Reichweite. *Nachteil: Ansehen fällt bei Wahl auf „niedrig“* |
+| VIII | **Shigeru Yoshida** (1946–54) | +20 % Sammeltempo; Gebäude 15 % billiger | **Yoshida-Doktrin:** 5 min lang Verbündete übernehmen 25 % des Schadens an deinen Gebäuden |
+| VIII | **Yasuhiro Nakasone** (1982–87) | Flugabwehr +25 % Schaden; Schiffe +10 % Leben | **Unsinkbarer Flugzeugträger:** 3 min lang Küstenbatterien und Flak +40 % Reichweite |
+
+### Osmanisches Reich / Türkei
+| Epoche | Führer | Dauerboni | Fähigkeit |
+|---|---|---|---|
+| VII | **Abdülhamid II.** (1876–1909) | Eisenbahnbau 30 % billiger (Hedschasbahn); Botschafter +30 % Tempo | **Panislamische Diplomatie:** 3 min lang Verträge ohne Pfand und +Ansehen |
+| VII | **Mustafa Kemal Atatürk** (1923–38) | Infanterie +15 % Leben; Gebäude 20 % schneller gebaut | **Gallipoli:** 2 min lang Infanterie in eigenen Provinzen +35 % Leben |
+| VIII | **İsmet İnönü** (1938–50) | Nichtangriffspakte doppelt so lang; +Ansehen bei Neutralität | **Aktive Neutralität:** 5 min lang kann dir niemand den Krieg erklären (Abklingzeit 30 min) |
+| VIII | **Turgut Özal** (1983–89) | Handel und Tribute 25 % günstiger; +15 % Sammeltempo | **Öffnung:** 3 min lang +40 % Handelseinnahmen |
 
 ## 14. Fest übernommene Ideen
 
@@ -485,7 +628,7 @@ Bewusst **ohne** Flammenwerfer.
 6. **Eisenbahn:** Gleise, Bahnhöfe, Truppen- und Güterzüge, Sabotage.
 7. **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“.
 8. **Luft:** Flugplatz mit Tanken/Aufmunitionieren, Jäger, Bomber, Hubschrauber, Fallschirmjäger, Flugabwehr.
-9. **Spätphase:** Nationseinheiten VII–VIII, Signatur-Einheiten, **Staatsführer**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
+9. **Spätphase:** Nationseinheiten VII–VIII, Signatur-Einheiten, **Staatsführer mit Porträts**, **Friedenskonferenz**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
 10. **Feinschliff:** Simulationen und Balancing.
 
 Modelle bleiben bis dahin Platzhalter. Die richtigen Modelle kommen später aus Blender als `.glb`.
