@@ -6,6 +6,7 @@ Stand: Konzept zur Diskussion. Zahlen sind Startwerte und werden mit Bot-gegen-B
 - **Staatsführer deutlich stärker:** je zwei Dauerboni plus eine aktive Fähigkeit.
 - **Porträts** für alle Führer; nur A.H. erscheint als Schattenriss (Kapitel 13).
 - **Neu: Friedenskonferenz.** Mitten im Krieg kann man eine Verhandlungsrunde einberufen. Das Spiel pausiert, alle anderen sehen am Verhandlungstisch zu und können Seiten unterstützen (Kapitel 12.4).
+- **Neu: Brückenbau über Wasser,** damit Landmächte auf Insel- und Seenkarten eine Chance haben (Kapitel 6).
 - **Haltung zu Symbolik:** Es geht um das historische Spielerlebnis. Wir distanzieren uns klar von NS- und SS-Symbolik; sie kommt im Spiel nirgends vor (Kapitel 13).
 
 Unverändert aus Entwurf 4: Atomwaffen mit Gegenspiel, Diplomatie mit Botschaftern, Speichern/Bot-Vertretung, Veteranen und Gelände.
@@ -140,6 +141,52 @@ Gilt für alle. Nationseinheiten (Kapitel 9) **ersetzen** eine dieser Einheiten 
 - **Luftüberlegenheit:** Aufklärer heben den Nebel des Krieges auf, Bomber erreichen das Hinterland.
 - **Fallschirmjäger** werden aus Transportflugzeugen über jedem Gebiet abgesetzt, das man sieht.
 - **Flugabwehr** gibt es als Einheit und als Gebäude. Jäger sind die mobile Antwort.
+
+### Brückenbau über Wasser (Chance für Landmächte)
+
+**Ziel:** Auch eine Nation ohne starke Flotte soll auf Insel- und Seenkarten mithalten. Statt Schiffe zu bauen, schlägt sie Brücken über Flüsse, Meerengen und Seen. Seemächte können diese Brücken angreifen, Landmächte müssen sie verteidigen. Dadurch entstehen umkämpfte Übergänge statt reiner Seeherrschaft.
+
+**Bauen:**
+- Arbeiter (ab VII auch Pioniere) bauen Brücken **Abschnitt für Abschnitt vom Ufer aus**.
+- Jeder Abschnitt ist eine Kachel mit eigenem Leben. Die Brücke ist erst nutzbar, wenn sie das andere Ufer erreicht.
+- **Kosten** steigen mit der Länge.
+- **Verwundbar beim Bau:** Arbeiter auf der Baustelle sind ungeschützt.
+
+**Brückentypen nach Epoche (historisch belegt):**
+
+| Epoche | Brücke | Vorbild | Max. Länge | Besonderheit |
+|---|---|---|---|---|
+| I–II | Holzsteg | Pfahlbauten | 3 Kacheln | Nur Infanterie und Arbeiter |
+| III | Pontonbrücke | Xerxes am Hellespont (480 v. Chr.), Caesars Rheinbrücke (55 v. Chr.) | 8 | Schnell gebaut, wenig Leben |
+| IV–V | Steinbogenbrücke | Römische und mittelalterliche Brücken, Karlsbrücke Prag (1357) | 6 | Viel Leben, teuer, Türme auf der Brücke möglich |
+| VI | Eiserne Brücke | Iron Bridge, Coalbrookdale (1779) | 14 | **Eisenbahntauglich** |
+| VII | Stahlbrücke / Hängebrücke | Firth of Forth (1890), Brooklyn Bridge (1883) | 24 | Eisenbahntauglich, sehr viel Leben |
+| VII spät | Pionier-Behelfsbrücke | Bailey-Brücke (1942) | 10 | In Sekunden je Abschnitt gebaut, für Angriffe über Flüsse |
+| VIII | Faltschwimmbrücke | sowjetische PMP (1962) | 30 | Sehr schnell, kann wieder eingefahren und versetzt werden |
+
+**Brücken und Schiffe:**
+- **Niedrige Brücken versperren Schiffen den Weg.** Eine Landmacht kann so eine Meerenge für feindliche Flotten sperren, wie mit einer Sperrkette.
+- **Klapp- oder Hochbrücken** (ab VI, teurer) lassen eigene und verbündete Schiffe durch. Der Besitzer bestimmt, wer passieren darf.
+- Für die Seemacht wird die Brücke damit zu einem Ziel, das sie zerstören **muss**.
+
+**Wer darf die Brücke benutzen:**
+- Eine Brücke ist ein Weg, den jeder benutzen kann, auch der Feind.
+- Kontrollieren kann man sie über einen **Brückenkopf**: eine Befestigung am Brückenende, an die man Türme und Tore anschließt.
+- Durchmarschrecht und Bündnisse regeln das diplomatisch (Kapitel 12).
+
+**Gegenspiel:**
+- Schiffe, Artillerie, Bomber und Pioniere können einzelne Abschnitte zerstören. Dann ist die Brücke unterbrochen, bis Arbeiter den Abschnitt reparieren.
+- Einheiten auf einem zerstörten Abschnitt stürzen ins Wasser: Infanterie verliert 50 % Leben und schwimmt ans nächste Ufer, Fahrzeuge gehen verloren.
+- Verteidigen lässt sich eine Brücke mit Türmen auf Steinbrücken, Küstenbatterien, Flugabwehr und einem Brückenkopf an beiden Enden.
+
+**Kartengenerator:**
+- Auf Insel- und Seenkarten erzeugt der Generator bewusst **Meerengen und schmale Stellen**.
+- Jede Insel ist ab Epoche VI über höchstens 14 Kacheln Wasser erreichbar, ab VII über höchstens 24. Landmächte sind damit nie vollständig abgeschnitten, müssen aber an wenigen Stellen bauen und verteidigen.
+
+**Nationen-Bezug:**
+- Russland: Faltschwimmbrücke 25 % schneller gebaut (PMP).
+- Großbritannien: Bailey-Brücke schon zu Beginn der späten Stufe von VII.
+- Führer mit Eisenbahnrabatt (Lincoln, Abdülhamid II., Alexander II., Napoleon III.) bauen auch eisenbahntaugliche Brücken günstiger.
 
 ## 7. Atomwaffen (Kalter Krieg): stark, aber mit Gegenspiel
 
@@ -626,7 +673,7 @@ Jede Unterstützung, Garantie und Drohung ist **für alle sichtbar**. So entsteh
 4. **Diplomatie:** Botschafter, privater Chat, Vertragsfenster, Ansehen.
 5. **Nationen:** 12 Nationen mit Boni und eigenen Einheiten IV–VI.
 6. **Eisenbahn:** Gleise, Bahnhöfe, Truppen- und Güterzüge, Sabotage.
-7. **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“.
+7. **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“ mit Meerengen, **Brückenbau**.
 8. **Luft:** Flugplatz mit Tanken/Aufmunitionieren, Jäger, Bomber, Hubschrauber, Fallschirmjäger, Flugabwehr.
 9. **Spätphase:** Nationseinheiten VII–VIII, Signatur-Einheiten, **Staatsführer mit Porträts**, **Friedenskonferenz**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
 10. **Feinschliff:** Simulationen und Balancing.
