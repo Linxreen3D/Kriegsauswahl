@@ -2,7 +2,7 @@ import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost, isProducer,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -11,8 +11,11 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 // ---------------- Symbole ----------------
 const UNIT_ICONS = {
   worker: ['👷', '👷', '👷', '👷', '👷', '👷', '👷', '👷'],
-  inf: ['🪓', '🔱', '🛡', '⚔', '🗡', '🪖', '🪖', '🪖'],
-  rng: ['🪨', '🏹', '🏹', '🏹', '🔫', '🔫', '🔫', '🚀'],
+  inf: ['🪓', '🪓', '🛡', '⚔', '🗡', '🪖', '🪖', '🪖'],
+  spear: ['', '🔱', '🔱', '🔱', '🔱', '🔱', '🧨', '🚀'],
+  art: ['', '', '', '', '', '💣', '💥', '💥'],
+  med: ['', '🌿', '🌿', '✚', '✚', '✚', '✚', '✚'],
+  rng: ['🪨', '🏹', '🏹', '🏹', '🔫', '🔫', '🔫', '🔫'],
   cav: ['', '🛞', '🐎', '🏇', '🏇', '🏇', '🚜', '🚜'],
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
@@ -247,6 +250,7 @@ function applyTuple(t, now) {
     const x = t[3] / 20, y = t[4] / 20;
     if (isNew) { e.px = x; e.py = y; e.rx = x; e.ry = y; } else { e.px = e.rx ?? x; e.py = e.ry ?? y; }
     e.t0 = now; e.x = x; e.y = y; e.state = t[7]; e.carry = t[8]; e.dir = t[9] / 10 - Math.PI;
+    e.rank = t[10] || 0; e.morale = t[11]; e.sup = t[12]; e.form = FORMATION_KEYS[t[13]] || 'none';
   } else {
     e.x = t[3]; e.y = t[4]; e.prog = t[7]; e.q = t[8]; e.era = t[9]; e.ghost = false;
     setBld(e);
@@ -559,6 +563,17 @@ function updateCmdCard(force) {
           });
         }
       } else {
+        // Formationen
+        const mil = units.filter(u => u.def.cls !== 'wrk');
+        if (mil.length) {
+          const FICONS = { line: '➖', column: '⏬', wedge: '🔺', square: '⬛', loose: '⁘' };
+          for (const fk of FORMATION_KEYS) {
+            const f = FORMATIONS[fk];
+            if (!f.key || (f.minEra && era < f.minEra)) continue;
+            const on = mil.every(u => u.form === fk);
+            put(f.key, { icon: FICONS[fk], title: `Formation: ${f.name}${on ? ' (aktiv – nochmal klicken zum Auflösen)' : ''}`, desc: f.desc, on, fn: () => cmd({ c: 'formation', ids: mil.map(u => u.id), f: on ? 'none' : fk }) });
+          }
+        }
         put('A', { icon: '⚔', title: 'Angriffsbewegung (A)', desc: 'Bewegt sich zum Ziel und greift unterwegs alle Feinde an.', fn: () => { UI.mode = { amove: true }; renderer.canvas.style.cursor = 'crosshair'; updateCmdCard(true); }, on: UI.mode && UI.mode.amove });
       }
       put('S', { icon: '✋', title: 'Stopp (S)', fn: () => cmd({ c: 'stop', ids: units.map(u => u.id) }) });
@@ -570,7 +585,7 @@ function updateCmdCard(force) {
         const opts = trainable(type, era, G.me.culture);
         opts.forEach((o, i) => {
           const st = unitStats(o.line, Math.max(era, LINES[o.line].minEra), o.unique, mods);
-          const key = i === 0 ? 'Q' : 'E';
+          const key = o.unique ? 'E' : LINES[o.line].key;
           put(key, {
             icon: o.unique ? UNIQUE_ICONS[o.unique] : UNIT_ICONS[o.line][Math.max(era, LINES[o.line].minEra)], title: `${st.name} ausbilden`, cost: st.cost,
             desc: `Leben ${st.hp} · Angriff ${st.atk.toFixed(0)} · Reichweite ${st.range < 1 ? 'Nahkampf' : st.range.toFixed(0)} · Bevölkerung ${st.pop}` + (o.unique ? ' · Spezialeinheit deiner Kultur' : ''),
@@ -649,6 +664,13 @@ function updateSelInfo() {
     let stats = '';
     if (e.def.kind === 'u') {
       stats = `<span>⚔ ${st.atk.toFixed(0)}</span><span>🎯 ${st.range < 1 ? 'Nahkampf' : st.range.toFixed(1)}</span><span>👟 ${st.speed.toFixed(1)}</span><span>👁 ${st.sight}</span>`;
+      if (st.heal) stats += `<span>✚ heilt ${st.heal.toFixed(1)}/s</span>`;
+      if (e.rank) stats += `<span title="Veteran: +${e.rank * 10} % Schaden und Leben">${'★'.repeat(e.rank)}</span>`;
+      if (e.owner === G.you && e.def.cls !== 'wrk') {
+        stats += `<span title="Moral: unter 50 % −20 % Schaden">💪 ${(e.morale ?? 10) * 10} %</span>`;
+        if (e.sup === 0) stats += `<span class="warn" title="Außerhalb der Versorgung (Haupthaus, Lager, Türme): Moral sinkt, nach 2 min verliert die Einheit Leben">⚠ ohne Nachschub</span>`;
+        if (e.form && e.form !== 'none') stats += `<span>${esc(FORMATIONS[e.form].name)}</span>`;
+      }
       if (e.owner === G.you && e.carry) stats += `<span>trägt ${RES_ICONS[RES[e.carry - 1]]}</span>`;
     } else {
       if (st.atk) stats += `<span>⚔ ${st.atk.toFixed(0)}</span><span>🎯 ${st.range}</span>`;

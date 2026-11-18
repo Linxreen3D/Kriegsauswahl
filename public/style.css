@@ -266,3 +266,5 @@ body:not(.is-host) .settings input, body:not(.is-host) .settings select { pointe
 .saves-list button { text-align: left; }
 .saves-list .who { display: block; font-size: 12px; opacity: .75; margin-top: 2px; }
 .small { font-size: 12px; }
+
+.stats .warn { color: #ff9a5a; }

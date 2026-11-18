@@ -3,10 +3,12 @@ import {
   TICK_MS, RES, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, RESOURCE_TYPES, RESOURCE_KINDS,
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
   WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, isProducer, DEPOSIT_LAYERS, hasLayers,
+  VET_RANKS, VET_BONUS, FORMATIONS, FORMATION_KEYS, SUPPLY_RANGE, SUPPLY_GRACE,
 } from '../shared/rules.js';
 import { generateMap, blockedTerrain } from './mapgen.js';
 
-const RADIUS = { wrk: 0.3, inf: 0.3, rng: 0.3, cav: 0.42, sie: 0.48 };
+const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3 };
+const MILITARY = cls => cls !== 'wrk' && cls !== 'sup'; // kämpft selbstständig
 const START_RES = { low: { food: 150, wood: 150, stone: 50, gold: 50 }, normal: { food: 250, wood: 250, stone: 150, gold: 100 }, high: { food: 600, wood: 600, stone: 400, gold: 400 } };
 const ST = { idle: 0, move: 1, attack: 2, gather: 3, build: 4, carry: 5 };
 const DIRS = [[1, 0, 10], [-1, 0, 10], [0, 1, 10], [0, -1, 10], [1, 1, 14], [1, -1, 14], [-1, 1, 14], [-1, -1, 14]];
@@ -168,6 +170,7 @@ export class World {
       id: this.nextId++, kind: 'u', owner, line, unique, era, cls: st.cls, typeIdx: TYPE_INDEX[unitKey(line, era, unique)], st,
       x, y, hp: st.hp, maxHp: st.hp, r: RADIUS[st.cls], order: { t: 'idle' }, state: ST.idle, cd: 0, carry: null,
       scan: Math.random() * 0.5, stuck: 0, lastProg: 0, buildQ: [],
+      xp: 0, rank: 0, morale: 100, unsup: 0, form: 'none',
     };
     this.units.push(u); this.ents.set(u.id, u);
     return u;
@@ -286,7 +289,7 @@ export class World {
     }
     const dx = gx - u.x, dy = gy - u.y, d = Math.hypot(dx, dy);
     if (d < 0.02) return true;
-    const sp = Math.min(d, u.st.speed * dt);
+    const sp = Math.min(d, this.speedOf(u) * dt);
     let nx = u.x + dx / d * sp, ny = u.y + dy / d * sp;
     if (this.passableAt(nx, ny)) { u.x = nx; u.y = ny; } else if (this.passableAt(nx, u.y)) u.x = nx; else if (this.passableAt(u.x, ny)) u.y = ny;
     u.dir = Math.atan2(dy, dx);
@@ -438,6 +441,16 @@ export class World {
         for (const b of own(c.ids)) if (b.kind === 'b') b.rally = { x: +c.x, y: +c.y, target: c.target || 0 };
         break;
       }
+      case 'formation': {
+        const f = FORMATIONS[c.f];
+        if (!f || (f.minEra && pl.era < f.minEra)) return;
+        const us = own(c.ids).filter(e => e.kind === 'u' && e.cls !== 'wrk');
+        for (const u of us) u.form = c.f;
+        // laufende Bewegung in der neuen Aufstellung neu ordnen
+        const moving = us.filter(u => (u.order.t === 'move' || u.order.t === 'amove') && u.order.gx != null);
+        if (moving.length) this.groupMove(moving, moving[0].order.gx, moving[0].order.gy, moving[0].order.t === 'amove');
+        break;
+      }
       case 'stop':
         for (const u of own(c.ids)) if (u.kind === 'u') { u.order = { t: 'idle' }; u.buildQ = []; }
         break;
@@ -480,18 +493,49 @@ export class World {
     cx /= us.length; cy /= us.length;
     const tx = Math.floor(x), ty = Math.floor(y);
     const key = 'p' + tx + ',' + ty;
-    // Formation: relative Positionen beibehalten, aber verdichten
+    const form = us.every(u => u.form === us[0].form) ? us[0].form : 'none';
+    const slots = form !== 'none' && us.length > 1 ? this.formationSlots(form, us.length, x - cx, y - cy) : null;
+    let order = us;
+    if (slots) {
+      // Einheiten den Plätzen zuordnen: nach Lage quer zur Marschrichtung, damit sich niemand kreuzt
+      const dl = Math.hypot(x - cx, y - cy) || 1, px = -(y - cy) / dl, py = (x - cx) / dl;
+      order = us.slice().sort((a, b) => (a.x * px + a.y * py) - (b.x * px + b.y * py));
+      const idx = slots.map((sl, i) => i).sort((a, b) => slots[a].side - slots[b].side);
+      const assigned = new Array(order.length);
+      idx.forEach((si, k) => { assigned[k] = slots[si]; });
+      order.forEach((u, k) => { u._slot = assigned[k]; });
+    }
+    // ohne Formation: relative Positionen beibehalten, aber verdichten
     const spread = Math.sqrt(us.length) * 0.75;
     let maxOff = 0;
     for (const u of us) maxOff = Math.max(maxOff, Math.hypot(u.x - cx, u.y - cy));
     const f = maxOff > spread ? spread / maxOff : 1;
-    for (const u of us) {
-      let ox = x + (u.x - cx) * f, oy = y + (u.y - cy) * f;
+    for (const u of order) {
+      let ox, oy;
+      if (slots) { ox = x + u._slot.dx; oy = y + u._slot.dy; delete u._slot; } else { ox = x + (u.x - cx) * f; oy = y + (u.y - cy) * f; }
       if (!this.passableAt(ox, oy) || !this.lineClear(x, y, ox, oy)) { ox = x; oy = y; }
-      u.order = { t: amove ? 'amove' : 'move', x: ox, y: oy, key, tx, ty };
+      u.order = { t: amove ? 'amove' : 'move', x: ox, y: oy, key, tx, ty, gx: x, gy: y };
       u.buildQ = [];
       u.stuck = 0;
     }
+  }
+  // Platzierung der Aufstellung relativ zum Ziel; (fx, fy) = Marschrichtung
+  formationSlots(form, n, fx, fy) {
+    const dl = Math.hypot(fx, fy) || 1, dx = fx / dl, dy = fy / dl, px = -dy, py = dx;
+    const out = [];
+    const at = (side, back) => out.push({ dx: px * side - dx * back, dy: py * side - dy * back, side });
+    if (form === 'wedge') {
+      for (let row = 0, k = 0; k < n; row++) for (let c = 0; c <= row * 2 && k < n; c++, k++) at((c - row) * 0.8, row * 0.8);
+    } else {
+      const sp = form === 'loose' ? 1.6 : form === 'square' ? 0.65 : 0.8;
+      const cols = form === 'column' ? Math.min(3, n) : form === 'square' ? Math.ceil(Math.sqrt(n)) : Math.min(n, Math.max(4, Math.ceil(Math.sqrt(n) * 2.2)));
+      for (let k = 0; k < n; k++) { const r = Math.floor(k / cols), c = k % cols, inRow = Math.min(cols, n - r * cols); at((c - (inRow - 1) / 2) * sp, r * sp); }
+    }
+    return out;
+  }
+  speedOf(u) {
+    const f = FORMATIONS[u.form];
+    return u.st.speed * (f ? f.speed : 1) * (u.morale < 30 ? 0.85 : 1);
   }
   orderGather(u, t) {
     u.buildQ = [];
@@ -520,11 +564,41 @@ export class World {
     if (this.units.some(u => u.dead)) this.units = this.units.filter(u => !u.dead);
     if (this.buildings.some(b => b.dead)) this.buildings = this.buildings.filter(b => !b.dead);
 
+    if (this.tickNo % 10 === 0) this.updateSupply(1 * this.settings.speed);
     if (this.tickNo % 5 === 0) this.recount();
     if (this.tickNo % 10 === 0) this.checkDefeat();
     if (Math.floor(this.time / 10) !== Math.floor((this.time - dt) / 10)) this.recordStats();
   }
 
+  // Nachschub und Moral (einmal pro Spielsekunde): Versorgung im Umkreis von Haupthaus, Lager und Türmen
+  updateSupply(dt) {
+    const src = new Map();
+    for (const b of this.buildings) if (!b.dead && b.built && (b.st.drop || b.type === 'tower')) {
+      const team = this.P[b.owner].team; if (!src.has(team)) src.set(team, []); src.get(team).push(b);
+    }
+    const R2 = SUPPLY_RANGE * SUPPLY_RANGE;
+    for (const u of this.units) {
+      if (u.dead || u.cls === 'wrk') continue;
+      const list = src.get(this.P[u.owner].team) || [];
+      let ok = false;
+      for (const b of list) if ((b.cx - u.x) ** 2 + (b.cy - u.y) ** 2 <= R2) { ok = true; break; }
+      u.supplied = ok;
+      if (ok) { u.unsup = 0; u.morale = Math.min(100, u.morale + 5 * dt); }
+      else {
+        u.unsup += dt; u.morale = Math.max(0, u.morale - 0.5 * dt);
+        if (u.unsup > SUPPLY_GRACE) this.damage(u, u.maxHp * 0.001 * dt, -1); // 1 % Leben je 10 s
+      }
+      // Sanitäter heilen bis zu drei verwundete Verbündete in der Nähe
+      if (u.st.heal) {
+        let n = 0;
+        this.nearbyUnits(u.x, u.y, 4, o => {
+          if (n >= 3 || o.dead || o === u || !this.allied(o.owner, u.owner) || o.hp >= o.maxHp || Math.hypot(o.x - u.x, o.y - u.y) > 4) return;
+          o.hp = Math.min(o.maxHp, o.hp + u.st.heal * dt); n++;
+        });
+        if (n) u.state = ST.build;
+      }
+    }
+  }
   recount() {
     for (const pl of this.P) { pl.pop = 0; pl.popCap = 0; pl.military = 0; pl.nUnits = 0; pl.nBuildings = 0; }
     for (const u of this.units) { const pl = this.P[u.owner]; pl.pop += u.st.pop; pl.nUnits++; if (u.cls !== 'wrk') pl.military++; }
@@ -571,7 +645,7 @@ export class World {
     u.state = ST.idle;
     switch (o.t) {
       case 'idle': {
-        if (u.cls !== 'wrk') {
+        if (MILITARY(u.cls)) {
           u.scan -= dt;
           if (u.scan <= 0) {
             u.scan = 0.5;
@@ -653,24 +727,45 @@ export class World {
     u.dir = Math.atan2((t.kind === 'u' ? t.y : t.cy) - u.y, (t.kind === 'u' ? t.x : t.cx) - u.x);
     if (u.cd <= 0) {
       u.cd = u.st.cd;
-      this.hit(u, t, u.st.atk, u.cls, u.st.splash);
+      this.hit(u, t, u.st.atk * this.dealMul(u, range), u.cls, u.st.splash);
       if (range > 1.2) this.event({ k: 'shot', x: u.x, y: u.y, tx: t.kind === 'u' ? t.x : t.cx, ty: t.kind === 'u' ? t.y : t.cy, c: u.cls === 'sie' ? 1 : (u.era >= 4 ? 2 : 0) });
     }
   }
+  // Schadensfaktor des Angreifers: Veteranenrang, Moral, Formation
+  dealMul(u, range) {
+    let m = 1 + u.rank * VET_BONUS;
+    if (u.morale < 50) m *= 0.8;
+    const f = FORMATIONS[u.form];
+    if (f) {
+      if (f.dealRanged && range > 1.2) m *= f.dealRanged;
+      if (f.dealCls && f.dealCls[u.cls]) m *= f.dealCls[u.cls];
+      if (f.dealMelee && range <= 1.2) m *= f.dealMelee;
+    }
+    return m;
+  }
+  // Schadensfaktor beim Ziel: Formation
+  takeMul(t, cls, splash) {
+    const f = t.kind === 'u' && FORMATIONS[t.form];
+    if (!f) return 1;
+    let m = f.takeAll || 1;
+    if (f.takeFrom && f.takeFrom[cls]) m *= f.takeFrom[cls];
+    if (splash && f.splashTaken) m *= f.splashTaken;
+    return m;
+  }
   hit(src, t, atk, cls, splash) {
     const dcls = t.kind === 'u' ? t.cls : 'bld';
-    let dmg = atk * (DMG[cls][dcls] || 1);
+    let dmg = atk * (DMG[cls][dcls] || 1) * this.takeMul(t, cls, false);
     if (t.kind === 'b' && !t.built) dmg *= 1.5;
-    this.damage(t, dmg, src.owner);
+    this.damage(t, dmg, src.owner, src);
     if (splash) {
       const tx = t.kind === 'u' ? t.x : t.cx, ty = t.kind === 'u' ? t.y : t.cy;
       this.nearbyUnits(tx, ty, splash, o => {
         if (o === t || o.dead || !this.enemy(src.owner, o.owner)) return;
-        if (Math.hypot(o.x - tx, o.y - ty) <= splash) this.damage(o, atk * 0.5 * (DMG[cls][o.cls] || 1), src.owner);
+        if (Math.hypot(o.x - tx, o.y - ty) <= splash) this.damage(o, atk * 0.5 * (DMG[cls][o.cls] || 1) * this.takeMul(o, cls, true), src.owner, src);
       });
     }
     // Vergeltung
-    if (t.kind === 'u' && !t.dead && t.cls !== 'wrk' && (t.order.t === 'idle' || (t.order.t === 'move' && t.order.x == null))) {
+    if (t.kind === 'u' && !t.dead && MILITARY(t.cls) && (t.order.t === 'idle' || (t.order.t === 'move' && t.order.x == null))) {
       t.order = { t: 'attack', target: src.id, guard: { x: t.x, y: t.y } };
     }
     if (t.kind === 'u' && !t.dead && t.cls === 'wrk' && t.order.t === 'idle') {
@@ -683,19 +778,31 @@ export class World {
     if (attacker.kind !== 'u') return;
     const x = victim.kind === 'u' ? victim.x : victim.cx, y = victim.kind === 'u' ? victim.y : victim.cy;
     this.nearbyUnits(x, y, 8, o => {
-      if (o.owner === victim.owner && o.cls !== 'wrk' && o.order.t === 'idle') o.order = { t: 'attack', target: attacker.id, guard: { x: o.x, y: o.y } };
+      if (o.owner === victim.owner && MILITARY(o.cls) && o.order.t === 'idle') o.order = { t: 'attack', target: attacker.id, guard: { x: o.x, y: o.y } };
     });
     if (!victim.alertCd || this.time > victim.alertCd) {
       victim.alertCd = this.time + 15;
       this.events.push({ k: 'alert', to: victim.owner, x, y });
     }
   }
-  damage(t, dmg, by) {
+  damage(t, dmg, by, src) {
     t.hp -= dmg;
-    if (t.hp <= 0 && !t.dead) this.kill(t, by);
+    if (t.hp <= 0 && !t.dead) this.kill(t, by, src);
   }
-  kill(e, by) {
+  kill(e, by, src) {
     if (e.dead) return;
+    // Erfahrung und Moral für den Sieger
+    if (src && src.kind === 'u' && !src.dead && e.kind === 'u' && src.cls !== 'wrk') {
+      src.xp += sumCost(e.st.cost) / Math.max(1, sumCost(src.st.cost));
+      src.morale = Math.min(100, src.morale + 5);
+      const rank = VET_RANKS.filter(t => src.xp >= t).length;
+      if (rank > src.rank) {
+        const ratio = src.hp / src.maxHp;
+        src.rank = rank;
+        src.maxHp = Math.round(src.st.hp * (1 + rank * VET_BONUS)); src.hp = src.maxHp * ratio;
+        if (rank === VET_RANKS.length) this.notice(src.owner, `★★★ ${src.st.name} ist jetzt ein Elite-Veteran!`);
+      }
+    }
     e.dead = true;
     e.hp = 0;
     this.ents.delete(e.id);
@@ -1156,7 +1263,13 @@ export class World {
       w.bcells[w.cellOf(b.cx, b.cy)].push(b); w.ents.set(b.id, b);
     }
     w.units = d.units;
-    for (const u of w.units) w.ents.set(u.id, u);
+    for (const u of w.units) {
+      u.typeIdx = TYPE_INDEX[unitKey(u.line, u.era, u.unique)];
+      if (u.morale == null) Object.assign(u, { xp: 0, rank: 0, morale: 100, unsup: 0, form: 'none' });
+      if (!u.r) u.r = RADIUS[u.cls];
+      w.ents.set(u.id, u);
+    }
+    for (const b of w.buildings) b.typeIdx = TYPE_INDEX[b.type];
     w.P = [];
     for (const pl of d.P) { pl.mods = playerMods(pl.culture, pl.nation, pl.late); w.P[pl.id] = pl; }
     w.recount();
@@ -1190,7 +1303,8 @@ export class World {
   entTuple(e, pid) {
     if (e.kind === 'u') {
       const carry = e.owner === pid && e.carry && e.carry.amt > 0 ? RES.indexOf(e.carry.res) + 1 : 0;
-      return [e.id, e.typeIdx, e.owner, Math.round(e.x * 20), Math.round(e.y * 20), Math.ceil(e.hp), e.maxHp, e.state, carry, Math.round(((e.dir || 0) + Math.PI) * 10)];
+      return [e.id, e.typeIdx, e.owner, Math.round(e.x * 20), Math.round(e.y * 20), Math.ceil(e.hp), e.maxHp, e.state, carry, Math.round(((e.dir || 0) + Math.PI) * 10),
+        e.rank || 0, e.owner === pid ? Math.round((e.morale ?? 100) / 10) : 0, e.owner === pid && e.supplied === false ? 0 : 1, FORMATION_KEYS.indexOf(e.form || 'none')];
     }
     return [e.id, e.typeIdx, e.owner, e.x, e.y, Math.ceil(e.hp), e.maxHp, e.built ? 100 : Math.floor(e.progress * 100), e.queue.length ? 1 : 0, e.era];
   }

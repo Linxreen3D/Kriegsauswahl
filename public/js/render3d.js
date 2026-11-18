@@ -525,7 +525,7 @@ export class Renderer3D {
         const moving = e.state === 1 || e.state === 5;
         const bob = moving ? Math.abs(Math.sin(now / 90 + e.id)) * 0.05 : 0;
         pos.set(X, this.T.height(X, Z) + bob, Z);
-        if (line === 'sie' || (line === 'cav' && era >= 6)) {
+        if (line === 'sie' || line === 'art' || (line === 'cav' && era >= 6)) {
           const o = this.siegeModel(e, color); o.position.copy(pos); o.quaternion.copy(q);
           if (e.state === 2 && line === 'sie') o.children[0].rotation.x = Math.sin(now / 120) * 0.02;
           continue;
@@ -537,7 +537,7 @@ export class Renderer3D {
           this.drawFigure('rider' + Math.max(1, Math.min(5, era)), rm, color, e.id + 1);
         } else {
           const pose = this.poseOf(e, now);
-          const v = line === 'worker' ? 'worker_' + pose : (line === 'rng' ? 'rng' : 'inf') + Math.min(6, era) + '_' + pose;
+          const v = line === 'worker' ? 'worker_' + pose : (line === 'rng' ? 'rng' : 'inf') + Math.max(0, Math.min(6, era)) + '_' + pose;
           this.drawFigure(v, m4, color, e.id);
         }
       } else {

@@ -84,14 +84,19 @@ export const NATIONS = {
 };
 
 // ---------------- Einheiten ----------------
-// Klassen: wrk (Arbeiter), inf (Nahkampf), rng (Fernkampf), cav (Reiterei/Fahrzeuge), sie (Belagerung)
+// Klassen: wrk (Arbeiter), inf (Infanterie), spr (Spieß/Panzerabwehr), rng (Fernkampf/MG), cav (Reiterei/Panzer),
+// sie (Belagerung), art (Artillerie), sup (Unterstützung/Sanitäter). Zeile = Angreifer, Spalte = Ziel.
+// Ein Konter gewinnt bei gleichen Kosten etwa 2:1, nicht 10:1.
 export const DMG = {
-  wrk: { wrk: 1, inf: 1, rng: 1, cav: 1, sie: 1, bld: 0.4 },
-  inf: { wrk: 1.2, inf: 1, rng: 1.1, cav: 1.6, sie: 1.6, bld: 0.6 },
-  rng: { wrk: 1.2, inf: 1.2, rng: 1, cav: 0.8, sie: 0.5, bld: 0.25 },
-  cav: { wrk: 1.4, inf: 0.9, rng: 1.7, cav: 1, sie: 1.8, bld: 0.45 },
-  sie: { wrk: 0.6, inf: 0.6, rng: 0.6, cav: 0.5, sie: 1, bld: 3.2 },
-  bld: { wrk: 1, inf: 1, rng: 1.1, cav: 0.9, sie: 1, bld: 0.3 },
+  wrk: { wrk: 1, inf: 1, spr: 1, rng: 1, cav: 1, sie: 1, art: 1, sup: 1, bld: 0.4 },
+  inf: { wrk: 1.2, inf: 1, spr: 1.0, rng: 1.0, cav: 0.8, sie: 1.6, art: 1.6, sup: 1.2, bld: 0.6 },
+  spr: { wrk: 1, inf: 1.0, spr: 1, rng: 0.9, cav: 1.3, sie: 1.2, art: 1.2, sup: 1, bld: 0.4 },
+  rng: { wrk: 1.2, inf: 1.9, spr: 1.5, rng: 1, cav: 0.8, sie: 0.5, art: 0.6, sup: 1.2, bld: 0.25 },
+  cav: { wrk: 1.4, inf: 1.4, spr: 0.7, rng: 1.3, cav: 1, sie: 1.8, art: 1.8, sup: 1.4, bld: 0.45 },
+  sie: { wrk: 0.6, inf: 0.6, spr: 0.6, rng: 0.6, cav: 0.5, sie: 1, art: 1, sup: 0.6, bld: 3.2 },
+  art: { wrk: 1.2, inf: 2.0, spr: 2.0, rng: 2.0, cav: 0.8, sie: 1.3, art: 1.3, sup: 1.2, bld: 1.2 },
+  sup: { wrk: 0.5, inf: 0.5, spr: 0.5, rng: 0.5, cav: 0.5, sie: 0.5, art: 0.5, sup: 0.5, bld: 0.2 },
+  bld: { wrk: 1, inf: 1, spr: 1, rng: 1.1, cav: 0.9, sie: 1, art: 1, sup: 1, bld: 0.3 },
 };
 
 // Linien: pro Epoche ein Name; Werte skalieren mit der Epoche.
@@ -101,12 +106,19 @@ export const LINES = {
     hp: 40, atk: 3, range: 0.4, cd: 1.5, speed: 1.6, sight: 6, cost: { food: 50 }, pop: 1, time: 10, grow: 0.08, costGrow: 1,
   },
   inf: {
-    cls: 'inf', at: 'barracks', minEra: 0, key: 'Q', names: ['Keulenträger', 'Speerträger', 'Schwertkämpfer', 'Hauskrieger', 'Hellebardier', 'Linieninfanterist', 'Schütze', 'Mechanisierte Infanterie'], late: 'Infanterist',
+    cls: 'inf', at: 'barracks', minEra: 0, key: 'Q', names: ['Keulenträger', 'Axtkämpfer', 'Schwertkämpfer', 'Hauskrieger', 'Fußritter', 'Linieninfanterist', 'Schütze', 'Mechanisierte Infanterie'], late: 'Infanterist',
     hp: 60, atk: 7, range: 0.5, cd: 1.2, speed: 1.45, sight: 6, cost: { food: 55, wood: 10 }, pop: 1, time: 16,
+    eraOverride: { 5: { range: 3 }, 6: { range: 4 }, 7: { range: 4.5, speed: 1.7 } },
+  },
+  spear: {
+    cls: 'spr', at: 'barracks', minEra: 1, key: 'W', names: ['', 'Speerträger', 'Phalangit', 'Speerträger', 'Pikenier', 'Bajonettschütze', 'Panzerbüchsenschütze', 'Lenkraketentrupp'], late: 'Panzerabwehrtrupp',
+    hp: 70, atk: 6, range: 0.7, cd: 1.3, speed: 1.35, sight: 6, cost: { food: 45, wood: 25 }, pop: 1, time: 16,
+    eraOverride: { 6: { range: 3 }, 7: { range: 5 } },
   },
   rng: {
-    cls: 'rng', at: 'range', minEra: 0, key: 'Q', names: ['Steinschleuderer', 'Bogenschütze', 'Bogenschütze', 'Langbogenschütze', 'Armbrustschütze', 'Jäger', 'Scharfschütze', 'Panzerabwehrtrupp'], late: 'MG-Schütze',
+    cls: 'rng', at: 'range', minEra: 0, key: 'Q', names: ['Steinschleuderer', 'Bogenschütze', 'Kompositbogner', 'Langbogenschütze', 'Armbrustschütze', 'Jäger', 'Scharfschütze', 'MG-Schütze'], late: 'MG-Schütze',
     hp: 38, atk: 5, range: 5, cd: 1.6, speed: 1.4, sight: 7, cost: { food: 30, wood: 35 }, pop: 1, time: 18,
+    eraOverride: { 6: { range: 6 }, 7: { range: 6.5 } },
   },
   cav: {
     cls: 'cav', at: 'stable', minEra: 1, key: 'Q', names: ['', 'Streitwagen', 'Reiter', 'Panzerreiter', 'Ritter', 'Husar', 'Panzerwagen', 'Kampfpanzer'], late: 'Panzer',
@@ -114,9 +126,17 @@ export const LINES = {
     eraOverride: { 5: { range: 3.5 }, 6: { range: 5, speed: 2.0, hpMul: 1.6, pop: 2 }, 7: { range: 6, speed: 2.2, hpMul: 1.7, pop: 2 } },
   },
   sie: {
-    cls: 'sie', at: 'workshop', minEra: 2, key: 'Q', names: ['', '', 'Torsionsgeschütz', 'Blide', 'Bombarde', 'Feldkanone', 'Feldhaubitze', 'Raketenartillerie'], late: 'Schwere Haubitze',
+    cls: 'sie', at: 'workshop', minEra: 2, key: 'Q', names: ['', '', 'Torsionsgeschütz', 'Blide', 'Bombarde', 'Belagerungsmörser', 'Schwerer Mörser', 'Raketenartillerie'], late: 'Schwere Haubitze',
     hp: 120, atk: 38, range: 7, minRange: 2, cd: 4, speed: 0.95, sight: 8, cost: { wood: 160, gold: 90 }, pop: 2, time: 32, splash: 1.2,
+  },  art: {
+    cls: 'art', at: 'workshop', minEra: 5, key: 'W', names: ['', '', '', '', '', 'Feldkanone', 'Feldgeschütz', 'Panzerhaubitze'], late: 'Haubitze',
+    hp: 110, atk: 40, range: 9, minRange: 2.5, cd: 3.5, speed: 1.0, sight: 8, cost: { wood: 140, gold: 110 }, pop: 3, time: 30, splash: 1.6,
   },
+  med: {
+    cls: 'sup', at: 'town', minEra: 1, key: 'E', names: ['', 'Heiler', 'Feldarzt', 'Mönch', 'Feldscher', 'Sanitäter', 'Sanitäter', 'Sanitäter'],
+    hp: 45, atk: 1, range: 0.5, cd: 2, speed: 1.5, sight: 7, cost: { food: 60, gold: 30 }, pop: 1, time: 20, heal: 2.5, grow: 0.15,
+  },
+
 };
 export const UNIQUE = {
   uq_steppe: { line: 'cav', name: 'Steppenreiter', mods: { range: 4, atkMul: 0.75, hpMul: 0.85 }, cost: { food: 60, wood: 40, gold: 40 } },
@@ -125,6 +145,22 @@ export const UNIQUE = {
   uq_warriors: { line: 'inf', name: 'Berserker', mods: { atkMul: 1.6, speedMul: 1.2, hpMul: 1.1 }, cost: { food: 70, gold: 30 } },
 };
 export const UNIQUE_MIN_ERA = 3;
+
+// ---------------- Veteranen, Formationen, Nachschub ----------------
+// Erfahrung = Summe (Kosten der besiegten Einheit / eigene Kosten); je Rang +10 % Schaden und Leben
+export const VET_RANKS = [3, 8, 16];
+export const VET_BONUS = 0.1;
+export const FORMATIONS = {
+  none: { name: 'Frei', speed: 1 },
+  line: { name: 'Linie', key: 'Q', speed: 0.95, desc: 'Fernkämpfer +15 % Schaden. Reiterei und Panzer machen +30 % Schaden gegen sie.', dealRanged: 1.15, takeFrom: { cav: 1.3 } },
+  column: { name: 'Kolonne', key: 'W', speed: 1.2, desc: '+20 % Tempo. Artillerie und Belagerung machen +30 % Schaden gegen sie.', takeFrom: { art: 1.3, sie: 1.3 } },
+  wedge: { name: 'Keil', key: 'E', speed: 1, desc: 'Reiterei und Panzer +20 % Schaden beim Angriff, aber +10 % erlittener Schaden.', dealCls: { cav: 1.2 }, takeAll: 1.1 },
+  square: { name: 'Igel / Karree', key: 'R', speed: 0.4, desc: 'Rundum-Verteidigung: Reiterei macht 40 % weniger Schaden. Fast unbeweglich, Artillerie trifft voll.', takeFrom: { cav: 0.6 } },
+  loose: { name: 'Aufgelockert', key: 'T', speed: 1, minEra: 6, desc: 'Flächenschaden −40 %, aber −15 % Schaden im Nahkampf.', splashTaken: 0.6, dealMelee: 0.85 },
+};
+export const FORMATION_KEYS = Object.keys(FORMATIONS);
+export const SUPPLY_RANGE = 16; // Kacheln um Haupthaus, Lager und Türme
+export const SUPPLY_GRACE = 120; // Sekunden ohne Nachschub, bevor Leben verloren geht
 
 // ---------------- Gebäude ----------------
 export const BUILDINGS = {
@@ -214,7 +250,7 @@ export function unitBase(line, era, unique) {
     range: ov.range != null ? ov.range : d.range,
     minRange: d.minRange || 0,
     cd: d.cd, speed: ov.speed || d.speed, sight: d.sight, pop: ov.pop || d.pop,
-    time: d.time * (1 + steps * 0.05), splash: d.splash || 0,
+    time: d.time * (1 + steps * 0.05), splash: d.splash || 0, heal: d.heal ? d.heal * Math.pow(1 + g, steps) : 0,
     cost: scaleCost(d.cost, Math.pow(cg, steps)),
   };
   if (unique) {
