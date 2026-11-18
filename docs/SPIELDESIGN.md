@@ -144,25 +144,27 @@ Gilt für alle. Nationseinheiten (Kapitel 9) **ersetzen** eine dieser Einheiten 
 
 ### Brückenbau über Wasser (Chance für Landmächte)
 
-**Ziel:** Auch eine Nation ohne starke Flotte soll auf Insel- und Seenkarten mithalten. Statt Schiffe zu bauen, schlägt sie Brücken über Flüsse, Meerengen und Seen. Seemächte können diese Brücken angreifen, Landmächte müssen sie verteidigen. Dadurch entstehen umkämpfte Übergänge statt reiner Seeherrschaft.
+**Ziel:** Auch eine Nation ohne starke Flotte soll auf Insel- und Seenkarten mithalten. Statt Schiffe zu bauen, schlägt sie Brücken über Flüsse, Meerengen, Seen und auch weite Strecken zwischen Inseln. Seemächte können diese Brücken angreifen, Landmächte müssen sie verteidigen. Dadurch entstehen umkämpfte Übergänge statt reiner Seeherrschaft.
 
-**Bauen:**
-- Arbeiter (ab VII auch Pioniere) bauen Brücken **Abschnitt für Abschnitt vom Ufer aus**.
-- Jeder Abschnitt ist eine Kachel mit eigenem Leben. Die Brücke ist erst nutzbar, wenn sie das andere Ufer erreicht.
-- **Kosten** steigen mit der Länge.
-- **Verwundbar beim Bau:** Arbeiter auf der Baustelle sind ungeschützt.
+**Bauen wie Mauern:**
+- Man zieht eine Linie von Ufer zu Ufer, wie beim Mauerbau. Die Vorschau zeigt alle Abschnitte und die Gesamtkosten.
+- Die Abschnitte **verbinden sich automatisch** miteinander, mit bestehenden Brücken, mit Straßen und mit Mauern am Ufer. Abzweigungen und Kreuzungen sind möglich, so entstehen auch Brückennetze zwischen mehreren Inseln.
+- **Keine Längenbegrenzung:** Jede Karte verlangt andere Brücken, deshalb kann man so weit bauen, wie man bezahlen kann. Die Grenze setzen Kosten, Bauzeit und Verteidigung.
+- Arbeiter (ab VII auch Pioniere) bauen von beiden Enden oder von der Mitte bestehender Abschnitte aus. Mehr Arbeiter bauen schneller.
+- Nutzbar ist die Brücke, sobald eine durchgehende Verbindung zum anderen Ufer besteht.
+- **Verwundbar beim Bau:** Arbeiter auf der Baustelle sind ungeschützt. Je länger die Brücke, desto länger ist sie angreifbar.
 
-**Brückentypen nach Epoche (historisch belegt):**
+**Brückentypen nach Epoche (historisch belegt):** Die Epoche bestimmt Bauart, Leben, Baugeschwindigkeit und Kosten je Abschnitt. Bestehende Abschnitte lassen sich auf eine neuere Bauart aufrüsten.
 
-| Epoche | Brücke | Vorbild | Max. Länge | Besonderheit |
-|---|---|---|---|---|
-| I–II | Holzsteg | Pfahlbauten | 3 Kacheln | Nur Infanterie und Arbeiter |
-| III | Pontonbrücke | Xerxes am Hellespont (480 v. Chr.), Caesars Rheinbrücke (55 v. Chr.) | 8 | Schnell gebaut, wenig Leben |
-| IV–V | Steinbogenbrücke | Römische und mittelalterliche Brücken, Karlsbrücke Prag (1357) | 6 | Viel Leben, teuer, Türme auf der Brücke möglich |
-| VI | Eiserne Brücke | Iron Bridge, Coalbrookdale (1779) | 14 | **Eisenbahntauglich** |
-| VII | Stahlbrücke / Hängebrücke | Firth of Forth (1890), Brooklyn Bridge (1883) | 24 | Eisenbahntauglich, sehr viel Leben |
-| VII spät | Pionier-Behelfsbrücke | Bailey-Brücke (1942) | 10 | In Sekunden je Abschnitt gebaut, für Angriffe über Flüsse |
-| VIII | Faltschwimmbrücke | sowjetische PMP (1962) | 30 | Sehr schnell, kann wieder eingefahren und versetzt werden |
+| Epoche | Brücke | Vorbild | Leben je Abschnitt | Bautempo | Besonderheit |
+|---|---|---|---|---|---|
+| I–II | Holzsteg | Pfahlbauten | sehr niedrig | schnell | Nur Infanterie und Arbeiter |
+| III | Pontonbrücke | Xerxes am Hellespont (480 v. Chr.), Caesars Rheinbrücke (55 v. Chr.) | niedrig | schnell | Erste Brücke für Reiterei und Belagerung |
+| IV–V | Steinbogenbrücke | Römische und mittelalterliche Brücken, Karlsbrücke Prag (1357) | hoch | langsam | Türme auf der Brücke möglich |
+| VI | Eiserne Brücke | Iron Bridge, Coalbrookdale (1779) | hoch | mittel | **Eisenbahntauglich** |
+| VII | Stahlbrücke / Hängebrücke | Brooklyn Bridge (1883), Firth of Forth (1890) | sehr hoch | mittel | Eisenbahntauglich |
+| VII spät | Pionier-Behelfsbrücke | Bailey-Brücke (1942) | niedrig | sehr schnell | Für Angriffe über Flüsse |
+| VIII | Faltschwimmbrücke | sowjetische PMP (1962) | mittel | sehr schnell | Kann wieder eingefahren und versetzt werden |
 
 **Brücken und Schiffe:**
 - **Niedrige Brücken versperren Schiffen den Weg.** Eine Landmacht kann so eine Meerenge für feindliche Flotten sperren, wie mit einer Sperrkette.
@@ -180,8 +182,8 @@ Gilt für alle. Nationseinheiten (Kapitel 9) **ersetzen** eine dieser Einheiten 
 - Verteidigen lässt sich eine Brücke mit Türmen auf Steinbrücken, Küstenbatterien, Flugabwehr und einem Brückenkopf an beiden Enden.
 
 **Kartengenerator:**
-- Auf Insel- und Seenkarten erzeugt der Generator bewusst **Meerengen und schmale Stellen**.
-- Jede Insel ist ab Epoche VI über höchstens 14 Kacheln Wasser erreichbar, ab VII über höchstens 24. Landmächte sind damit nie vollständig abgeschnitten, müssen aber an wenigen Stellen bauen und verteidigen.
+- Auf Insel- und Seenkarten erzeugt der Generator auch schmale Stellen und Meerengen. Dort sind Brücken billig und schnell gebaut, und es entstehen umkämpfte Übergänge.
+- Weite Strecken bleiben möglich, sind aber teuer und lange angreifbar.
 
 **Nationen-Bezug:**
 - Russland: Faltschwimmbrücke 25 % schneller gebaut (PMP).
