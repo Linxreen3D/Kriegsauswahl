@@ -2,7 +2,7 @@
 import {
   TICK_MS, RES, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, RESOURCE_TYPES, RESOURCE_KINDS,
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
-  WONDER, WONDER_ERA,
+  WONDER, WONDER_ERA, wonderHold,
 } from '../shared/rules.js';
 import { generateMap, blockedTerrain } from './mapgen.js';
 
@@ -873,7 +873,7 @@ export class World {
         b.queue.shift(); b.qProg = 0; pl.wonderBuilding = null;
         b.wonder = true; b.wonderAt = this.time; b.era = WONDER_ERA;
         const ratio = b.hp / b.maxHp; b.maxHp = Math.round(b.st.hp * WONDER.hpMul); b.hp = b.maxHp * ratio;
-        this.event({ k: 'wonder', p: pl.id, what: 'done', hold: WONDER.hold });
+        this.event({ k: 'wonder', p: pl.id, what: 'done', hold: wonderHold(this.W) });
       }
       return;
     }
@@ -1048,7 +1048,7 @@ export class World {
     this.event({ k: 'defeat', p: pl.id, s: surrendered });
   }
   winners() {
-    for (const b of this.buildings) if (b.wonder && !b.dead && this.time - b.wonderAt >= WONDER.hold) {
+    for (const b of this.buildings) if (b.wonder && !b.dead && this.time - b.wonderAt >= wonderHold(this.W)) {
       this.winReason = 'Weltwunder';
       return this.P.filter(p => p.team === this.P[b.owner].team);
     }
@@ -1069,13 +1069,13 @@ export class World {
     for (const r of this.resources.values()) res.push(r.id, RESOURCE_KINDS.indexOf(r.rtype), r.x, r.y, Math.round(r.amount));
     return {
       t: 'start', w: this.W, h: this.H, terrain: Buffer.from(this.terrain).toString('base64'), res, you: pid,
-      map: this.mapInfo, players: this.playersPublic(), settings: this.settings, time: this.time,
+      map: this.mapInfo, wonderHold: wonderHold(this.W), players: this.playersPublic(), settings: this.settings, time: this.time,
       start: this.P[pid] ? this.P[pid].start : this.P[0].start,
     };
   }
   playersPublic() {
     const won = {};
-    for (const b of this.buildings) if (b.wonder && !b.dead) won[b.owner] = Math.max(0, Math.ceil(WONDER.hold - (this.time - b.wonderAt)));
+    for (const b of this.buildings) if (b.wonder && !b.dead) won[b.owner] = Math.max(0, Math.ceil(wonderHold(this.W) - (this.time - b.wonderAt)));
     return this.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, pop: p.pop, culture: p.culture, nation: p.nation, score: this.score(p), isBot: p.isBot, wonder: won[p.id] ?? null }));
   }
   privateState(pl) {

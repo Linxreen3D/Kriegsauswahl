@@ -127,8 +127,10 @@ export const BUILDINGS = {
   workshop: { name: 'Werkstatt', size: 3, hp: 900, cost: { wood: 200, gold: 50 }, time: 40, sight: 6, minEra: 2, key: 'V', desc: 'Baut Belagerungswaffen.' },
   wall: { name: 'Palisade', size: 1, hp: 350, cost: { wood: 4 }, time: 3, sight: 2, minEra: 0, key: 'C', desc: 'Günstiges Hindernis (ab Mittelalter Steinmauer).' },
 };
-// Weltwunder: Ausbau des Haupthauses in der letzten Epoche. Wer es WONDER.hold Sekunden hält, gewinnt.
-export const WONDER = { name: 'Weltwunder', cost: { food: 3000, wood: 2500, stone: 3000, gold: 3500 }, time: 240, hold: 600, hpMul: 4 };
+// Weltwunder: Ausbau des Haupthauses in der letzten Epoche. Wer es 30 Minuten (große Karten: 60) hält, gewinnt.
+export const WONDER = { name: 'Weltwunder', cost: { food: 3000, wood: 2500, stone: 3000, gold: 3500 }, time: 240, hold: 1800, holdLarge: 3600, hpMul: 4 };
+// Große Karten (Kantenlänge ab 160 Kacheln, d. h. „Groß“/„Riesig“ oder viele Spieler) brauchen 1 Stunde
+export const wonderHold = mapW => (mapW >= 160 ? WONDER.holdLarge : WONDER.hold);
 export const WONDER_ERA = 7; // Anzeige-Epoche für das Modell
 
 export const BUILD_ORDER = ['house', 'storage', 'farm', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];

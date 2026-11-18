@@ -163,7 +163,7 @@ function onLobby(m) {
 function onStart(m) {
   G.phase = 'play';
   G.you = m.you; G.settings = m.settings; G.players = m.players;
-  G.W = m.w; G.H = m.h;
+  G.W = m.w; G.H = m.h; G.wonderHold = m.wonderHold;
   const bin = atob(m.terrain);
   G.terrain = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) G.terrain[i] = bin.charCodeAt(i);
@@ -574,7 +574,7 @@ function updateCmdCard(force) {
         if (type === 'town' && era === ERAS.length - 1 && !same.some(b => b.era === 7)) {
           put('W', {
             icon: '🏛', title: 'Weltwunder errichten', cost: WONDER.cost,
-            desc: `Baut dieses Haupthaus in ${Math.round(WONDER.time / 60)} Minuten zum Weltwunder aus. Hältst du es danach ${Math.round(WONDER.hold / 60)} Minuten, gewinnst du das Spiel. Alle Spieler werden gewarnt!`,
+            desc: `Baut dieses Haupthaus in ${Math.round(WONDER.time / 60)} Minuten zum Weltwunder aus. Hältst du es danach ${Math.round((G.wonderHold || WONDER.hold) / 60)} Minuten, gewinnst du das Spiel. Alle Spieler werden gewarnt!`,
             off: !affordable(WONDER.cost) || !!G.me.wonderB, fn: () => cmd({ c: 'wonder', id: same[0].id }),
           });
         }
