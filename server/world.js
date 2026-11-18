@@ -2,7 +2,7 @@
 import {
   TICK_MS, RES, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, RESOURCE_TYPES, RESOURCE_KINDS,
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
-  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost,
+  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, isProducer,
 } from '../shared/rules.js';
 import { generateMap, blockedTerrain } from './mapgen.js';
 
@@ -491,9 +491,9 @@ export class World {
   orderGather(u, t) {
     u.buildQ = [];
     if (t.kind === 'r') u.order = { t: 'gather', target: t.id, rtype: t.rtype };
-    else if (t.kind === 'b' && t.type === 'farm' && this.allied(t.owner, u.owner)) {
+    else if (t.kind === 'b' && isProducer(t.type) && this.allied(t.owner, u.owner)) {
       if (!t.built) u.order = { t: 'build', target: t.id };
-      else u.order = { t: 'gather', target: t.id, rtype: 'farm' };
+      else u.order = { t: 'gather', target: t.id, rtype: t.type };
     } else if (t.kind === 'b' && t.owner === u.owner && !t.built) u.order = { t: 'build', target: t.id };
   }
 
@@ -721,9 +721,9 @@ export class World {
     return best;
   }
   findResourceNear(rtype, x, y, r, owner) {
-    if (rtype === 'farm') {
+    if (isProducer(rtype)) {
       let best = null, bd = Infinity;
-      for (const b of this.buildings) if (!b.dead && b.type === 'farm' && b.owner === owner && b.built && !b.worker) {
+      for (const b of this.buildings) if (!b.dead && b.type === rtype && b.owner === owner && b.built && !b.worker) {
         const d = Math.hypot(b.cx - x, b.cy - y); if (d < r && d < bd) { bd = d; best = b; }
       }
       return best;
@@ -756,8 +756,8 @@ export class World {
   doGather(u, dt, pl) {
     const o = u.order;
     let t = this.ents.get(o.target);
-    const isFarm = o.rtype === 'farm';
-    const resKind = isFarm ? 'food' : RESOURCE_TYPES[o.rtype].res;
+    const isFarm = isProducer(o.rtype); // Feld, Bergwerk, Steinbruch: unerschöpflich, ein Arbeiter pro Gebäude
+    const resKind = isFarm ? BUILDINGS[o.rtype].yields : RESOURCE_TYPES[o.rtype].res;
     if (u.carry && u.carry.res !== resKind) u.carry = null;
     // abliefern
     if (o.returning || (u.carry && u.carry.amt >= CARRY)) {
@@ -783,7 +783,7 @@ export class World {
     }
     if (isFarm) {
       if (t.worker && t.worker !== u.id && this.ents.get(t.worker) && this.ents.get(t.worker).order.target === t.id) {
-        const n = this.findResourceNear('farm', u.x, u.y, 12, u.owner);
+        const n = this.findResourceNear(o.rtype, u.x, u.y, 12, u.owner);
         if (n && n !== t) { o.target = n.id; return; }
         u.order = { t: 'idle' }; return;
       }
@@ -808,7 +808,7 @@ export class World {
     u.lastD = null;
     u.state = ST.gather;
     u.dir = Math.atan2(t.cy - u.y, t.cx - u.x);
-    const rate = (isFarm ? FARM_RATE : RESOURCE_TYPES[o.rtype].rate) * pl.mods.gather[resKind] * (1 + pl.era * 0.06);
+    const rate = (isFarm ? BUILDINGS[o.rtype].rate : RESOURCE_TYPES[o.rtype].rate) * pl.mods.gather[resKind] * (1 + pl.era * 0.06);
     let amt = rate * dt;
     if (!u.carry) u.carry = { res: resKind, amt: 0 };
     if (!isFarm) {
@@ -824,7 +824,7 @@ export class World {
     const o = u.order;
     const b = this.ents.get(o.target);
     if (!b || b.dead || b.kind !== 'b' || (b.built && b.hp >= b.maxHp) || !this.allied(b.owner, u.owner)) {
-      if (b && !b.dead && b.type === 'farm' && b.built && b.owner === u.owner && !b.worker) { u.order = { t: 'gather', target: b.id, rtype: 'farm' }; return; }
+      if (b && !b.dead && isProducer(b.type) && b.built && b.owner === u.owner && !b.worker) { u.order = { t: 'gather', target: b.id, rtype: b.type }; return; }
       if (u.buildQ.length) { u.order = { t: 'build', target: u.buildQ.shift() }; return; }
       // nächste Baustelle in der Nähe
       const near = this.buildings.find(x => !x.dead && x.owner === u.owner && !x.built && Math.hypot(x.cx - u.x, x.cy - u.y) < 8);
@@ -845,7 +845,7 @@ export class World {
         b.built = true;
         this.P[b.owner].stats.built++;
         this.event({ k: 'built', to: b.owner, id: b.id, type: b.type });
-        if (b.type === 'farm' && b.owner === u.owner) { b.worker = u.id; u.order = { t: 'gather', target: b.id, rtype: 'farm' }; }
+        if (isProducer(b.type) && b.owner === u.owner) { b.worker = u.id; u.order = { t: 'gather', target: b.id, rtype: b.type }; }
         else if (b.type === 'storage' || b.type === 'town') {
           // nach Lagerbau: in der Nähe weitersammeln
           const res = this.findResourceNear('tree', b.cx, b.cy, 8) || this.findResourceNear('gold', b.cx, b.cy, 8) || this.findResourceNear('stone', b.cx, b.cy, 8);
@@ -874,7 +874,7 @@ export class World {
         } else b.cd = 0.4;
       }
     }
-    if (b.type === 'farm' && b.worker) {
+    if (isProducer(b.type) && b.worker) {
       const w = this.ents.get(b.worker);
       if (!w || w.order.target !== b.id) b.worker = 0;
     }
@@ -933,7 +933,7 @@ export class World {
       this.cells[this.cellOf(u.x, u.y)].push(u);
       if (b.rally) {
         const rt = b.rally.target ? this.ents.get(b.rally.target) : null;
-        if (rt && u.cls === 'wrk' && (rt.kind === 'r' || rt.type === 'farm')) this.orderGather(u, rt);
+        if (rt && u.cls === 'wrk' && (rt.kind === 'r' || isProducer(rt.type))) this.orderGather(u, rt);
         else this.groupMove([u], b.rally.x, b.rally.y, u.cls !== 'wrk');
       }
     }

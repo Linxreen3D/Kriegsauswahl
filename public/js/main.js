@@ -2,7 +2,7 @@ import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost, isProducer,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -17,7 +17,7 @@ const UNIT_ICONS = {
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
-const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
+const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', mine: '⛏', quarry: '🪨', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 function iconOf(def) {
   if (def.kind === 'b') return BLD_ICONS[def.key];
   if (def.unique) return UNIQUE_ICONS[def.unique];
@@ -457,7 +457,7 @@ function smartCommand(wx, wy, attackMove = false) {
       return;
     }
     if (t && t.def && t.def.kind === 'b' && G.allied(t.owner) && workers.length) {
-      if (t.def.key === 'farm' && t.prog >= 100 && t.owner === G.you) cmd({ c: 'gather', ids: workers, target: t.id });
+      if (isProducer(t.def.key) && t.prog >= 100 && t.owner === G.you) cmd({ c: 'gather', ids: workers, target: t.id });
       else if (t.prog < 100 || t.hp < t.maxHp) cmd({ c: 'repair', ids: workers, target: t.id });
       else cmd({ c: 'move', ids: workers, x: wx, y: wy });
       if (others.length) cmd({ c: 'move', ids: others, x: wx, y: wy });
@@ -471,7 +471,7 @@ function smartCommand(wx, wy, attackMove = false) {
     return;
   }
   if (blds.length) {
-    cmd({ c: 'rally', ids: blds.map(b => b.id), x: wx, y: wy, target: t && t.isRes ? t.id : (t && t.def && t.def.key === 'farm' ? t.id : 0) });
+    cmd({ c: 'rally', ids: blds.map(b => b.id), x: wx, y: wy, target: t && t.isRes ? t.id : (t && t.def && isProducer(t.def.key) ? t.id : 0) });
     UI.markers.push({ x: wx, y: wy, t0: now, color: '#ffd34d' });
     sfx.command();
   }
@@ -1037,6 +1037,7 @@ function drawMenuBackground() {
 async function init() {
   setupUi();
   renderer = new Renderer3D($('game'), $('overlay'));
+  window.__renderer = renderer; // für automatisierte Tests
   await renderer.init();
   window.__G = G; window.__R = renderer; // Debug-Zugriff
   setupInput();

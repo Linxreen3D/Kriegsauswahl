@@ -1,5 +1,5 @@
 // KI-Gegner: spielt über dieselbe Befehlsschnittstelle wie Menschen.
-import { ERAS, WONDER, CULTURES, BUILDINGS, LINES, RESOURCE_TYPES, LATE_STAGE, unitStats, buildingStats, trainable, eraCost } from '../shared/rules.js';
+import { ERAS, WONDER, CULTURES, BUILDINGS, LINES, RESOURCE_TYPES, LATE_STAGE, isProducer, unitStats, buildingStats, trainable, eraCost } from '../shared/rules.js';
 
 const PROFILES = {
   easy: { think: 2.0, workers: 0.6, attackAt: 14, firstAttack: 540, aggression: 0.5, towers: 0 },
@@ -107,7 +107,7 @@ export class AI {
       if (ok && pl.pop + st.pop <= pl.popCap && w.canAfford(pl, st.cost)) this.cmd({ c: 'train', ids: [b.id], line: o.line, unique: o.unique, n: 1 });
     }
     // Sammelpunkt
-    for (const b of blds) if (b.built && !b.rally && b.type !== 'town' && b.type !== 'house' && b.type !== 'farm') this.cmd({ c: 'rally', ids: [b.id], x: this.bx + 4, y: this.by + 4 });
+    for (const b of blds) if (b.built && !b.rally && b.type !== 'town' && b.type !== 'house' && !isProducer(b.type)) this.cmd({ c: 'rally', ids: [b.id], x: this.bx + 4, y: this.by + 4 });
 
     // Verteidigung
     let threat = null;
@@ -155,7 +155,7 @@ export class AI {
     const idle = [];
     for (const u of workers) {
       const o = u.order;
-      if (o.t === 'gather') counts[o.rtype === 'farm' ? 'food' : RESOURCE_TYPES[o.rtype].res]++;
+      if (o.t === 'gather') counts[isProducer(o.rtype) ? BUILDINGS[o.rtype].yields : RESOURCE_TYPES[o.rtype].res]++;
       else if (o.t === 'idle' && !u.buildQ.length) idle.push(u);
     }
     const e = pl.era;
@@ -179,12 +179,12 @@ export class AI {
         if (-diff > underV) { underV = -diff; under = k; }
       }
       if (over && under && over !== under && overV >= 1.5 && underV >= 1.5) {
-        const movers = workers.filter(u => u.order.t === 'gather' && (u.order.rtype === 'farm' ? 'food' : RESOURCE_TYPES[u.order.rtype].res) === over).slice(0, Math.min(3, Math.floor(underV)));
+        const movers = workers.filter(u => u.order.t === 'gather' && (isProducer(u.order.rtype) ? BUILDINGS[u.order.rtype].yields : RESOURCE_TYPES[u.order.rtype].res) === over).slice(0, Math.min(3, Math.floor(underV)));
         for (const u of movers) { u.order = { t: 'idle' }; counts[over]--; idle.push(u); }
       }
     }
     if (!idle.length) return;
-    for (const u of idle) {
+    for (const u of idle.slice(0, 12)) {
       const total = workers.length;
       const order = Object.keys(ratio).sort((a, b) => (ratio[b] * total - counts[b]) - (ratio[a] * total - counts[a]));
       let done = false;
@@ -203,6 +203,17 @@ export class AI {
         } else {
           const rt = best === 'wood' ? 'tree' : best;
           for (const r of [16, 30, 50, 80]) { target = w.findResourceNear(rt, u.x, u.y, r); if (target) break; }
+          if (!target && best !== 'wood') {
+            // Vorkommen erschöpft: Bergwerk bzw. Steinbruch nutzen oder bauen
+            const ptype = best === 'gold' ? 'mine' : 'quarry';
+            target = w.findResourceNear(ptype, this.bx, this.by, 40, this.pid);
+            if (!target) {
+              const unbuilt = blds.find(b => b.type === ptype && !b.built);
+              if (unbuilt) { this.cmd({ c: 'repair', ids: [u.id], target: unbuilt.id }); counts[best]++; done = true; break; }
+              if (pl.era >= BUILDINGS[ptype].minEra && this.build(ptype, [u], 1, 4, 12)) { counts[best]++; done = true; break; }
+              continue;
+            }
+          }
           if (!target) continue;
           // weit vom Lager? Lager bauen
           const drop = w.dropoffFor({ x: target.cx, y: target.cy, owner: this.pid });
@@ -215,7 +226,7 @@ export class AI {
         this.cmd({ c: 'gather', ids: [u.id], target: target.id });
         counts[best]++; done = true; break;
       }
-      if (!done) break;
+      if (!done) continue;
     }
   }
 

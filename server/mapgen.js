@@ -190,8 +190,8 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
       if (type === 'berry') { if (place('berry', x, y)) { cluster(x, y, 'berry', 4, 2); c++; } } else if (place(type, x, y, sz)) c++;
     }
   };
-  scatter('gold', Math.round(area / 1500), 2, 16);
-  scatter('stone', Math.round(area / 1900), 2, 16);
+  scatter('gold', Math.round(area / 1000), 2, 16);
+  scatter('stone', Math.round(area / 1300), 2, 16);
   scatter('berry', Math.round(area / 1800), 1, 14);
 
   return { w: W, h: H, terrain, resources: resList, starts, mapType: typeKey, mapName: T.name };

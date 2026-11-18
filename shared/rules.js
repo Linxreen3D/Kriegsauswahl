@@ -31,14 +31,14 @@ export const ERAS = [
   { name: 'Steinzeit', short: 'I', years: 'bis 3000 v. Chr.', cost: null, time: 0 },
   { name: 'Bronzezeit', short: 'II', years: '3000–1200 v. Chr.', cost: { food: 500, wood: 250 }, time: 60 },
   { name: 'Eisenzeit', short: 'III', years: '1200 v. Chr.–500', cost: { food: 900, wood: 450, gold: 200 }, time: 90 },
-  { name: 'Frühes Mittelalter', short: 'IV', years: '500–1000', cost: { food: 1400, gold: 700, stone: 300 }, time: 150 },
-  { name: 'Spätes Mittelalter', short: 'V', years: '1000–1600', cost: { food: 2000, wood: 1000, gold: 1100 }, time: 180 },
-  { name: '1. Industrielle Revolution', short: 'VI', years: '1750–1860', cost: { food: 2700, gold: 1700, stone: 800 }, time: 240 },
-  { name: '2. Industrielle Revolution', short: 'VII', years: '1860–1945', cost: { food: 3500, wood: 1800, gold: 2400 }, time: 300 },
-  { name: 'Kalter Krieg', short: 'VIII', years: '1945–1990', cost: { food: 4500, wood: 2200, gold: 3200, stone: 1200 }, time: 480 },
+  { name: 'Frühes Mittelalter', short: 'IV', years: '500–1000', cost: { food: 1800, gold: 900, stone: 400 }, time: 150 },
+  { name: 'Spätes Mittelalter', short: 'V', years: '1000–1600', cost: { food: 2800, wood: 1400, gold: 1600 }, time: 180 },
+  { name: '1. Industrielle Revolution', short: 'VI', years: '1750–1860', cost: { food: 4200, gold: 2800, stone: 1200 }, time: 240 },
+  { name: '2. Industrielle Revolution', short: 'VII', years: '1860–1945', cost: { food: 6000, wood: 3000, gold: 4200 }, time: 300 },
+  { name: 'Kalter Krieg', short: 'VIII', years: '1945–1990', cost: { food: 8000, wood: 4000, gold: 6000, stone: 2000 }, time: 480 },
 ];
 // Epoche VII hat zwei Stufen: Die Forschung „Moderne Kriegsführung“ schaltet die Technik von 1914–1945 frei.
-export const LATE_STAGE = { era: 6, name: 'Moderne Kriegsführung', cost: { food: 2000, wood: 1000, gold: 2000 }, time: 240, hpMul: 1.2, atkMul: 1.2 };
+export const LATE_STAGE = { era: 6, name: 'Moderne Kriegsführung', cost: { food: 3500, wood: 1800, gold: 3500 }, time: 240, hpMul: 1.2, atkMul: 1.2 };
 // Aufholhilfe: Wer zwei oder mehr Epochen hinter dem Führenden liegt, zahlt 15 % weniger je Rückstands-Epoche (max. 60 %).
 export function catchUpFactor(myEra, leaderEra) {
   const gap = leaderEra - myEra;
@@ -131,7 +131,10 @@ export const BUILDINGS = {
   town: { name: 'Haupthaus', size: 3, hp: 1400, cost: { wood: 300, stone: 150 }, time: 70, pop: 10, drop: true, atk: 6, range: 6, cd: 2, sight: 9, minEra: 0, key: 'Y', desc: 'Bildet Arbeiter aus, Epochenaufstieg, Abgabestelle für alle Ressourcen.' },
   house: { name: 'Haus', size: 2, hp: 300, cost: { wood: 30 }, time: 14, pop: 5, sight: 4, minEra: 0, key: 'Q', desc: '+5 Bevölkerung.' },
   storage: { name: 'Lager', size: 2, hp: 450, cost: { wood: 100 }, time: 20, drop: true, sight: 5, minEra: 0, key: 'W', desc: 'Abgabestelle für alle Ressourcen.' },
-  farm: { name: 'Feld', size: 2, hp: 200, cost: { wood: 60 }, time: 10, walkable: true, sight: 2, minEra: 0, key: 'E', desc: 'Unerschöpfliche Nahrung für einen Arbeiter.' },
+  farm: { name: 'Feld', size: 2, hp: 200, cost: { wood: 60 }, time: 10, walkable: true, sight: 2, minEra: 0, key: 'E', yields: 'food', rate: 0.6, desc: 'Unerschöpfliche Nahrung für einen Arbeiter.' },
+  // Dauerhafte Quellen für Gold und Stein, wenn die Vorkommen der Karte erschöpft sind
+  mine: { name: 'Bergwerk', size: 2, hp: 500, cost: { wood: 150, stone: 50 }, time: 30, walkable: true, sight: 3, minEra: 3, key: 'F', yields: 'gold', rate: 0.3, desc: 'Unerschöpfliches Gold für einen Arbeiter, langsamer als ein Vorkommen.' },
+  quarry: { name: 'Steinbruch', size: 2, hp: 500, cost: { wood: 150 }, time: 25, walkable: true, sight: 3, minEra: 3, key: 'X', yields: 'stone', rate: 0.34, desc: 'Unerschöpflicher Stein für einen Arbeiter, langsamer als ein Vorkommen.' },
   barracks: { name: 'Kaserne', size: 3, hp: 900, cost: { wood: 150 }, time: 30, sight: 6, minEra: 0, key: 'R', desc: 'Bildet Nahkämpfer aus.' },
   range: { name: 'Schießplatz', size: 3, hp: 800, cost: { wood: 150 }, time: 30, sight: 6, minEra: 0, key: 'T', desc: 'Bildet Fernkämpfer aus.' },
   stable: { name: 'Stall', size: 3, hp: 900, cost: { wood: 175, gold: 25 }, time: 35, sight: 6, minEra: 1, key: 'D', desc: 'Bildet Reiterei und später Fahrzeuge aus.' },
@@ -140,12 +143,12 @@ export const BUILDINGS = {
   wall: { name: 'Palisade', size: 1, hp: 350, cost: { wood: 4 }, time: 3, sight: 2, minEra: 0, key: 'C', desc: 'Günstiges Hindernis (ab Mittelalter Steinmauer).' },
 };
 // Weltwunder: Ausbau des Haupthauses in der letzten Epoche. Wer es 30 Minuten (große Karten: 60) hält, gewinnt.
-export const WONDER = { name: 'Weltwunder', cost: { food: 3000, wood: 2500, stone: 3000, gold: 3500 }, time: 240, hold: 1800, holdLarge: 3600, hpMul: 4 };
+export const WONDER = { name: 'Weltwunder', cost: { food: 6000, wood: 5000, stone: 5000, gold: 7000 }, time: 240, hold: 1800, holdLarge: 3600, hpMul: 4 };
 // Große Karten (Kantenlänge ab 160 Kacheln, d. h. „Groß“/„Riesig“ oder viele Spieler) brauchen 1 Stunde
 export const wonderHold = mapW => (mapW >= 160 ? WONDER.holdLarge : WONDER.hold);
 export const WONDER_ERA = 8; // Anzeige-Epoche für das Modell (nach der letzten Epoche)
 
-export const BUILD_ORDER = ['house', 'storage', 'farm', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
+export const BUILD_ORDER = ['house', 'storage', 'farm', 'mine', 'quarry', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
 
 // ---------------- Rohstoffe auf der Karte ----------------
 export const RESOURCE_TYPES = {
@@ -157,6 +160,8 @@ export const RESOURCE_TYPES = {
 export const RESOURCE_KINDS = ['tree', 'berry', 'gold', 'stone'];
 export const FARM_RATE = 0.6;
 export const CARRY = 10;
+// Gebäude, in denen ein Arbeiter dauerhaft sammelt (Feld, Bergwerk, Steinbruch)
+export const isProducer = type => !!(BUILDINGS[type] && BUILDINGS[type].yields);
 
 // ---------------- Typtabelle (Index für das Netzwerkprotokoll) ----------------
 export const TYPES = [];
