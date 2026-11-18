@@ -13,7 +13,7 @@ import { nationBuilding } from './nations.js';
 import { libertyMonument, libertyStatue } from './statue.js';
 const q = new URLSearchParams(location.search), mode = q.get('m') || 'grid';
 W.loadTextures(); Md.initMaterials();
-const ctx = W.createWorld(document.getElementById('c'), { sunAz: 150, sunElev: 34, fogNear: 200, fogFar: 600 });
+const ctx = W.createWorld(document.getElementById('c'), { sunAz: mode === 'liberty' ? -35 : 150, sunElev: mode === 'liberty' ? 40 : 34, fogNear: 200, fogFar: 600 });
 const T = W.createTerrain(ctx.scene, { size: 320, seg: 160, seed: 9, hills: 0.25, flats: [[0, 0, 110, 0.9]] });
 const BLUE = '#1f4fa8';
 const TYPES = [['town', 3], ['house', 2], ['storage', 2], ['farm', 2], ['barracks', 3], ['range', 3], ['stable', 3], ['tower', 2], ['workshop', 3], ['wall', 1]];
@@ -46,9 +46,11 @@ if (mode === 'grid') {
   ctx.camera.position.set(-3, 88, 92); ctx.camera.lookAt(-3, 0, -2);
 } else if (mode === 'liberty') {
   const close = q.get('close');
-  if (close) {
-    const st = libertyStatue(); st.position.set(0, T.height(0, 0), 0); st.rotation.y = 0.35; ctx.scene.add(st);
-    ctx.camera.fov = 30; ctx.camera.updateProjectionMatrix(); ctx.camera.position.set(6, 6.5, 19); ctx.camera.lookAt(0, 4.7, 0);
+  if (close || q.get('mon')) {
+    const nm = libertyMonument(BLUE); const gy = T.height(0, 0); nm.position.set(0, gy, 0); ctx.scene.add(nm);
+    ctx.camera.fov = close ? 30 : 34; ctx.camera.updateProjectionMatrix();
+    if (close) { ctx.camera.position.set(1.5, gy + 13.6, 22); ctx.camera.lookAt(0, gy + 15.9, 0); }
+    else { ctx.camera.position.set(-14, gy + 9, 40); ctx.camera.lookAt(0, gy + 9.5, 0); }
   } else {
     fitPlace(nationBuilding('town', 7, BLUE, 'usa'), 3, -11, 0, 1.55);
     const nm = libertyMonument(BLUE); const box = new THREE.Box3().setFromObject(nm); const k = 3 * 2 * 0.96 * 1.55 / Math.max(box.max.x - box.min.x, box.max.z - box.min.z); nm.scale.setScalar(k); nm.position.set(11, T.height(11, 0), 0); ctx.scene.add(nm);
