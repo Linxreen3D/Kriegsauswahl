@@ -4,11 +4,10 @@ import { join, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { WebSocketServer } from 'ws';
-import { Room } from './game.js';
+import { Room } from './room.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
-const MAP = JSON.parse(readFileSync(join(ROOT, 'public', 'map.json'), 'utf8'));
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -55,12 +54,12 @@ function makeCode() {
   return c;
 }
 
-const wss = new WebSocketServer({ server, perMessageDeflate: { threshold: 512 }, maxPayload: 16 * 1024 });
+const wss = new WebSocketServer({ server, perMessageDeflate: { threshold: 512 }, maxPayload: 64 * 1024 });
 wss.on('connection', ws => {
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
-  let budget = 40; // einfacher Spam-Schutz: max. ~40 Nachrichten pro Sekunde
-  const refill = setInterval(() => { budget = 40; }, 1000);
+  let budget = 60; // einfacher Spam-Schutz: max. ~60 Nachrichten pro Sekunde
+  const refill = setInterval(() => { budget = 60; }, 1000);
   ws.on('message', data => {
     if (--budget < 0) return;
     let msg;
@@ -69,7 +68,7 @@ wss.on('connection', ws => {
     if (msg.t === 'ping') return ws.send(JSON.stringify({ t: 'pong', c: msg.c }));
     if (msg.t === 'create') {
       if (ws.room) ws.room.leave(ws);
-      const room = new Room(makeCode(), MAP, r => rooms.delete(r.code));
+      const room = new Room(makeCode(), r => rooms.delete(r.code));
       rooms.set(room.code, room);
       room.addHuman(ws, msg.name);
       return;
@@ -97,5 +96,5 @@ setInterval(() => {
 }, 15000);
 
 server.listen(PORT, () => {
-  console.log(`Frontlinien läuft auf http://localhost:${PORT}  (${MAP.regions.length} Regionen)`);
+  console.log(`Frontlinien läuft auf http://localhost:${PORT}`);
 });

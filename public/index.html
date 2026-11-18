@@ -12,13 +12,13 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <canvas id="map"></canvas>
+  <canvas id="game"></canvas>
 
   <!-- Startbildschirm -->
   <section id="home" class="screen">
     <div class="card hero">
       <div class="logo"><span class="logo-mark">◆</span> FRONTLINIEN</div>
-      <p class="tagline">Wähle dein Land. Erobere die Welt. Mit Freunden.</p>
+      <p class="tagline">Echtzeitstrategie von der Steinzeit bis zur Moderne – mit Freunden.</p>
       <label class="field">Dein Name
         <input id="nameInput" maxlength="20" placeholder="Kommandant" autocomplete="nickname">
       </label>
@@ -30,15 +30,15 @@
       </div>
       <p id="homeError" class="error"></p>
       <details class="howto">
-        <summary>So wird gespielt</summary>
+        <summary>Steuerung</summary>
         <ul>
-          <li><b>Startwahl:</b> Klicke zu Beginn auf ein freies Gebiet – das wird deine Hauptstadt.</li>
-          <li><b>Angreifen:</b> Eigene Region anklicken, dann ein verbundenes Ziel anklicken – oder einfach ziehen.</li>
-          <li><b>Sammelangriff:</b> Mit <kbd>Shift</kbd> mehrere eigene Regionen auswählen.</li>
-          <li><b>Truppenanteil:</b> Tasten <kbd>1</kbd>–<kbd>4</kbd> = 25 / 50 / 75 / 100 %.</li>
-          <li><b>Gold</b> kommt aus deinen Regionen. Baue Fabriken, Kasernen und Festungen oder setze Spezialfähigkeiten ein.</li>
-          <li><b>Gestrichelte Linien</b> sind Seewege (langsamer). Bündnisse schützen vor Angriffen und erlauben Unterstützung.</li>
-          <li><b>Kamera:</b> Mausrad / Pinch zum Zoomen, ziehen zum Verschieben, <kbd>Leertaste</kbd> springt zur Hauptstadt.</li>
+          <li><b>Linksklick / Rahmen ziehen:</b> Einheiten auswählen (Doppelklick = alle gleichen auf dem Bildschirm).</li>
+          <li><b>Rechtsklick:</b> Bewegen, Angreifen, Sammeln, Bauen/Reparieren, Sammelpunkt setzen.</li>
+          <li><b>A</b> + Klick: Angriffsbewegung · <b>S</b>: Stopp · <b>Entf</b>: Löschen</li>
+          <li><b>Strg + 1–9</b>: Gruppe speichern · <b>1–9</b>: Gruppe wählen (2× = hinspringen)</li>
+          <li><b>.</b> untätiger Arbeiter · <b>H</b> Haupthaus · <b>Leertaste</b> letzte Warnung</li>
+          <li><b>Kamera:</b> Pfeiltasten, Bildschirmrand, mittlere Maustaste, Mausrad = Zoom, Minimap.</li>
+          <li>Bauen: Arbeiter wählen → Gebäude in der Befehlsleiste (Hotkeys) → platzieren. <b>Shift</b> = mehrere.</li>
         </ul>
       </details>
     </div>
@@ -65,7 +65,8 @@
               <option value="normal" selected>Bot: Normal</option>
               <option value="hard">Bot: Schwer</option>
             </select>
-            <button id="addBot" class="btn small">+ Bot hinzufügen</button>
+            <button id="addBot" class="btn small">+ Bot</button>
+            <button id="addBots" class="btn small">+ 5 Bots</button>
           </div>
           <h3>Deine Farbe</h3>
           <div id="colorPicker" class="color-picker"></div>
@@ -89,60 +90,57 @@
   <!-- Spiel-HUD -->
   <section id="hud" class="hidden">
     <header class="topbar">
-      <div class="tb-left">
-        <span class="logo small-logo">◆ FRONTLINIEN</span>
-        <span id="phaseLabel" class="pill"></span>
+      <div class="resbar">
+        <div class="res" title="Nahrung"><span class="ri">🍖</span><b id="r_food">0</b></div>
+        <div class="res" title="Holz"><span class="ri">🪵</span><b id="r_wood">0</b></div>
+        <div class="res" title="Stein"><span class="ri">🪨</span><b id="r_stone">0</b></div>
+        <div class="res" title="Gold"><span class="ri">🪙</span><b id="r_gold">0</b></div>
+        <div class="res" title="Bevölkerung"><span class="ri">👥</span><b id="r_pop">0/0</b></div>
       </div>
-      <div class="tb-center">
-        <div class="stat" title="Gold"><span class="gold-icon">●</span><b id="goldVal">0</b><small id="incomeVal">+0/s</small></div>
-        <div class="stat" title="Regionen"><span>⬢</span><b id="regionVal">0</b></div>
-        <div class="stat" title="Truppen"><span>⚑</span><b id="troopVal">0</b></div>
-        <div class="stat" title="Spielzeit"><span>⏱</span><b id="timeVal">0:00</b></div>
+      <div class="tb-mid">
+        <span id="eraLabel" class="pill"></span>
+        <span id="timeLabel" class="muted"></span>
       </div>
       <div class="tb-right">
-        <div class="pct" id="pctGroup" title="Anteil der Truppen, die gesendet werden (Tasten 1–4)">
-          <button data-p="0.25">25%</button><button data-p="0.5" class="on">50%</button><button data-p="0.75">75%</button><button data-p="1">100%</button>
-        </div>
+        <button id="idleBtn" class="icon-btn" title="Untätiger Arbeiter (.)">💤<span id="idleCount" class="badge hidden"></span></button>
+        <button id="scoreBtn" class="icon-btn" title="Nationen (Tab)">🏳</button>
         <button id="soundBtn" class="icon-btn" title="Ton an/aus">🔊</button>
-        <button id="menuBtn" class="icon-btn" title="Menü">☰</button>
+        <button id="menuBtn" class="icon-btn" title="Menü (F10)">☰</button>
       </div>
     </header>
 
-    <aside id="scoreboard" class="panel">
-      <div class="panel-title">Nationen <button class="collapse" data-target="scoreList">–</button></div>
-      <ul id="scoreList"></ul>
+    <div id="notices"></div>
+    <div id="chatOverlay"></div>
+    <input id="chatInput" class="chat-input hidden" maxlength="200" placeholder="Nachricht (Enter senden, Esc abbrechen) – mit /t nur ans Team">
+
+    <aside id="scorePanel" class="panel hidden">
+      <div class="panel-title">Nationen</div>
+      <table id="scoreTable"></table>
     </aside>
 
-    <aside id="infoPanel" class="panel hidden">
-      <div id="infoContent"></div>
-    </aside>
+    <footer id="bottom">
+      <div class="mm-wrap"><canvas id="minimap" width="184" height="184"></canvas></div>
+      <div id="selInfo" class="panel"></div>
+      <div id="cmdCard" class="panel"></div>
+    </footer>
 
-    <div id="abilityBar"></div>
+    <div id="tooltip" class="tooltip hidden"></div>
 
-    <div id="feedWrap" class="panel">
-      <div class="tabs"><button data-tab="feed" class="on">Ereignisse</button><button data-tab="chat">Chat <span id="chatBadge" class="badge hidden"></span></button></div>
-      <div id="feed" class="feed"></div>
-      <div id="chatBox" class="hidden">
-        <div id="chatLog" class="chat-log"></div>
-        <div class="chat-row">
-          <input id="chatInput" class="chat-input" maxlength="200" placeholder="Nachricht… (Enter)">
-          <label class="small muted"><input type="checkbox" id="allyChat"> nur Verbündete</label>
-        </div>
+    <div id="choice" class="modal hidden">
+      <div class="card choice-card">
+        <h2 id="choiceTitle"></h2>
+        <p id="choiceSub" class="muted"></p>
+        <div id="choiceOptions" class="choice-options"></div>
+        <button id="choiceLater" class="btn ghost small">Später entscheiden</button>
       </div>
     </div>
-
-    <canvas id="minimap" width="240" height="106"></canvas>
-
-    <div id="banner" class="banner hidden"></div>
-    <div id="toast" class="toast hidden"></div>
-    <div id="tooltip" class="tooltip hidden"></div>
 
     <div id="menu" class="modal hidden">
       <div class="card">
         <h2>Menü</h2>
         <p class="muted">Raumcode: <b id="menuCode"></b></p>
         <button id="menuInvite" class="btn">Einladungslink kopieren</button>
-        <button id="surrenderBtn" class="btn danger">Kapitulieren</button>
+        <button id="surrenderBtn" class="btn danger">Aufgeben</button>
         <button id="leaveGame" class="btn">Spiel verlassen</button>
         <button id="closeMenu" class="btn primary">Weiterspielen</button>
       </div>
@@ -152,7 +150,7 @@
       <div class="card end-card">
         <h1 id="endTitle"></h1>
         <p id="endReason" class="muted"></p>
-        <canvas id="endChart" width="640" height="240"></canvas>
+        <canvas id="endChart" width="680" height="220"></canvas>
         <table id="endTable"></table>
         <div class="row center">
           <button id="rematchBtn" class="btn primary">Zurück zur Lobby</button>
@@ -164,7 +162,6 @@
   </section>
 
   <div id="connLost" class="conn hidden">Verbindung unterbrochen – verbinde neu…</div>
-
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
