@@ -36,7 +36,7 @@ function makeTerrain({ size = 110, seg = 110, seed = 7, river = null, flats = []
   for (let i = 0; i < p.count; i++) p.setY(i, height(p.getX(i), p.getZ(i)));
   geo.computeVertexNormals();
   const colors = new Float32Array(p.count * 3), c = new THREE.Color();
-  const pal = palette === 'war'
+  const pal = palette === 'lush' ? { g1: '#5f9a3a', g2: '#a3ad48', dirt: '#9a7a4e', sand: '#e2cf98', rock: '#9a958e' } : palette === 'war'
     ? { g1: '#7d9a46', g2: '#8aa64e', dirt: '#8c7350', sand: '#c9b27c', rock: '#8a857c' }
     : { g1: '#62a03f', g2: '#7aae47', dirt: '#9c7a50', sand: '#e2cf98', rock: '#9a958e' };
   const jr = A.rand(seed + 99);
@@ -297,7 +297,105 @@ export function sceneHud(ctx) {
   lookRTS(camera, 0, 6, 44, 0.9, 0.62);
 }
 
+// ---------- Szene 6: Lebendige Siedlung am See (Antike) ----------
+export function sceneVillage(ctx) {
+  const { scene, camera } = ctx;
+  const T = makeTerrain({ size: 170, seg: 150, seed: 52, palette: 'lush', hills: 2.4, river: [[-80, -30], [-45, -12], [-30, 10], [-40, 40], [-80, 60]], flats: [[8, 0, 20, 0.9]] });
+  scene.add(T.mesh); scene.add(makeWater(170));
+  const H = T.height;
+  const P = (o, x, z, r, s) => place(scene, H, o, x, z, r, s);
+  const town = (x, z) => Math.hypot(x - 8, z) < 19;
+  // Erdflächen & Wege um die Gebäude
+  for (const [x, z, r] of [[8, 0, 9], [0, 8, 4], [18, -6, 4], [-4, -8, 4]]) P(A.dirtPatch(r), x, z).position.y += 0.06;
+  P(A.longhouse(RED), 8, -1, 0.3, 1.8);
+  P(A.campfire(), 8, 5);
+  const r = A.rand(3);
+  const houses = [[-2, -6], [2, -11], [10, -11], [17, -8], [20, -1], [19, 7], [13, 11], [4, 12], [-3, 7], [-5, 0], [24, 4], [-1, 15]];
+  houses.forEach(([x, z], i) => P(i % 3 === 0 ? A.hut(RED, i) : A.timberHouse(RED, i, '#b8954f'), x, z, Math.atan2(8 - x, -z) + Math.PI, 0.95));
+  // Palisade mit Toren
+  for (let k = 0; k < 22; k++) {
+    const a = k / 22 * Math.PI * 2; if (k === 5 || k === 16) continue;
+    const x = 8 + Math.cos(a) * 18, z = Math.sin(a) * 18;
+    P(A.palisade(5.2), x, z, -a + Math.PI / 2);
+  }
+  P(A.roundTower(RED, 4, 0.9, '#8a6a44'), 8 + Math.cos(5 / 22 * 6.283) * 18, Math.sin(5 / 22 * 6.283) * 18);
+  // Felder vor der Palisade
+  for (let k = 0; k < 4; k++) P(A.field(5, 4, k, k % 2 === 0), 32 + (k % 2) * 6.5, -8 + Math.floor(k / 2) * 6, 0.1);
+  // viele Arbeiter
+  for (let k = 0; k < 40; k++) {
+    const a = r() * Math.PI * 2, d = 4 + r() * 14;
+    P(A.soldier({ color: RED, era: 1, weapon: 'tool', seed: 500 + k, pose: r() < 0.4 ? 'walk' : 'attack', carry: r() < 0.3 ? ['wood', 'food', 'gold'][k % 3] : null }), 8 + Math.cos(a) * d, Math.sin(a) * d, r() * 6);
+  }
+  for (let k = 0; k < 8; k++) P(A.soldier({ color: RED, era: 1, weapon: 'tool', seed: 600 + k, pose: 'attack' }), 31 + (k % 4) * 3, -8 + Math.floor(k / 4) * 6, r() * 6);
+  // Armee auf dem Exerzierplatz
+  for (let k = 0; k < 24; k++) P(A.soldier({ color: RED, era: 2, weapon: k < 12 ? 'spear' : 'bow', seed: 700 + k, shield: k < 12 }), 26 + (k % 6) * 1.2, 14 + Math.floor(k / 6) * 1.3, -0.6);
+  // Tiere
+  for (let k = 0; k < 4; k++) P(A.mammoth(k), 44 + k * 4 + r() * 2, 22 + r() * 6, 2 + r());
+  for (let k = 0; k < 7; k++) P(A.deer(k), -12 + r() * 8, 28 + r() * 6, r() * 6);
+  for (let k = 0; k < 3; k++) P(A.soldier({ color: RED, era: 1, weapon: 'spear', seed: 800 + k, pose: 'attack' }), 40 + k * 1.5, 18 + k, 0.8);
+  // Boote auf dem Fluss
+  const boatAt = (b, x, z, ry) => { b.position.set(x, -0.3, z); b.rotation.y = ry; scene.add(b); };
+  boatAt(A.boat(RED), -36, 0, 0.3); boatAt(A.boat(RED), -40, 18, -0.4); boatAt(A.boat(RED, 'war'), -33, 26, 0.2);
+  P(A.timberHouse(RED, 40, '#b8954f'), -24, 4, Math.PI / 2, 0.9);
+  // Gold, Stein, Beeren
+  P(A.goldMine(11), 30, 30); P(A.stoneMine(12), -12, -24);
+  for (let k = 0; k < 6; k++) P(A.berryBush(k + 40), -8 + (k % 3) * 1.5, -30 + Math.floor(k / 3) * 1.5);
+  // dichte, bunte Natur
+  forest(scene, H, 38, -34, 16, 160, 61, 0.35, town);
+  forest(scene, H, -20, -44, 18, 160, 62, 0.5, town);
+  forest(scene, H, 60, 0, 14, 110, 63, 0.4, town);
+  forest(scene, H, 10, 46, 16, 120, 64, 0.5, town);
+  scatter(scene, H, k => A.treeLeaf(900 + k, 1, true), 70, [-60, -60, 80, 60], 65, town);
+  scatter(scene, H, k => A.bush(k, k % 3 === 0), 260, [-60, -60, 80, 60], 66, town);
+  scatter(scene, H, k => A.grassTuft(k), 500, [-60, -60, 80, 60], 67, town);
+  scatter(scene, H, k => A.flower(['#ffffff', '#ffd34d', '#e05a9a', '#a07ae0'][k % 4], k), 300, [-60, -60, 80, 60], 68, town);
+  scatter(scene, H, k => A.rock(k + 950, 0.4 + (k % 4) * 0.3), 60, [-60, -60, 80, 60], 69, town);
+  camera.fov = 40; camera.updateProjectionMatrix();
+  camera.position.set(-6, 30, 48); camera.lookAt(14, 0, -2);
+}
+
+// ---------- Szene 7: Belagerung einer asiatischen Stadt ----------
+export function sceneSiege(ctx) {
+  const { scene, camera } = ctx;
+  const T = makeTerrain({ size: 170, seg: 150, seed: 77, palette: 'lush', hills: 2.0, flats: [[0, -16, 26, 0.9], [0, 16, 22, 0.9]] });
+  scene.add(T.mesh); scene.add(makeWater(170, -1.2));
+  const H = T.height;
+  const P = (o, x, z, r, s) => place(scene, H, o, x, z, r, s);
+  const city = (x, z) => z < -2 && Math.abs(x) < 30 || (z > 2 && z < 30 && Math.abs(x) < 26);
+  // Grüne (asiatische) Stadt hinter großer Mauer
+  for (let x = -28; x <= 28; x += 8) if (Math.abs(x) > 3) P(A.bigWall(8.2), x, -2);
+  P(A.gatehouse(GREEN), 0, -2);
+  for (const x of [-24, -12, 12, 24]) P(A.roundTower(GREEN, 5.5, 1.2), x + (x > 0 ? 4 : -4), -2);
+  P(A.pagoda(GREEN, 4), 0, -18);
+  const r = A.rand(9);
+  for (let k = 0; k < 22; k++) { const x = -26 + (k % 11) * 5 + r() * 1.5, z = -9 - Math.floor(k / 11) * 6 - r() * 2; if (Math.abs(x) < 5 && z < -12) continue; P(A.asianHouse(GREEN, k), x, z, r() * 0.3); }
+  P(A.pagoda(GREEN, 2), -18, -24); P(A.pagoda(GREEN, 2), 20, -26);
+  for (let k = 0; k < 8; k++) P(A.soldier({ color: GREEN, era: 3, weapon: 'bow', seed: 1000 + k, pose: 'aim' }), -22 + k * 6 + (k > 3 ? 2 : -2), -2.2, 0).position.y += 3.4;
+  // Ausfall: Kriegselefanten + Speerträger vor dem Tor
+  for (let k = 0; k < 4; k++) P(A.warElephant(GREEN, k), -6 + k * 4, 4, 0.1 * (k - 1.5));
+  for (let k = 0; k < 20; k++) P(A.soldier({ color: GREEN, era: 3, weapon: 'spear', seed: 1100 + k, shield: true, pose: 'attack' }), -8 + (k % 10) * 1.6, 7 + Math.floor(k / 10) * 1.2, 0);
+  // Roter Angriff: große Armee
+  for (let k = 0; k < 60; k++) P(A.soldier({ color: RED, era: 3, weapon: k % 3 === 0 ? 'pike' : 'sword', seed: 1200 + k, shield: k % 3 !== 0, pose: k % 2 ? 'attack' : 'walk' }), -14 + (k % 15) * 1.9 + r() * 0.5, 10.5 + Math.floor(k / 15) * 1.4 + r() * 0.4, Math.PI);
+  for (let k = 0; k < 24; k++) P(A.soldier({ color: RED, era: 3, weapon: 'bow', seed: 1300 + k, pose: 'aim' }), -16 + (k % 12) * 2.8, 19 + Math.floor(k / 12) * 1.4, Math.PI);
+  for (let k = 0; k < 14; k++) P(A.cavalry({ color: RED, era: 3, seed: k }), 18 + (k % 4) * 2.2 + r(), 8 + Math.floor(k / 4) * 2.6, Math.PI - 0.5);
+  for (const [x, z] of [[-10, 26], [0, 27], [10, 26]]) P(A.catapult(3), x, z, Math.PI);
+  // Kampfspuren
+  for (let k = 0; k < 30; k++) { const a = A.arrow(); a.position.set(-20 + r() * 40, 4 + r() * 5, 2 + r() * 14); a.rotation.set(-0.3 + (k % 2) * 0.6, k % 2 ? 0 : Math.PI, 0); scene.add(a); }
+  P(A.flame(1.2), -10, -10); P(A.smoke(9, 21, true), -9.6, -9.4); P(A.flame(0.9), 14, -14); P(A.smoke(8, 22, true), 14.4, -13.4);
+  P(A.explosion(0.7), 6, -2.5); P(A.crater(1.2), -4, 14);
+  const b = A.rock(80, 0.8, '#8a857c'); b.position.set(3, 11, 8); scene.add(b);
+  forest(scene, H, -48, 10, 16, 140, 71, 0.5, city); forest(scene, H, 48, 14, 16, 140, 72, 0.4, city);
+  forest(scene, H, 0, -48, 24, 160, 73, 0.6, city);
+  scatter(scene, H, k => A.treeLeaf(950 + k, 1, true), 60, [-70, -60, 70, 60], 74, city);
+  scatter(scene, H, k => A.bush(k + 30, k % 3 === 0), 200, [-70, -60, 70, 60], 75, city);
+  scatter(scene, H, k => A.grassTuft(k), 400, [-70, -60, 70, 60], 76, city);
+  camera.fov = 40; camera.updateProjectionMatrix();
+  camera.position.set(22, 30, 46); camera.lookAt(0, 0, 2);
+}
+
 export const SCENES = {
+  village: { fn: sceneVillage, opts: { sky: ['#8cc6ee', '#f3e2c2'], fog: [70, 170], sun: [-40, 50, 20] } },
+  siege: { fn: sceneSiege, opts: { sky: ['#9cc4e0', '#f0d6b0'], fog: [70, 170], sun: [-35, 45, 30], sunColor: '#ffe6c0' } },
   stone: { fn: sceneStone, opts: {} },
   medieval: { fn: sceneMedieval, opts: { sun: [-30, 55, 30], sky: ['#8cc6ee', '#f3dcb8'] } },
   modern: { fn: sceneModern, opts: { sky: ['#9aa8b5', '#d9c7a8'], sunColor: '#ffe2b8', sunI: 2.4, sun: [35, 45, -20], hemi: 0.8 } },

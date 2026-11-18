@@ -443,3 +443,114 @@ export function healthBar(k = 0.8, w = 1) {
   g.add(bg, fg);
   return g;
 }
+
+// ---------- Tiere ----------
+export function mammoth(seed = 1) {
+  const g = new THREE.Group(), fur = ['#6b4a32', '#5a3c26', '#7a5638'][seed % 3];
+  g.add(at(mesh(jitter(ico(1.3, 1), 0.15, seed), fur), 0, 2.2, 0, 0, 0, 0, [1, 0.95, 1.35]));
+  g.add(at(mesh(jitter(ico(0.85, 0), 0.1, seed + 1), fur), 0, 2.7, 1.5));
+  g.add(at(mesh(cyl(0.25, 0.12, 1.7, 6), fur), 0, 1.6, 2.1, 0.35, 0, 0));
+  for (const x of [-0.35, 0.35]) g.add(at(mesh(new THREE.TorusGeometry(0.6, 0.08, 4, 8, Math.PI * 0.8), '#f1e9d6'), x, 1.8, 2.1, 0, Math.PI / 2, Math.PI * 0.9));
+  for (const [x, z] of [[-0.6, 0.7], [0.6, 0.7], [-0.6, -0.8], [0.6, -0.8]]) g.add(at(mesh(cyl(0.32, 0.3, 1.5, 6), fur), x, 0.75, z));
+  return g;
+}
+export function deer(seed = 1) {
+  const g = new THREE.Group(), c = '#a8763f';
+  g.add(at(mesh(box(0.35, 0.4, 1.0), c), 0, 0.85, 0));
+  g.add(at(mesh(box(0.18, 0.5, 0.2), c), 0, 1.15, 0.45, -0.4, 0, 0));
+  g.add(at(mesh(box(0.2, 0.2, 0.38), c), 0, 1.4, 0.62));
+  for (const x of [-0.1, 0.1]) g.add(at(mesh(cyl(0.02, 0.02, 0.5, 3), '#d8c8a8'), x, 1.7, 0.55, 0, 0, x * 3));
+  for (const [x, z] of [[-0.12, 0.35], [0.12, 0.35], [-0.12, -0.35], [0.12, -0.35]]) g.add(at(mesh(box(0.08, 0.65, 0.08), c), x, 0.33, z));
+  return g;
+}
+export function warElephant(color, seed = 1) {
+  const g = new THREE.Group(), skin = '#8d8a86';
+  g.add(at(mesh(jitter(ico(1.2, 1), 0.08, seed), skin), 0, 2.0, 0, 0, 0, 0, [1, 0.9, 1.3]));
+  g.add(at(mesh(jitter(ico(0.7, 0), 0.06, seed + 1), skin), 0, 2.4, 1.45));
+  g.add(at(mesh(cyl(0.2, 0.08, 1.5, 6), skin), 0, 1.5, 1.95, 0.25, 0, 0));
+  for (const x of [-0.6, 0.6]) g.add(at(mesh(box(0.08, 0.7, 0.55), skin), x, 2.4, 1.3, 0, x > 0 ? 0.3 : -0.3, 0));
+  for (const x of [-0.3, 0.3]) g.add(at(mesh(cone(0.07, 0.8, 4), '#f1e9d6'), x, 1.8, 1.9, 1.3, 0, 0));
+  for (const [x, z] of [[-0.55, 0.6], [0.55, 0.6], [-0.55, -0.7], [0.55, -0.7]]) g.add(at(mesh(cyl(0.3, 0.28, 1.4, 6), skin), x, 0.7, z));
+  g.add(at(mesh(box(1.5, 0.15, 1.6), color), 0, 2.95, -0.1));
+  g.add(at(mesh(box(1.1, 0.7, 1.1), '#8a6238'), 0, 3.35, -0.1));
+  for (const [x, z] of [[-0.5, -0.6], [0.5, -0.6], [-0.5, 0.4], [0.5, 0.4]]) g.add(at(mesh(cyl(0.04, 0.04, 0.9, 3), '#5a3c22'), x, 3.9, z));
+  g.add(at(mesh(cone(0.9, 0.6, 4), color), 0, 4.55, -0.1, 0, Math.PI / 4, 0));
+  return g;
+}
+// ---------- Wasser ----------
+export function boat(color, kind = 'fish') {
+  const g = new THREE.Group();
+  const hull = new THREE.Shape(); hull.moveTo(0, 1.6); hull.quadraticCurveTo(0.8, 0.6, 0.7, -1.4); hull.lineTo(-0.7, -1.4); hull.quadraticCurveTo(-0.8, 0.6, 0, 1.6);
+  const s = kind === 'war' ? 1.8 : 1;
+  const hg = new THREE.ExtrudeGeometry(hull, { depth: 0.6, bevelEnabled: false }); hg.rotateX(Math.PI / 2); hg.translate(0, 0.6, 0);
+  g.add(at(mesh(hg, '#7a5530'), 0, -0.1, 0, 0, 0, 0, s));
+  g.add(at(mesh(cyl(0.05, 0.06, 2.6 * s, 4), '#5a3c22'), 0, 1.4 * s, 0));
+  const sail = mesh(box(1.5 * s, 1.6 * s, 0.04), kind === 'war' ? color : '#efe6d2'); g.add(at(sail, 0, 1.6 * s, 0.05));
+  if (kind !== 'war') g.add(at(mesh(box(0.5, 0.06, 0.06), color), 0, 2.6, 0));
+  else { for (let k = -2; k <= 2; k++) for (const x of [-1, 1]) g.add(at(mesh(box(1.4, 0.05, 0.08), '#6b4a2e'), x * 1.2, 0.2, k * 0.6, 0, 0, x * 0.4)); }
+  return g;
+}
+// ---------- Kulturen ----------
+export function pagoda(color, tiers = 3) {
+  const g = new THREE.Group();
+  g.add(at(mesh(box(4, 0.6, 4), '#b8ad98'), 0, 0.3, 0));
+  for (let k = 0; k < tiers; k++) {
+    const w = 3 - k * 0.6, y = 0.6 + k * 1.6;
+    g.add(at(mesh(box(w, 1.1, w), '#c8402f'), 0, y + 0.55, 0));
+    const roof = mesh(cyl(w * 0.35, w * 0.82, 0.5, 4), '#2f4a3a'); g.add(at(roof, 0, y + 1.3, 0, 0, Math.PI / 4, 0));
+    for (const [x, z] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) g.add(at(mesh(cone(0.1, 0.35, 4), '#2f4a3a'), x * w * 0.55, y + 1.15, z * w * 0.55, z * 0.6, 0, -x * 0.6));
+  }
+  g.add(at(mesh(cyl(0.04, 0.04, 1.2, 3), '#c8a24a'), 0, 0.6 + tiers * 1.6 + 0.6, 0));
+  g.add(at(mesh(box(0.6, 0.4, 0.03), color), 0.3, 0.6 + tiers * 1.6 + 1.0, 0));
+  return g;
+}
+export function asianHouse(color, seed = 1) {
+  const g = new THREE.Group();
+  g.add(at(mesh(box(2.4, 1.3, 1.8), '#e8dcc0'), 0, 0.65, 0));
+  for (const x of [-1.1, 1.1]) g.add(at(mesh(box(0.1, 1.3, 0.1), '#7a2a20'), x, 0.65, 0.9));
+  const roof = mesh(cyl(0.8, 1.9, 0.7, 4), '#3d5a4a'); g.add(at(roof, 0, 1.6, 0, 0, Math.PI / 4, 0, [1.15, 1, 0.9]));
+  g.add(at(mesh(box(0.25, 0.6, 0.04), color), 0.6, 0.9, 0.92));
+  return g;
+}
+export function palisade(len = 4) {
+  const g = new THREE.Group(), r = rand(len * 7);
+  for (let x = -len / 2; x < len / 2; x += 0.32) { g.add(at(mesh(cyl(0.15, 0.17, 2.2 + r() * 0.3, 5), '#7a5a36'), x, 1.1, 0)); g.add(at(mesh(cone(0.15, 0.35, 5), '#6b4a2e'), x, 2.4, 0)); }
+  g.add(at(mesh(box(len, 0.1, 0.1), '#5a3c22'), 0, 1.6, 0.15));
+  return g;
+}
+export function gatehouse(color) {
+  const g = new THREE.Group(), stone = '#b3aa9a';
+  for (const x of [-2, 2]) g.add(at(roundTower(color, 5, 1.1, stone), x, 0, 0));
+  g.add(at(mesh(box(3, 3.4, 1.6), stone), 0, 3.3, 0));
+  g.add(at(mesh(box(2.0, 2.6, 1.7), '#3a2616'), 0, 1.3, 0));
+  for (let x = -1.3; x <= 1.3; x += 0.52) g.add(at(mesh(box(0.3, 0.35, 1.6), stone), x, 5.2, 0));
+  g.add(at(mesh(box(1.2, 1.6, 0.05), color), 0, 3.4, 0.83));
+  return g;
+}
+export function bigWall(len = 8, stone = '#b3aa9a') {
+  const g = new THREE.Group();
+  g.add(at(mesh(box(len, 3.4, 1.4), stone), 0, 1.7, 0));
+  for (let x = -len / 2 + 0.25; x < len / 2; x += 0.55) g.add(at(mesh(box(0.3, 0.4, 1.4), stone), x, 3.6, 0));
+  return g;
+}
+export function plane(color) {
+  const g = new THREE.Group();
+  g.add(at(mesh(cyl(0.35, 0.18, 4, 7), '#6d7550'), 0, 0, 0, Math.PI / 2, 0, 0));
+  g.add(at(mesh(box(6, 0.1, 1), '#6d7550'), 0, 0.15, 0.5));
+  g.add(at(mesh(box(2.2, 0.08, 0.6), '#6d7550'), 0, 0.1, -1.8));
+  g.add(at(mesh(box(0.08, 0.8, 0.6), '#6d7550'), 0, 0.45, -1.8));
+  for (const x of [-2.2, 2.2]) g.add(at(mesh(cyl(0.38, 0.38, 0.06, 8), color), x, 0.21, 0.5));
+  g.add(at(mesh(box(1.4, 0.04, 0.12), '#222'), 0, 0, 2.05));
+  return g;
+}
+export function dirtPatch(r = 3, color = '#9c7a50') {
+  const m = new THREE.Mesh(jitter(new THREE.CircleGeometry(r, 9), 0.6, r * 10), mat(color));
+  m.rotation.x = -Math.PI / 2; m.receiveShadow = true;
+  return m;
+}
+export function bush(seed = 1, autumn = false) {
+  const g = new THREE.Group(), r = rand(seed);
+  const cols = autumn ? ['#c98a2b', '#a8902f', '#7f9a3a'] : ['#3f7f35', '#4f9440', '#5a8a2f'];
+  for (let k = 0; k < 3; k++) g.add(at(mesh(jitter(ico(0.35 + r() * 0.2, 0), 0.1, seed + k), cols[k]), (r() - 0.5) * 0.6, 0.3, (r() - 0.5) * 0.6));
+  return g;
+}

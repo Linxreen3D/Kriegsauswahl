@@ -52,6 +52,8 @@ const titles = {
   medieval: ['Mittelalter', 'Belagerung der roten Burg'],
   modern: ['Moderne', 'Panzer rollen an die Front'],
   eras: ['Sieben Epochen', 'Von der Keule bis zum Panzer'],
+  village: ['Antike', 'Eine Siedlung erwacht'],
+  siege: ['Mittelalter', 'Sturm auf die Stadt der Pagoden'],
 };
 if (titles[name]) ov.innerHTML = `<div class="title"><div class="t"><span>◆</span> FRONTLINIEN</div><div class="s">${titles[name][0]} · ${titles[name][1]}</div></div>`;
 if (name === 'eras') ['Steinzeit', 'Bronzezeit', 'Antike', 'Mittelalter', 'Renaissance', 'Industriezeit', 'Moderne'].forEach((t, i) => {
