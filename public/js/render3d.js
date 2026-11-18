@@ -158,6 +158,7 @@ export async function loadFigures(base = 'assets/figures') {
 }
 
 // ---------- Renderer ----------
+export { mergeModel };
 export class Renderer3D {
   constructor(canvas, overlay) {
     this.canvas = canvas; this.overlay = overlay; this.octx = overlay.getContext('2d');
@@ -449,6 +450,7 @@ export class Renderer3D {
     const ctr = mm.box.getCenter(new THREE.Vector3());
     const tf = new THREE.Matrix4().makeScale(fit, fit, fit).multiply(new THREE.Matrix4().makeTranslation(-ctr.x, -mm.box.min.y, -ctr.z));
     for (const p of mm.parts) { p.geo.applyMatrix4(tf); fowify(p.mat); }
+    if (!Number.isFinite(fit) || mm.parts.some(p => !Number.isFinite(p.geo.attributes.position.array[0]))) console.warn('Modell ungültig:', key, fit);
     mdl = { parts: mm.parts, h: size.y * fit, key };
     this.bldModels.set(key, mdl);
     return mdl;
