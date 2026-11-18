@@ -10,6 +10,7 @@ import * as Md from './models.js';
 import * as H from './humans.js';
 import { eraBuilding, wonder } from './eras.js';
 import { nationBuilding } from './nations.js';
+import { libertyMonument, libertyStatue } from './statue.js';
 const q = new URLSearchParams(location.search), mode = q.get('m') || 'grid';
 W.loadTextures(); Md.initMaterials();
 const ctx = W.createWorld(document.getElementById('c'), { sunAz: 150, sunElev: 34, fogNear: 200, fogFar: 600 });
@@ -43,6 +44,17 @@ if (mode === 'grid') {
   }
   ctx.camera.fov = 30; ctx.camera.updateProjectionMatrix();
   ctx.camera.position.set(-3, 88, 92); ctx.camera.lookAt(-3, 0, -2);
+} else if (mode === 'liberty') {
+  const close = q.get('close');
+  if (close) {
+    const st = libertyStatue(); st.position.set(0, T.height(0, 0), 0); st.rotation.y = 0.35; ctx.scene.add(st);
+    ctx.camera.fov = 30; ctx.camera.updateProjectionMatrix(); ctx.camera.position.set(6, 6.5, 19); ctx.camera.lookAt(0, 4.7, 0);
+  } else {
+    fitPlace(nationBuilding('town', 7, BLUE, 'usa'), 3, -11, 0, 1.55);
+    const nm = libertyMonument(BLUE); const box = new THREE.Box3().setFromObject(nm); const k = 3 * 2 * 0.96 * 1.55 / Math.max(box.max.x - box.min.x, box.max.z - box.min.z); nm.scale.setScalar(k); nm.position.set(11, T.height(11, 0), 0); ctx.scene.add(nm);
+    ctx.camera.fov = 32; ctx.camera.updateProjectionMatrix(); ctx.camera.position.set(0, 16, 34); ctx.camera.lookAt(0, 5, 0);
+    labels.push([new THREE.Vector3(-11, -1, 9), 'vorher', 'lbl']); labels.push([new THREE.Vector3(11, -1, 9), 'neu modelliert', 'lbl']);
+  }
 } else if (mode === 'nation') {
   const n = q.get('n'), NAMES = { usa: 'USA', russia: 'Russland', germany: 'Deutschland', china: 'China', austria: 'Österreich-Ungarn', yugoslavia: 'Jugoslawien', india: 'Indien' };
   fitPlace(nationBuilding('town', 7, BLUE, n), 3, 0, -8, 1.55);
