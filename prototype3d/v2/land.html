@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}#c{width:1920px;height:1080px;display:block}</style>
+<script type="importmap">{ "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }</script></head>
+<body><canvas id="c"></canvas><script type="module">
+import * as W from './world.js';
+W.loadTextures();
+const ctx = W.createWorld(document.getElementById('c'));
+const T = W.createTerrain(ctx.scene, { seed: 3, river: [[-120, 40], [-40, 25], [10, 40], [120, 20]], flats: [[0, -10, 25]], dirt: [[0, -10, 10]], paths: [[[0, -10], [30, -30]]], mountains: [[-60, -90, 50, 30], [70, -100, 45, 26]] });
+W.createWater(ctx.scene, ctx.sunDir);
+const kinds = W.makeTreeKinds();
+const avoid = (x, z) => Math.hypot(x, z + 10) < 22;
+let spots = [];
+spots = spots.concat(W.forestSpots(T, -40, -30, 30, 500, 1, avoid), W.forestSpots(T, 45, -25, 28, 450, 2, avoid), W.forestSpots(T, 0, 70, 40, 400, 3, avoid));
+W.plantForest(ctx.scene, T, kinds, spots);
+W.plantGrass(ctx.scene, T, 40000, [-90, -70, 90, 80], avoid);
+W.bushes(ctx.scene, T, 600, [-90, -70, 90, 80], avoid);
+W.scatterRocks(ctx.scene, T, 200, [-90, -70, 90, 80], avoid);
+ctx.camera.position.set(10, 42, 62); ctx.camera.lookAt(0, 0, 0);
+ctx.composer.render();
+window.__ready = true;
+</script></body></html>

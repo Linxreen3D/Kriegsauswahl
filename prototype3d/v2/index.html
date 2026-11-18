@@ -1,0 +1,21 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Frontlinien – Vorschau</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}#c{width:1920px;height:1080px;display:block}</style>
+<script type="importmap">{ "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }</script></head>
+<body><canvas id="c"></canvas><div id="ui"></div><script type="module">
+import * as THREE from "three";
+import * as W from "./world.js";
+import * as Md from './models.js';
+import { SCENES } from './scenes.js';
+const q = new URLSearchParams(location.search), name = q.get('scene') || 'siege';
+W.loadTextures(); Md.initMaterials();
+const ctx = W.createWorld(document.getElementById('c'), { sunAz: name === 'village' ? 220 : 140 });
+SCENES[name](ctx);
+// Schatten auf den Bildausschnitt zentrieren
+const tgt = new THREE.Vector3(); ctx.camera.getWorldDirection(tgt); const focus = ctx.camera.position.clone().add(tgt.multiplyScalar(ctx.camera.position.y / -tgt.y * 1));
+ctx.sun.target.position.copy(focus); ctx.sun.position.copy(focus).add(ctx.sunDir.clone().multiplyScalar(150));
+ctx.scene.updateMatrixWorld(true); const sprites = []; ctx.scene.traverse(o => { if (o.isSprite) sprites.push(o); }); sprites.forEach(o => ctx.fx.attach(o));
+ctx.composer.render();
+window.__ctx = ctx;
+if (q.get('ui')) { const m = await import('./ui.js'); await m.buildUI(ctx, name); }
+window.__ready = true;
+</script></body></html>
