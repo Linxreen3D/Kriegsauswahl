@@ -1,13 +1,15 @@
-# Frontlinien – Spieldesign (Entwurf 3)
+# Frontlinien – Spieldesign (Entwurf 4)
 
 Stand: Konzept zur Diskussion. Zahlen sind Startwerte und werden mit Bot-gegen-Bot-Simulationen nachgestellt.
 
-**Was sich gegenüber Entwurf 2 geändert hat:**
-- **8 Epochen statt 9.** Die Weltkriege gehören jetzt zur 2. Industriellen Revolution. Der Kalte Krieg bleibt als letzte Epoche, damit wir bis 1990 kommen.
-- **Atomwaffen** sind eingeplant, aber stark abgeschwächt und mit Gegenspiel.
-- **Brennstoff (Kohle/Öl) ist vorerst raus.** Der Ansatz liegt im Ideenspeicher (Kapitel 14).
-- **USA im Mittelalter:** keine eigenen Einheiten, Ausgleich durch den Wirtschaftsbonus. Entschieden.
-- **Neu:** Eisenbahnen (Kapitel 8) und weitere Ideen (Kapitel 13).
+**Was sich gegenüber Entwurf 3 geändert hat:**
+- **Atomwaffen deutlich stärker** und schwerer abzufangen. Gegenspiel bleibt über Aufklärung, Sabotage und Zweitschlag (Kapitel 7).
+- **Neu:** Diplomatie mit Botschaftern, privatem Verhandlungs-Chat und Tauschverträgen für Gebiete, Rohstoffe und Truppen (Kapitel 12).
+- **Neu:** Staatsführer zur Auswahl in den letzten beiden Epochen, dargestellt als Schattenriss (Kapitel 13).
+- **Fest übernommen:** Speichern/Fortsetzen mit Bot-Vertretung, Veteranenränge, Gelände mit Taktik (Kapitel 14).
+- **Im Ideenspeicher:** Brennstoff, LKW (mit Sinn und Zweck) und die übrigen Ideen (Kapitel 16).
+
+Weiterhin gilt: 8 Epochen, die Weltkriege gehören zur 2. Industriellen Revolution, und die USA haben in IV–V keine eigenen Einheiten.
 
 ---
 
@@ -138,34 +140,37 @@ Gilt für alle. Nationseinheiten (Kapitel 9) **ersetzen** eine dieser Einheiten 
 - **Fallschirmjäger** werden aus Transportflugzeugen über jedem Gebiet abgesetzt, das man sieht.
 - **Flugabwehr** gibt es als Einheit und als Gebäude. Jäger sind die mobile Antwort.
 
-## 7. Atomwaffen (Kalter Krieg): schwach, mit Gegenspiel
+## 7. Atomwaffen (Kalter Krieg): stark, aber mit Gegenspiel
 
-**Ziel:** Eine Atomwaffe ist ein teurer, riskanter Schlag, der eine Stellung aufbricht. Sie entscheidet aber nie ein Spiel, und der Gegner hat bei jedem Schritt eine Antwort.
+**Ziel:** Eine Atomrakete soll sich lohnen. Sie löscht eine Armee oder eine Stadt fast aus und kann einen Weltwunder-Sieg verzögern. Abwehr ist möglich, aber teuer und nie sicher. Das eigentliche Gegenspiel liegt **vor dem Start** (Aufklärung, Sabotage) und **danach** (Zweitschlag, Wiederaufbau).
 
-**Grundregeln:**
-- **Lobby-Option „Atomwaffen: an/aus“**, Standard „an“.
-- **Nur historische Atommächte bis 1990:** USA, Russland (UdSSR), Großbritannien, Frankreich, China.
-- **Ausgleich für die anderen sieben Nationen:** Ihre Raketenabwehr ist 25 % billiger und fängt besser ab.
+**Wer darf:**
+- Nur historische Atommächte bis 1990: USA, Russland (UdSSR), Großbritannien, Frankreich, China.
+- Lobby-Option „Atomwaffen: an/aus“, Standard „an“.
 
-**Ablauf und Gegenspiel bei jedem Schritt:**
+**Ablauf und Gegenspiel:**
 
 | Schritt | Was passiert | Gegenspiel |
 |---|---|---|
-| 1. Atomforschungszentrum bauen | Sehr teuer, 6 min Bauzeit. **Alle Spieler sehen den Standort auf der Karte.** | Angreifen, bevor es fertig ist |
-| 2. Rakete im Silo bauen | 8 min Bauzeit, wird allen mit Countdown angekündigt. Nur 1 Rakete gleichzeitig, **max. 2 pro Spiel** | Silo angreifen, mit Bombern, Spezialkräften oder Artillerie. Wird es beschädigt, stoppt der Bau |
-| 3. Start | Ziel wird markiert und ist **für alle 30 Sekunden vorher sichtbar** | Truppen aus dem Zielgebiet abziehen, in Bunker verlegen |
-| 4. Abfangen | Jede Raketenabwehr in Reichweite hat 50 % Abfangchance. 2 Stellungen: 75 %, 3 und mehr: 90 % (Obergrenze) | Raketenabwehr bauen; sie ist für jede Nation verfügbar und vergleichsweise günstig |
-| 5. Einschlag | Kleiner Radius (ca. 5 Kacheln). Schaden siehe unten | – |
+| 1. Atomforschungszentrum | Teuer, 5 min Bauzeit. **Andere Spieler erfahren nur, dass jemand baut, nicht wo.** Aufklärer und Botschafter in der Nähe decken den Standort auf | Aufklären, dann mit Bombern, Spezialkräften oder Artillerie angreifen |
+| 2. Rakete bauen | 6 min Bauzeit im Silo. Kein öffentlicher Countdown, nur die Meldung „Eine Atommacht rüstet auf“ | Silo finden und beschädigen: Dann stoppt der Bau. Die Spezialkräfte (SAS, Jagdkommando, Kommandos …) sind dafür gemacht |
+| 3. Start | Das Ziel ist nur **10 Sekunden** vorher sichtbar, und nur für den, der getroffen wird | Bunker: Einheiten darin überleben |
+| 4. Abfangen | Eine Raketenabwehr fängt mit 30 % ab. Mehrere Stellungen erhöhen die Chance bis höchstens 50 %. Jede Stellung braucht danach 5 min zum Nachladen | Abwehr bauen, aber sie ist teuer und nie sicher |
+| 5. Zweitschlag | Hat der Getroffene selbst eine fertige Rakete, kann er sofort zurückschlagen, auch wenn sein Silo getroffen wurde | Abschreckung wie im Kalten Krieg: Wer zuerst schießt, riskiert die Antwort |
 
-**Schaden beim Einschlag (bewusst schwach):**
-- Infanterie und Arbeiter: 70 % ihres maximalen Lebens.
-- Fahrzeuge und Panzer: 40 %.
-- Gebäude: 35 %.
-- Haupthaus: 15 %.
-- **Weltwunder und Bunker: kein Schaden.**
-- Danach ist das Gebiet 90 Sekunden verstrahlt: Sammeln dort ist halbiert. Kein dauerhaftes Sperrgebiet.
+**Wirkung beim Einschlag:**
+- Radius ca. 9 Kacheln.
+- Im **inneren Kreis** (4 Kacheln): Infanterie und Arbeiter sterben, Fahrzeuge verlieren 80 % Leben, Gebäude 75 %.
+- Im **äußeren Ring:** halber Schaden.
+- **Haupthaus** und **Weltwunder** verlieren 40 %.
+- Trifft eine Rakete ein Weltwunder, das gerade gehalten wird, **springt dessen Haltezeit 10 Minuten zurück.** So bekommt die Atomwaffe im Endspiel einen klaren Sinn gegen Wunder-Siege.
+- **Bunker** schützen ihre Insassen vollständig.
+- **Verstrahlung:** 4 Minuten lang ist das Gebiet für Arbeiter gesperrt, und Einheiten darin verlieren langsam Leben.
 
-**Kosten:** Zentrum und Rakete zusammen etwa so viel wie eine halbe Epoche Aufstieg. Wer Atomwaffen baut, fehlt dieses Geld bei der Armee. Ein Gegner, der stattdessen Panzer gebaut hat, ist in dem Moment stärker.
+**Grenzen, damit es nicht kippt:**
+- Pro Spieler 1 Rakete gleichzeitig, danach 12 Minuten Pause, **höchstens 3 pro Spiel**.
+- Sehr teuer: etwa so viel wie ein Epochenaufstieg.
+- **Ausgleich für die sieben Nationen ohne Atomwaffen:** Raketenabwehr kostet 40 % weniger und lädt doppelt so schnell nach. Sie können ein Bündnis mit einer Atommacht schließen, die ihnen „Schutz“ zusagt (Kapitel 12).
 
 ## 8. Eisenbahnen (ab Epoche VI)
 
@@ -370,37 +375,122 @@ Bewusst **ohne** Flammenwerfer.
 3. **Zeitmessung:** Wann erreichen Bots jede Epoche? Vergleich mit Kapitel 3.
 4. **Spieltests mit euch:** Was fühlt sich zu stark oder zu schwach an? Danach wird jeweils eine Zahl geändert.
 
-## 12. Umsetzung in Schritten
+## 12. Diplomatie und Botschafter
 
-1. **Grundgerüst:** 8 Epochen mit zwei Stufen in VII, Spieltempo, Rohstofferschöpfung, Aufholhilfe.
-2. **Landtruppen:** neue Linien (Panzerabwehr, Flugabwehr, Artillerie, Unterstützung) und Konter-System.
-3. **Nationen:** 12 Nationen mit Boni und eigenen Einheiten IV–VI.
-4. **Eisenbahn:** Gleise, Bahnhöfe, Truppen- und Güterzüge, Sabotage.
-5. **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“.
-6. **Luft:** Flugplatz mit Tanken/Aufmunitionieren, Jäger, Bomber, Hubschrauber, Fallschirmjäger, Flugabwehr.
-7. **Spätphase:** Nationseinheiten VII–VIII, Signatur-Einheiten, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
-8. **Feinschliff:** Simulationen und Balancing.
+### Botschafter (Einheit, alle Epochen)
+- **Wird im Haupthaus ausgebildet**, kostet wenig, kämpft nicht.
+- **Diplomatische Immunität:** Wer einen Botschafter angreift, löst eine Meldung an alle Spieler aus („X hat einen Botschafter getötet“) und verliert Ansehen (siehe unten).
+- **Erster Kontakt:** Mit einem Spieler verhandeln kann man erst, wenn der eigene Botschafter dessen Gebiet erreicht hat. Wer seine Nachbarn nicht kennt, kann nicht mit ihnen reden. Das ist realistisch und gibt dem Botschafter einen festen Zweck.
+- **Botschaft gründen:** Der Botschafter kann im Gebiet des anderen eine Botschaft bauen, wenn der zustimmt. Solange sie steht:
+  - bleibt der Verhandlungs-Chat dauerhaft offen;
+  - sieht man einen kleinen Bereich um die Botschaft;
+  - ab VII spät ist der Kanal sofort (Funk).
+- **Ohne Botschaft** muss jede neue Nachricht wieder überbracht werden: Der Botschafter läuft hin, und erst bei Ankunft erscheint sie beim Empfänger. Wird er getötet, kommt die Nachricht nie an.
+- **Je höher die Epoche, desto schneller:**
+
+| Epoche | Botschafter | Tempo (Infanterie = 1) |
+|---|---|---|
+| I | Läufer | 1,3 |
+| II–III | Reitender Bote | 2,0 |
+| IV–V | Gesandter zu Pferd mit Eskorte | 2,2 (mehr Leben) |
+| VI | Kurier in der Kutsche | 2,5 |
+| VII früh | Kurier im Automobil | 3,0 |
+| VII spät | Diplomat im Flugzeug (fliegt, landet am Ziel) | 5,0 |
+| VIII | Diplomat im Regierungsjet | 7,0 |
+
+### Anfrage und Verhandlungs-Chat
+1. **Anfrage stellen:** Botschafter mit einer Anfrage losschicken: Verhandlung, Bündnis, Frieden oder Kriegserklärung.
+2. **Annehmen oder ablehnen:** Der Empfänger bekommt ein Fenster mit Namen, Nation und Staatsführer des Absenders.
+3. **Privater Chat:** Bei Zustimmung öffnet sich ein Chat nur zwischen den beiden. Mehrere solcher Chats gleichzeitig sind möglich, Dreier-Gespräche für Bündnisse auch.
+4. **Vertragsfenster neben dem Chat:** Beide stellen ihr Angebot zusammen. Ändert einer etwas, muss der andere neu zustimmen. Erst wenn **beide** auf „Unterzeichnen“ drücken, führt der Server den Tausch aus, alles auf einmal oder gar nicht.
+
+### Was man tauschen kann
+
+| Gegenstand | Wie es funktioniert |
+|---|---|
+| **Gebiete** | Die Karte ist in **Provinzen** eingeteilt (Kapitel 12.4). Eine Provinz wechselt den Besitzer, mitsamt Gebäuden, Rohstoffvorkommen und Bahnhöfen darin. Eigene Truppen dort müssen sie binnen 60 Sekunden verlassen |
+| **Rohstoffe** | Einmalig („500 Gold jetzt“) oder als Tribut („50 Holz pro Minute für 20 Minuten“) |
+| **Truppen** | Ausgewählte Einheiten wechseln den Besitzer. Ausnahmen: Signatur-Einheiten und Atomraketen |
+| **Bündnis** | Gemeinsame Sicht, gemeinsamer Sieg, keine Angriffe aufeinander. Auf Wunsch mit Schutzversprechen |
+| **Nichtangriffspakt** | Für eine festgelegte Zeit (10, 20 oder 30 min) |
+| **Durchmarschrecht** | Truppen dürfen durch das Gebiet des anderen ziehen; dessen Türme schießen nicht |
+| **Kartenwissen** | Einmalig die aufgedeckte Karte des anderen teilen |
+| **Gleisnutzung** | Mitbenutzung des Bahnnetzes des anderen |
+
+### Ansehen (Vertragsbruch)
+- Jeder Spieler hat einen sichtbaren **Ansehens-Wert**.
+- **Vertragsbruch** (Angriff trotz Pakt, Bündnis verlassen ohne Kündigung, getöteter Botschafter) senkt ihn deutlich und wird **allen gemeldet**.
+- **Kündigen ist erlaubt:** Bündnisse und Pakte laufen nach Kündigung noch 2 Minuten weiter. Das ist dann kein Vertragsbruch.
+- **Niedriges Ansehen:** Verträge mit diesem Spieler brauchen eine Sicherheit (zum Beispiel Rohstoffe als Pfand), und bei Bündnissen gibt es keine gemeinsame Sicht. Verrat bleibt möglich, hat aber einen Preis.
+
+### 12.4 Provinzen (Voraussetzung für Gebietstausch)
+- **Einteilung:** Der Kartengenerator teilt die Karte in Provinzen, etwa 6–8 pro Spieler, mit Namen und sichtbaren Grenzen.
+- **Besitz:** Eine Provinz gehört dem, der dort ein Haupthaus, einen **Außenposten** (neues, günstiges Gebäude) oder eine Festung hat. Bei mehreren gehört sie dem mit den meisten Gebäudepunkten.
+- **Sammelbonus:** In eigenen Provinzen sammeln Arbeiter 10 % schneller.
+- **Gebietstausch** im Vertrag überträgt genau diese Provinzen.
+
+## 13. Staatsführer (Epoche VII und VIII)
+
+- **Auswahl beim Erreichen von VII:** Jede Nation wählt einen von 2–3 historischen Staatsführern.
+- **Neue Wahl beim Erreichen von VIII**, aus den Führern des Kalten Kriegs.
+- **Darstellung wie in Hearts of Iron IV:**
+  - Ein dunkler **Schattenriss** des Führers mit Namen und Amtszeit.
+  - Daneben steht sein Bonus.
+  - Keine Fotos, keine Symbole von Regimen.
+- **Jeder Führer gibt einen Bonus**, bei starken Boni zusätzlich einen kleinen Nachteil. Führer sind Seitenwege, keine Pflichtwahl. Gleich stark wie Nationsbonus mal 0,5.
+
+**Hinweis zum Release in Deutschland:**
+- Führer wie Hitler oder Mussolini sind in Strategiespielen üblich, auch in Hearts of Iron IV. In Deutschland ist das seit 2018 im Einzelfall mit USK-Prüfung möglich (Sozialadäquanzklausel, § 86a StGB).
+- **Verboten bleiben verfassungsfeindliche Symbole** wie das Hakenkreuz und SS-Runen. Deshalb kommen sie nirgends vor, auch nicht auf Fahnen.
+- Der Schattenriss mit sachlichem Bonus (Rüstungsproduktion statt Ideologie) ist dafür die richtige Form. Vor dem Steam-Release sollten wir das noch einmal gezielt prüfen.
+
+| Nation | Epoche VII (1860–1945) | Epoche VIII (1945–1990) |
+|---|---|---|
+| **Deutschland** | **Otto von Bismarck** (1871–90): Verträge kosten kein Pfand, Botschafter +30 % Tempo · **Wilhelm II.** (1888–1918): Schiffe 15 % billiger · **Adolf Hitler** (1933–45): Panzer und Flugzeuge 15 % schneller gebaut; Nachteil: Ansehen sinkt bei Wahl auf „niedrig“ | **Konrad Adenauer** (1949–63): Wirtschaftswunder, +10 % Sammeltempo · **Helmut Schmidt** (1974–82): Verteidigungsgebäude 20 % mehr Leben |
+| **Österreich-Ungarn / Österreich** | **Franz Joseph I.** (1848–1916): Gebäude 15 % mehr Leben · **Karl I.** (1916–18): Friedensverträge geben +Ansehen | **Bruno Kreisky** (1970–83): Neutralität, Nichtangriffspakte doppelt so lang, +Ansehen · **Julius Raab** (1953–61): Staatsvertrag, Außenposten 30 % billiger |
+| **Russland / UdSSR** | **Alexander II.** (1855–81): Reformen, Arbeiter 15 % billiger · **Josef Stalin** (1924–53): Panzer 15 % billiger; Nachteil: Botschafter langsamer | **Nikita Chruschtschow** (1953–64): Atomrakete 25 % schneller gebaut · **Michail Gorbatschow** (1985–91): Glasnost, Verträge geben +Ansehen, Tribute 20 % günstiger |
+| **China** | **Sun Yat-sen** (1912): Infanterie 10 % billiger · **Chiang Kai-shek** (1928–49): Befestigungen 20 % billiger | **Mao Zedong** (1949–76): Volkskrieg, Infanterie 20 % schneller ausgebildet; Nachteil: Sammeltempo −5 % · **Deng Xiaoping** (1978–89): Reform und Öffnung, +12 % Sammeltempo |
+| **Indien** | **Mahatma Gandhi** (Unabhängigkeitsbewegung): Ansehen kann nicht unter neutral sinken, Verteidigungsbonus in eigenen Provinzen · **Subhas Chandra Bose** (Indische Nationalarmee, 1943): Infanterie 10 % billiger | **Jawaharlal Nehru** (1947–64): Blockfreiheit, Verträge mit allen Seiten ohne Pfand · **Indira Gandhi** (1966–77, 80–84): Panzer und Artillerie 10 % stärker |
+| **Jugoslawien** | **Peter I.** (Serbien 1903–21): Infanterie +10 % Leben · **Josip Broz Tito** (Partisanenführer, 1941–45): Partisanen 25 % billiger | **Josip Broz Tito** (1945–80): Blockfreiheit, Bündnisse mit beiden Seiten möglich, +Ansehen · **Territorialverteidigung als Doktrin:** Abklingzeit der Fähigkeit halbiert |
+| **USA** | **Abraham Lincoln** (1861–65): Eisenbahnbau 30 % billiger · **Theodore Roosevelt** (1901–09): Schiffe 15 % schneller gebaut · **Franklin D. Roosevelt** (1933–45): Fließband, alle Fahrzeuge 15 % schneller gebaut | **Dwight D. Eisenhower** (1953–61): Bündnisse geben beiden Partnern +5 % Schaden · **John F. Kennedy** (1961–63): Spezialkräfte 20 % billiger · **Ronald Reagan** (1981–89): Raketenabwehr 30 % besser |
+| **Frankreich** | **Napoleon III.** (1852–70): Artillerie 10 % stärker · **Georges Clemenceau** (1917–20): Befestigungen und Bunker 20 % mehr Leben | **Charles de Gaulle** (1959–69): Atomrakete 25 % billiger · **François Mitterrand** (1981–95): Bündnisse halten nach Kündigung doppelt so lange |
+| **Großbritannien** | **Königin Victoria** (1837–1901): Werften 20 % schneller · **Winston Churchill** (1940–45): Verteidigung in eigenen Provinzen +15 % Schaden | **Winston Churchill** (1951–55): Spezialkräfte +20 % Leben · **Margaret Thatcher** (1979–90): Landungsschiffe und Flugzeugträger 20 % billiger |
+| **Italien** | **Viktor Emanuel II.** (1861–78): Infanterie 10 % schneller · **Benito Mussolini** (1922–43): Flugzeuge 10 % billiger; Nachteil: Infanterie −5 % Leben | **Alcide De Gasperi** (1945–53): Wiederaufbau, Gebäude 20 % schneller gebaut · **Bettino Craxi** (1983–87): Tribute und Handel 15 % günstiger |
+| **Japan** | **Kaiser Meiji** (1867–1912): Aufstiegsforschung 10 % schneller · **Hideki Tōjō** (1941–44): Schiffe und Flugzeuge 10 % stärker; Nachteil: Ansehen sinkt bei Wahl auf „niedrig“ | **Shigeru Yoshida** (1946–54): Wirtschaft zuerst, +12 % Sammeltempo · **Yasuhiro Nakasone** (1982–87): Flugabwehr 20 % stärker |
+| **Osmanisches Reich / Türkei** | **Abdülhamid II.** (1876–1909): Eisenbahnbau 20 % billiger · **Mustafa Kemal Atatürk** (1923–38): Infanterie +10 % Leben, Gebäude 10 % schneller | **İsmet İnönü** (1938–50): Neutralität, Nichtangriffspakte doppelt so lang · **Turgut Özal** (1983–89): Tribute und Handel 15 % günstiger |
+
+## 14. Fest übernommene Ideen
+
+### Spielstand speichern; Bot übernimmt
+- **Pausieren und speichern:** Der Gastgeber kann jederzeit pausieren und speichern. Ein gespeichertes Spiel lässt sich an einem anderen Abend mit denselben Spielern fortsetzen; jeder bekommt wieder sein Reich.
+- **Verbindungsabbruch:** Fliegt jemand raus, übernimmt ein Bot sein Reich, bis er zurück ist. Der Bot verteidigt nur und baut weiter, damit ein Abbruch kein Todesurteil ist und kein Vorteil.
+
+### Veteranenränge
+- Einheiten sammeln Erfahrung durch Schaden und Siege. Bis zu 3 Sterne, je +10 % Schaden und Leben.
+- **Nachrüsten** auf eine neue Epoche behält die Sterne. Alte Truppen bleiben wertvoll, und man schont seine Armee.
+
+### Gelände mit Taktik
+- **Hügel:** +1 Sichtweite und +1 Reichweite für Fernkampf und Artillerie, langsamer bergauf.
+- **Wald:** tarnt Infanterie (erst aus der Nähe sichtbar), bremst Fahrzeuge.
+- **Flüsse:** nur über Brücken und Furten. Brücken lassen sich sprengen und wieder aufbauen.
+- **Straßen** (ab V, von Arbeitern gebaut): +25 % Tempo.
+
+## 15. Umsetzung in Schritten
+
+1. **Grundgerüst:** 8 Epochen mit zwei Stufen in VII, Spieltempo, Rohstofferschöpfung, Aufholhilfe, **Speichern/Fortsetzen und Bot-Vertretung**.
+2. **Landtruppen:** neue Linien, Konter-System, **Veteranenränge**.
+3. **Karte:** **Provinzen**, Außenposten, **Gelände** (Hügel, Wald, Flüsse, Brücken, Straßen).
+4. **Diplomatie:** Botschafter, privater Chat, Vertragsfenster, Ansehen.
+5. **Nationen:** 12 Nationen mit Boni und eigenen Einheiten IV–VI.
+6. **Eisenbahn:** Gleise, Bahnhöfe, Truppen- und Güterzüge, Sabotage.
+7. **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“.
+8. **Luft:** Flugplatz mit Tanken/Aufmunitionieren, Jäger, Bomber, Hubschrauber, Fallschirmjäger, Flugabwehr.
+9. **Spätphase:** Nationseinheiten VII–VIII, Signatur-Einheiten, **Staatsführer**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
+10. **Feinschliff:** Simulationen und Balancing.
 
 Modelle bleiben bis dahin Platzhalter. Die richtigen Modelle kommen später aus Blender als `.glb`.
 
-## 13. Weitere Ideen
-
-Sortiert nach meiner Einschätzung, was für eure Runden am meisten bringt.
-
-| # | Idee | Worum es geht | Warum es sich lohnt |
-|---|---|---|---|
-| 1 | **Spielstand speichern und fortsetzen; Bot übernimmt** | Eine 4-Stunden-Partie lässt sich pausieren und an einem anderen Abend weiterspielen. Fliegt jemand raus, steuert ein Bot sein Reich, bis er zurück ist | Bei 4 Stunden mit Freunden fast Pflicht |
-| 2 | **Veteranenränge** | Einheiten sammeln Erfahrung, bis zu 3 Sterne mit je +10 % Schaden und Leben | Alte Truppen bleiben wertvoll. Man schont seine Armee statt sie zu verheizen |
-| 3 | **Neutrale Siedlungen** | Auf der Karte liegen Dörfer und später Städte. Wer sie erobert oder per Tribut gewinnt, erhält Bevölkerung und Rohstoffe | Ziele im ganzen Spiel, mehr Bewegung auf großen Karten |
-| 4 | **Diplomatie** | Im freien Modus Bündnisse, Waffenstillstand, Tribut und Handel zwischen Spielern | Bei 24 Spielern entsteht Politik, nicht nur Krieg |
-| 5 | **Gelände mit Taktik** | Hügel geben Sicht und Reichweite, Wald tarnt, Flüsse nur über Brücken und Furten. Brücken lassen sich sprengen | Kleinere Armeen können klug gegen größere bestehen |
-| 6 | **Märkte und Handelswagen** (ab III) | Wagen fahren zwischen eigenen oder verbündeten Märkten und bringen Gold, je weiter, desto mehr. Ab VI per Eisenbahn | Wirtschaft über die Karte, Überfall-Ziele |
-| 7 | **Feldherr** | Pro Spieler ein General mit Aura (+Moral, +Tempo). Wird er besiegt, gibt es eine Abklingzeit, bis er zurückkehrt | Eine Figur, um die sich Schlachten drehen |
-| 8 | **Gebäude besetzen** | Infanterie kann in Häuser, Türme und Bunker gehen und von dort schießen. Ab VII werden Städte zu Festungen | Häuserkampf, realistisch für die späten Epochen |
-| 9 | **Zuschauer und Wiederholung** | Ausgeschiedene Spieler schauen weiter zu; Partien lassen sich hinterher abspielen | Wer früh fliegt, bleibt dabei |
-| 10 | **Wetter / Tageszeit** (später) | Nacht verkürzt die Sicht, Regen bremst Fahrzeuge, Schnee in Gebirgen | Atmosphäre, aber Aufwand und Leistung prüfen |
-
-## 14. Ideenspeicher (vorerst zurückgestellt)
+## 16. Ideenspeicher (vorerst zurückgestellt)
 
 ### Brennstoff (Kohle → Öl)
 - **Problem:** Ab der Industrialisierung haben alle genug von den vier Rohstoffen. Dann baut jeder nur noch die stärksten Einheiten, und das Endspiel wird zäh.
@@ -412,3 +502,22 @@ Sortiert nach meiner Einschätzung, was für eure Runden am meisten bringt.
   4. Vorkommen liegen nur in der Kartenmitte und an den Rändern. So entstehen umkämpfte Punkte im Endspiel.
 - **Passend zur Eisenbahn:** Brennstoff würde per Güterzug transportiert, und die Strecken würden noch wichtiger.
 - **Nationen-Bezug (falls eingeführt):** Deutschland mit Kohleverflüssigung; USA und Russland mit Ölreichtum; Japan und Italien knapp, aber sparsamer.
+
+### LKW (ab VII früh): wozu?
+Ein LKW ist nur sinnvoll, wenn er etwas kann, das Züge und Fußtruppen nicht können: **flexibel die letzte Strecke überbrücken**. Vorschlag mit vier Zwecken:
+1. **Fahrendes Lager:** Arbeiter geben Rohstoffe am LKW ab, der sie zum nächsten Lager oder Bahnhof fährt. Damit lohnen sich kleine, abgelegene Vorkommen, für die sich kein Gleis lohnt.
+2. **Truppentransport:** Bis zu 8 Infanteristen steigen ein und fahren mit LKW-Tempo. Das ist der Schritt zur motorisierten Infanterie, bevor in VIII die Schützenpanzer kommen.
+3. **Geschütze ziehen:** Feldgeschütze und Flak werden angehängt und fahren doppelt so schnell. Abgehängt sind sie nach 10 Sekunden schussbereit.
+4. **Nachschub für Artillerie (optional, falls wir Munition einführen):** Artillerie hat einen begrenzten Munitionsvorrat. Ein Versorgungs-LKW in der Nähe füllt ihn wieder auf. Dann wird der Nachschub zum Ziel: Zerstört man die LKW, verstummt die Artillerie.
+
+**Gegenspiel:** LKW sind ungepanzert und ein leichtes Ziel für Reiterei, Spähwagen und Flugzeuge. Konvois brauchen Begleitschutz.
+
+**Passt zu Brennstoff:** Falls Brennstoff später kommt, bringen LKW ihn von der Bahn zu den Panzern.
+
+### Weitere zurückgestellte Ideen
+- **Neutrale Siedlungen:** Dörfer und Städte zum Erobern oder per Tribut gewinnen, für Bevölkerung und Rohstoffe.
+- **Märkte und Handelswagen** (ab III): Gold für weite Handelswege.
+- **Feldherr:** ein General mit Aura.
+- **Gebäude besetzen:** Infanterie schießt aus Häusern, Türmen und Bunkern.
+- **Zuschauer und Wiederholung** für ausgeschiedene Spieler.
+- **Wetter und Tageszeit.**
