@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}#c{width:1920px;height:1080px;display:block}</style>
+<script type="importmap">{ "imports": { "three": "../node_modules/three/build/three.module.js", "three/addons/": "../node_modules/three/examples/jsm/" } }</script></head>
+<body><canvas id="c"></canvas><script type="module">
+import * as THREE from 'three';
+import * as W from './world.js';
+import * as H from './humans.js';
+W.loadTextures();
+const ctx = W.createWorld(document.getElementById('c'), { sunElev: 35, sunAz: 150 });
+const T = W.createTerrain(ctx.scene, { seed: 2, hills: 0.1, flats: [[0, 0, 30, 0]], dirt: [[0, 0, 6]] });
+const t0 = performance.now();
+const list = [
+  { era: 3, weapon: 'sword', shield: true, pose: 'idle', seed: 3 }, { era: 3, weapon: 'sword', shield: true, pose: 'attack', seed: 4 },
+  { era: 3, weapon: 'spear', shield: true, pose: 'idle', seed: 5 }, { era: 3, weapon: 'bow', pose: 'aim', seed: 6 },
+  { era: 0, weapon: 'club', pose: 'walk', seed: 7 }, { era: 2, weapon: 'spear', shield: true, seed: 8 },
+  { era: 4, weapon: 'pike', seed: 9 }, { era: 5, weapon: 'musket', seed: 10 }, { era: 6, weapon: 'rifle', seed: 11, pose: 'walk' },
+  { era: 3, weapon: 'none', civilian: true, color: '#7a5a3a', seed: 12 },
+];
+const hr = H.horseR({ color: '#1f4fa8', seed: 2, rider: { era: 3, weapon: 'spear', shield: true, seed: 21 } }); hr.position.set(5.6, T.height(0, 0), -0.6); hr.rotation.y = 1.1; ctx.scene.add(hr);
+list.forEach((o, i) => { const f = H.soldierR({ color: '#1f4fa8', ...o }); f.position.set((i - 4.5) * 0.9, T.height(0, 0), 0); f.rotation.y = 0.35; ctx.scene.add(f); });
+console.log('build ms', performance.now() - t0);
+const q = new URLSearchParams(location.search);
+ctx.camera.fov = 26; ctx.camera.updateProjectionMatrix();
+const z = +(q.get('z') || 9.5);
+ctx.camera.position.set(1.5, 2.6, z); ctx.camera.lookAt(1, 1.05, 0);
+ctx.sun.target.position.set(0, 0, 0); ctx.sun.position.copy(ctx.sunDir).multiplyScalar(60);
+ctx.sun.shadow.camera.left = ctx.sun.shadow.camera.bottom = -10; ctx.sun.shadow.camera.right = ctx.sun.shadow.camera.top = 10; ctx.sun.shadow.camera.updateProjectionMatrix();
+ctx.composer.render();
+window.__ready = true;
+</script></body></html>

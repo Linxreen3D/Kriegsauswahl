@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as W from './world.js';
 import * as Md from './models.js';
 import * as U from './units.js';
+import * as H from './humans.js';
 import { rng } from './textures.js';
 
 const RED = '#b8261c', BLUE = '#1f4fa8', GREEN = '#1f7a3a', GOLD = '#d8a020';
@@ -201,19 +202,19 @@ export function troops(ctx) {
   const { scene, camera } = ctx;
   const T = W.createTerrain(scene, { seed: 5, hills: 0.3, flats: [[0, 0, 40, 1.2]], dirt: [[0, 0, 9]] });
   const P = placer(scene, T), r = rng(3);
-  for (let k = 0; k < 4; k++) P(U.cavalry({ color: BLUE, era: 3, seed: k + 1 }), -7 + k * 2.3, -2 + (k % 2) * 0.6, 0.5);
-  for (let k = 0; k < 12; k++) P(U.soldier({ color: BLUE, era: 3, weapon: 'sword', shield: true, seed: 20 + k, pose: k % 3 === 0 ? 'attack' : 'idle' }), -1 + (k % 4) * 1.0, 1 + Math.floor(k / 4) * 1.0, 0.25 + (r() - 0.5) * 0.2);
+  const hd = new URLSearchParams(location.search).get('hd');
+  const sol = o => hd ? H.soldierR(o) : U.soldier(o);
+  const cav = o => hd ? H.horseR({ color: o.color, seed: o.seed, rider: { era: 3, weapon: 'spear', shield: true, seed: o.seed + 30 } }) : U.cavalry(o);
+  for (let k = 0; k < 4; k++) P(cav({ color: BLUE, era: 3, seed: k + 1 }), -7 + k * 2.3, -2 + (k % 2) * 0.6, 0.5);
+  for (let k = 0; k < 12; k++) P(sol({ color: BLUE, era: 3, weapon: 'sword', shield: true, seed: 20 + k, pose: k % 3 === 0 ? 'attack' : 'idle' }), -1 + (k % 4) * 1.0, 1 + Math.floor(k / 4) * 1.0, 0.25 + (r() - 0.5) * 0.2);
   P(U.standardBearer(BLUE, 3, 7), 0.4, 4.2, 0.3);
-  for (let k = 0; k < 8; k++) P(U.soldier({ color: BLUE, era: 3, weapon: 'bow', seed: 40 + k, pose: k % 2 ? 'aim' : 'idle' }), 4.5 + (k % 4) * 1.0, 2 + Math.floor(k / 4) * 1.1, 0.35);
-  for (let k = 0; k < 8; k++) P(U.soldier({ color: RED, era: 3, weapon: 'pike', seed: 60 + k, pose: 'charge' }), -2 + (k % 4) * 1.0, -6 + Math.floor(k / 4) * 1.0, Math.PI + 0.3);
-  // Epochen-Reihe
-  const eras = [[0, 'club'], [2, 'spear'], [4, 'pike'], [5, 'musket'], [6, 'rifle']];
-  eras.forEach(([e, w], i) => P(U.soldier({ color: BLUE, era: e, weapon: w, seed: 80 + i, shield: e === 2 }), 9.5 + i * 1.1, -1.5, 0.4));
+  for (let k = 0; k < 8; k++) P(sol({ color: BLUE, era: 3, weapon: 'bow', seed: 40 + k, pose: k % 2 ? 'aim' : 'idle' }), 4.5 + (k % 4) * 1.0, 2 + Math.floor(k / 4) * 1.1, 0.35);
+  for (let k = 0; k < 8; k++) P(sol({ color: RED, era: 3, weapon: 'pike', seed: 60 + k, pose: 'charge' }), -2 + (k % 4) * 1.0, -6 + Math.floor(k / 4) * 1.0, Math.PI + 0.3);
   W.plantGrass(scene, T, 8000, [-30, -30, 30, 30], (x, z) => Math.hypot(x, z) < 9);
   const kinds = W.makeTreeKinds();
   W.plantForest(scene, T, kinds, W.forestSpots(T, 0, -30, 18, 200, 4, (x, z) => z > -16));
   camera.fov = 30; camera.updateProjectionMatrix();
-  camera.position.set(6, 9, 17); camera.lookAt(2, 1.2, 0);
+  camera.position.set(4, 9, 16); camera.lookAt(0, 1.2, 0);
 }
 
 export function city(ctx) {

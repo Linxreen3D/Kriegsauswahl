@@ -384,4 +384,4 @@ export function standardBearer(color, era = 3, seed = 1) {
   pole.position.set(0.25, 0.3, 0.12); g.add(pole);
   return g;
 }
-export { heraldry, EMBLEMS };
+export { heraldry, EMBLEMS, sword, spear, bow, musket, shield, emblemFor, chainmail, plate, darkPlate, gold, steel, leather, darkLeather, wood, cloth, mat, canvasTex, std };
