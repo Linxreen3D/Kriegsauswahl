@@ -3,6 +3,8 @@
 Stand: Konzept zur Diskussion. Zahlen sind Startwerte und werden mit Bot-gegen-Bot-Simulationen nachgestellt.
 
 **Was sich gegenüber Entwurf 4 geändert hat:**
+- **Neu übernommen:** Nachschublinien und Moral, Formationen, Klima und Jahreszeiten, Spionage, historische Ereignisse, Chronik und Endstatistik (Kapitel 14).
+- **Sondereinheit „Celo“** für Jugoslawien, als persönliche Widmung (Kapitel 9).
 - **Staatsführer deutlich stärker:** je zwei Dauerboni plus eine aktive Fähigkeit.
 - **Porträts** für alle Führer; nur A.H. erscheint als Schattenriss (Kapitel 13).
 - **Neu: Friedenskonferenz.** Mitten im Krieg kann man eine Verhandlungsrunde einberufen. Das Spiel pausiert, alle anderen sehen am Verhandlungstisch zu und können Seiten unterstützen (Kapitel 12.4).
@@ -340,6 +342,28 @@ Bewusst **ohne** Flammenwerfer.
 | VIII | M-84 | Kampfpanzer, 1984 | Robuster Kampfpanzer |
 | VIII Signatur | **Territorialverteidigung** | Doktrin ab 1969 | Fähigkeit: Arbeiter greifen 2 Minuten als Miliz zu den Waffen, lange Abklingzeit |
 
+#### Sondereinheit „Celo“ (Widmung)
+
+> *In Erinnerung an Celo: Leibwächter von Franjo Tuđman und des Papstes bei seinem Besuch in Kroatien, Mitglied einer Spezialeinheit, zu der nur die besten 40 Mann des Landes gehörten.*
+
+Celo ist eine **einzigartige Heldeneinheit** für Jugoslawien. Er ist die einzige Einheit im Spiel, die bewusst über die Grenze von 1990 hinausgeht, als persönliche Widmung.
+
+| Eigenschaft | Wirkung |
+|---|---|
+| **Verfügbarkeit** | Epoche VIII, nur Jugoslawien, im Haupthaus ausgebildet, **max. 1**, mittlere Kosten |
+| **Elite der Top 40** (passiv) | Beste Infanteriewerte im Spiel: viel Leben, präzises Feuer auf große Distanz. Startet mit allen 3 Veteranensternen |
+| **Leibwächter** (passiv) | Man weist ihm ein Schutzziel zu: Botschafter, Signatur-Einheit, Gebäude oder eine verbündete Einheit. Er bleibt automatisch in der Nähe und fängt 50 % des Schadens ab, den das Ziel nehmen würde. Das Ziel erhält +20 % Rüstung |
+| **Wachsamkeit** (passiv) | Deckt im Umkreis von 10 Kacheln Spione, getarnte Einheiten (Partisanen, Spezialkräfte) und Saboteure auf. Gegen sie macht er +50 % Schaden. Kein Anschlag gelingt in seiner Nähe unbemerkt |
+| **Personenschutz** (aktiv) | 8 Sekunden lang nimmt das Schutzziel keinen Schaden. Abklingzeit 3 Minuten |
+| **Ehrengeleit** (passiv) | Ein Botschafter in seiner Begleitung kann nicht angegriffen werden. Konferenzanträge kommen damit sicher an, auch mitten im Krieg. Erinnert an den Papstbesuch 1994 |
+| **Unvergessen** | Fällt Celo, bleibt an der Stelle ein **Gedenkstein**: Eigene Einheiten in der Nähe erhalten dauerhaft +10 % Moral. Nach 3 Minuten kehrt Celo am Haupthaus zurück |
+
+- **Darstellung:**
+  - Eigenes Modell aus Blender in Ausrüstung der frühen 1990er.
+  - Eigener Kodex-Eintrag mit Porträt und Lebenslauf. Text und Bild kommen von dir.
+  - Widmung im Abspann: „In Erinnerung an Celo“.
+- **Balancing:** Er ist stark, aber eine einzelne Einheit. Er soll schützen und aufdecken, nicht allein Schlachten gewinnen.
+
 ### USA – Bonus: alle Rohstoffe 15 % schneller (gleicht die fehlenden Einheiten in IV–V aus)
 | Epoche | Einheit | Historisch | Rolle |
 |---|---|---|---|
@@ -667,17 +691,67 @@ Jede Unterstützung, Garantie und Drohung ist **für alle sichtbar**. So entsteh
 - **Flüsse:** nur über Brücken und Furten. Brücken lassen sich sprengen und wieder aufbauen.
 - **Straßen** (ab V, von Arbeitern gebaut): +25 % Tempo.
 
+### Nachschublinien
+- Eigene Provinzen, Lager, Bahnhöfe, Außenposten und Brückenköpfe versorgen Truppen in einem Umkreis.
+- **Außerhalb der Versorgung** verlieren Einheiten langsam Moral, und nach 2 Minuten auch Leben (1 % pro 10 s). Bei Moral unter 50 % machen sie 20 % weniger Schaden.
+- **Moral** erholt sich in Versorgung schnell wieder. Sie steigt durch Siege, Staatsführer-Fähigkeiten und Gedenksteine.
+- **Folge:** Vorstöße tief ins Feindesland brauchen Eisenbahn, Brücken oder Außenposten. Wer Bahnhöfe und Brücken des Gegners zerstört, schwächt dessen Armee, ohne zu kämpfen.
+
+### Formationen
+| Formation | Wirkung | Schwäche |
+|---|---|---|
+| **Linie** | Fernkämpfer +15 % Schaden, alle schießen gleichzeitig | Reiterei und Panzer von der Flanke +30 % Schaden |
+| **Kolonne** | +25 % Tempo auf Straßen und Schienenwegen | Artillerie und Bomber +30 % Schaden |
+| **Keil** | Reiterei und Panzer +20 % Schaden beim Ansturm | Wenig Rüstung an den Seiten |
+| **Igel / Karree** | Rundum-Verteidigung, Reiterei −40 % Schaden gegen sie | Kann sich kaum bewegen, Artillerie trifft voll |
+| **Aufgelockert** (ab VII) | Flächenschaden −40 % | Weniger Schaden im Nahkampf |
+
+Formationen werden per Taste gewählt. Die Einheiten halten sie beim Marschieren.
+
+### Klima und Jahreszeiten
+- **Klimazonen** auf der Karte: gemäßigt, Schnee, Wüste, Sumpf.
+- **Jahreszeiten** wechseln alle 15 Minuten; ein Spieljahr dauert eine Stunde.
+- **Winter:** Schnee bremst um 25 %. Truppen außerhalb der Versorgung verlieren doppelt so schnell Moral.
+- **Schlammperiode** (Frühjahr und Herbst): Fahrzeuge −40 % Tempo abseits von Straßen.
+- **Wüste:** Infanterie ohne Versorgung verliert schneller Leben.
+- **Nationen-Bezug:**
+  - **Russland: „General Winter“**, keine Winter-Nachteile im eigenen Gebiet.
+  - Österreich-Ungarn, Italien und Jugoslawien (Gebirgstruppen) ohne Tempoverlust im Schnee auf Hügeln.
+
+### Spionage (ab Epoche V)
+- **Spion** (Einheit): getarnt, nur aus der Nähe oder von Wachsamkeit (Celo, Spähtürme, Geheimdienst) aufzudecken.
+- **Aufträge:**
+  - **Sabotage:** ein Gebäude 2 min lahmlegen oder Gleise und Brücken sprengen.
+  - **Pläne stehlen:** die nächste eigene Forschung 25 % billiger.
+  - **Aufklären:** einen Bereich 3 min aufdecken, auch das Atomzentrum.
+- **Geheimdienst** (Gebäude): bildet Spione aus und deckt in eigenen Provinzen feindliche Spione nach und nach auf.
+- **Erwischte Spione** werden allen gemeldet. Der Auftraggeber verliert etwas Ansehen.
+
+### Historische Ereignisse mit Entscheidung
+- Etwa alle 15–20 Minuten bekommt jeder Spieler ein Ereignis passend zu seiner Epoche und Nation. Es kommt mit Bild, kurzem Text und zwei Wahlmöglichkeiten.
+- **Beispiele:**
+  - **Pest** (V): Arbeiter isolieren (−20 % Sammeln für 3 min) oder Risiko eingehen (25 % Chance, 10 Arbeiter zu verlieren).
+  - **Goldrausch** (VI): Arbeiter abziehen (+50 % Gold, −20 % Nahrung für 5 min) oder ignorieren.
+  - **Industriespionage** (VII): einen fremden Bauplan kaufen (Gold für 30 % billigere Forschung) oder ablehnen (+Ansehen).
+  - **Wahlkampf** (VIII): Wirtschaft fördern oder Rüstung fördern, mit jeweils 5 min Bonus.
+- Nationale Ereignisse, zum Beispiel Bismarcks Reichsgründung, Gallipoli oder der Tito-Stalin-Bruch 1948.
+
+### Chronik und Endstatistik
+- **Chronik:** Während des Spiels entsteht eine Zeitleiste mit Epochenaufstiegen, Kriegserklärungen, Verträgen, Verrat, Konferenzen, Atomschlägen und Weltwundern. Man kann sie jederzeit öffnen.
+- **Endstatistik:** Diagramme über die gesamte Partie, darunter Armeegröße, Rohstoffe, Provinzen, Verluste und Epochenverlauf je Spieler.
+- **Auszeichnungen:** zum Beispiel „Größter Verräter“, „Friedensstifter“, „Brückenbauer“ oder „Eiserne Verteidigung“.
+
 ## 15. Umsetzung in Schritten
 
 1. **Grundgerüst:** 8 Epochen mit zwei Stufen in VII, Spieltempo, Rohstofferschöpfung, Aufholhilfe, **Speichern/Fortsetzen und Bot-Vertretung**.
-2. **Landtruppen:** neue Linien, Konter-System, **Veteranenränge**.
-3. **Karte:** **Provinzen**, Außenposten, **Gelände** (Hügel, Wald, Flüsse, Brücken, Straßen).
-4. **Diplomatie:** Botschafter, privater Chat, Vertragsfenster, Ansehen.
+2. **Landtruppen:** neue Linien, Konter-System, **Veteranenränge**, **Formationen**, **Nachschub und Moral**.
+3. **Karte:** **Provinzen**, Außenposten, **Gelände** (Hügel, Wald, Flüsse, Brücken, Straßen), **Klimazonen und Jahreszeiten**.
+4. **Diplomatie:** Botschafter, privater Chat, Vertragsfenster, Ansehen, **Spionage**, **Ereignisse**, **Chronik und Endstatistik**.
 5. **Nationen:** 12 Nationen mit Boni und eigenen Einheiten IV–VI.
 6. **Eisenbahn:** Gleise, Bahnhöfe, Truppen- und Güterzüge, Sabotage.
 7. **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“ mit Meerengen, **Brückenbau**.
 8. **Luft:** Flugplatz mit Tanken/Aufmunitionieren, Jäger, Bomber, Hubschrauber, Fallschirmjäger, Flugabwehr.
-9. **Spätphase:** Nationseinheiten VII–VIII, Signatur-Einheiten, **Staatsführer mit Porträts**, **Friedenskonferenz**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
+9. **Spätphase:** Nationseinheiten VII–VIII, **Sondereinheit Celo**, Signatur-Einheiten, **Staatsführer mit Porträts**, **Friedenskonferenz**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
 10. **Feinschliff:** Simulationen und Balancing.
 
 Modelle bleiben bis dahin Platzhalter. Die richtigen Modelle kommen später aus Blender als `.glb`.
@@ -712,4 +786,11 @@ Ein LKW ist nur sinnvoll, wenn er etwas kann, das Züge und Fußtruppen nicht k�
 - **Feldherr:** ein General mit Aura.
 - **Gebäude besetzen:** Infanterie schießt aus Häusern, Türmen und Bunkern.
 - **Zuschauer und Wiederholung** für ausgeschiedene Spieler.
-- **Wetter und Tageszeit.**
+- **Wetter und Tageszeit** (Jahreszeiten sind schon übernommen).
+- **Kriegsgefangene** zum Austausch am Konferenztisch.
+- **Kriegsgrund:** Angriff ohne Grund kostet Ansehen.
+- **Söldnerlager** auf der Karte.
+- **Doktrinen pro Epoche.**
+- **Kleine Wunder pro Epoche.**
+- **Jahreszahl im Spiel.**
+- **Steam Workshop und Editor.**
