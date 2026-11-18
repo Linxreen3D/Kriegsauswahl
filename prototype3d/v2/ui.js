@@ -1,6 +1,7 @@
 // Spieloberfläche (Entwurf): verzierte Rahmen, 3D-gerenderte Symbole, echte Minimap.
 import * as THREE from 'three';
 import * as Md from './models.js';
+import * as U from './units.js';
 import * as TX from './textures.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
@@ -110,10 +111,10 @@ export async function buildUI(ctx, sceneName) {
   const st = new THREE.Group(); for (let k = 0; k < 5; k++) { const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 + k * 0.05, 1), new THREE.MeshStandardMaterial({ color: '#9a958e', roughness: 0.8 })); r.position.set((k % 3) * 0.45 - 0.45, Math.floor(k / 3) * 0.4, (k % 2) * 0.3); st.add(r); } I.stone = icon(st, { zoom: 1.1 });
   const gd = new THREE.Group(); for (let k = 0; k < 9; k++) { const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.22, 0), new THREE.MeshStandardMaterial({ color: '#f0c040', roughness: 0.25, metalness: 0.95 })); r.position.set((k % 3) * 0.32 - 0.32, Math.floor(k / 3) * 0.12 + (k === 4 ? 0.25 : 0), (Math.floor(k / 3) - 1) * 0.3); r.rotation.set(k, k * 2, k); gd.add(r); } I.gold = icon(gd, { zoom: 1.15 });
   I.food = icon(Md.haystack(), { zoom: 1.1 });
-  I.knight = icon(Md.cavalry({ color: BLUE, era: 3, seed: 502 }), { yaw: 0.7, pitch: 0.2, zoom: 1.35, focusY: 0.5 });
-  I.portrait = icon(Md.soldier({ color: BLUE, era: 3, weapon: 'sword', shield: true, seed: 9, cape: true }), { yaw: 0.45, pitch: 0.12, zoom: 2.6, focusY: 0.8 });
-  I.sword = icon(Md.soldier({ color: BLUE, era: 3, weapon: 'sword', shield: true, seed: 3 }), { yaw: 0.5, pitch: 0.15, zoom: 1.5, focusY: 0.6 });
-  I.archer = icon(Md.soldier({ color: BLUE, era: 3, weapon: 'bow', seed: 7, pose: 'aim' }), { yaw: 0.9, pitch: 0.15, zoom: 1.4, focusY: 0.6 });
+  I.knight = icon(U.cavalry({ color: BLUE, era: 3, seed: 502 }), { yaw: 0.7, pitch: 0.2, zoom: 1.35, focusY: 0.5 });
+  I.portrait = icon(U.soldier({ color: BLUE, era: 3, weapon: 'sword', shield: true, seed: 9, cape: true }), { yaw: 0.35, pitch: 0.1, zoom: 2.3, focusY: 0.74 });
+  I.sword = icon(U.soldier({ color: BLUE, era: 3, weapon: 'sword', shield: true, seed: 3 }), { yaw: 0.5, pitch: 0.15, zoom: 1.5, focusY: 0.6 });
+  I.archer = icon(U.soldier({ color: BLUE, era: 3, weapon: 'bow', seed: 7, pose: 'aim' }), { yaw: 0.9, pitch: 0.15, zoom: 1.4, focusY: 0.6 });
   I.treb = icon(Md.trebuchet(BLUE), { yaw: 0.9, pitch: 0.3 });
   I.house = icon(Md.halfTimberHouse(BLUE, 3), { yaw: 0.7, pitch: 0.4 });
   I.barracks = icon(Md.barracksB(BLUE), { yaw: 0.6, pitch: 0.45 });

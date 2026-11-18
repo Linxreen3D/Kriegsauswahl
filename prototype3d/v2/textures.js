@@ -214,3 +214,21 @@ export function waterNormals(N = 256) {
   const t = toTex(normalFromHeight(h, N, 6), false);
   return t;
 }
+
+export function cobbleTex(N = 512) {
+  const r = rng(140), pts = [];
+  for (let k = 0; k < 260; k++) pts.push([r() * N, r() * N, 0.75 + r() * 0.35]);
+  const f = fbm(141, N, 16, 3);
+  return build(N, (x, y) => {
+    let d1 = 1e9, d2 = 1e9, sh = 1;
+    for (const [px, py, s] of pts) for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) {
+      const d = (x - px - ox) ** 2 + (y - py - oy) ** 2;
+      if (d < d1) { d2 = d1; d1 = d; sh = s; } else if (d < d2) d2 = d;
+    }
+    const edge = Math.sqrt(d2) - Math.sqrt(d1);
+    const gap = edge < 3;
+    const v = f(x, y);
+    const base = gap ? [62, 56, 48] : [128 * sh + v * 30, 120 * sh + v * 26, 108 * sh + v * 22];
+    return [base[0], base[1], base[2], gap ? 0 : Math.min(1, edge / 10)];
+  }, 5);
+}

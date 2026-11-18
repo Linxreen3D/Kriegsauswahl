@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as TX from './textures.js';
+import { soldier as soldierHD } from './units.js';
 
 const M = {};
 export function initMaterials() {
@@ -448,9 +449,9 @@ export function elephant(color, seed = 1) {
   how.add(put(m(boxT(1.3, 0.75, 1.3, 1), M.planks), 0, 0.37, 0));
   for (const [x, z] of [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]]) how.add(put(m(cylT(0.04, 0.04, 1.0, 6, 1), M.wood), x, 1.2, z));
   how.add(put(curvedRoof(2.0, 0.6, M.roofGreen, 0.25), 0, 1.9, 0));
-  for (let k = 0; k < 2; k++) how.add(put(soldier({ color, era: 3, weapon: 'bow', seed: seed * 10 + k, pose: 'aim', shield: false }), -0.3 + k * 0.6, 0.0, 0, 0, 0, 0, 0.8));
+  for (let k = 0; k < 2; k++) how.add(put(soldierHD({ color, era: 3, weapon: 'bow', seed: seed * 10 + k, pose: 'aim', shield: false }), -0.3 + k * 0.6, 0.0, 0, 0, 0, 0, 0.8));
   how.position.set(0, 3.45, -0.2); g.add(how);
-  g.add(put(soldier({ color, era: 3, weapon: 'spear', seed: seed + 3 }), 0, 2.75, 1.0, 0, 0, 0, 0.85));
+  g.add(put(soldierHD({ color, era: 3, weapon: 'spear', seed: seed + 3, pose: 'ride' }), 0, 2.2, 1.0, 0, 0, 0, 0.85));
   return g;
 }
 export function trebuchet(color) {
@@ -491,3 +492,116 @@ export function smoke(s = 1, seed = 1, n = 12) {
   return g;
 }
 export function arrow() { const g = new THREE.Group(); g.add(put(m(cylT(0.012, 0.012, 0.9, 4, 1), M.wood, false), 0, 0, 0, Math.PI / 2)); g.add(put(m(new THREE.ConeGeometry(0.03, 0.1, 4), M.metal, false), 0, 0, 0.48, Math.PI / 2)); g.add(put(m(new THREE.PlaneGeometry(0.06, 0.15), col('#ddd'), false), 0, 0, -0.4, 0, Math.PI / 2)); return g; }
+
+// ---------- Stadtdetails ----------
+let COBBLE;
+export function plaza(w, d, round = false) {
+  COBBLE = COBBLE || (() => { const t = TX.cobbleTex(); return new THREE.MeshStandardMaterial({ map: t.map, normalMap: t.normalMap, roughness: 0.9 }); })();
+  const g = round ? new THREE.CircleGeometry(w, 40) : new THREE.PlaneGeometry(w, d);
+  g.rotateX(-Math.PI / 2);
+  const p = g.attributes.position, uv = g.attributes.uv;
+  for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i) / 2.5, p.getZ(i) / 2.5);
+  const o = new THREE.Mesh(g, COBBLE); o.receiveShadow = true; o.position.y = 0.05;
+  const grp = new THREE.Group(); grp.add(o); return grp;
+}
+const PLASTERS = ['#e8dcc0', '#e6c98e', '#e3b9a6', '#c9d0cf', '#efe6d2', '#d9c49a'];
+const plasterMats = new Map();
+function plasterTint(c) { if (!plasterMats.has(c)) { const m2 = M.plaster.clone(); m2.color = new THREE.Color(c); plasterMats.set(c, m2); } return plasterMats.get(c); }
+// Schmales, hohes Stadthaus mit vorkragenden Geschossen
+export function townhouse(color, seed = 1) {
+  const r = TX.rng(seed), g = new THREE.Group();
+  const w = 2.6 + r() * 0.8, d = 3.4, fh = 1.75, floors = 2 + Math.floor(r() * 2);
+  const pm = plasterTint(PLASTERS[Math.floor(r() * PLASTERS.length)]);
+  g.add(put(m(boxT(w, 0.5, d, 1.5), M.stone), 0, 0.25, 0));
+  let y = 0.5;
+  for (let f = 0; f < floors; f++) {
+    const ext = f * 0.18;
+    g.add(put(m(boxT(w + ext, fh, d + ext * 0.5, 2), f === 0 ? M.stone : pm), 0, y + fh / 2, ext * 0.25));
+    if (f > 0) {
+      for (const x of [-(w + ext) / 2 + 0.06, (w + ext) / 2 - 0.06]) g.add(put(m(boxT(0.13, fh, 0.1, 1), M.beam), x, y + fh / 2, (d + ext * 0.5) / 2 + ext * 0.25 + 0.02));
+      g.add(put(m(boxT(w + ext + 0.1, 0.16, 0.12, 1), M.beam), 0, y + 0.05, (d + ext * 0.5) / 2 + ext * 0.25 + 0.03));
+      g.add(put(m(boxT(0.1, fh * 0.9, 0.08, 1), M.beam), 0, y + fh / 2, (d + ext * 0.5) / 2 + ext * 0.25 + 0.03, 0, 0, 0.5));
+    }
+    const zf = (d + ext * 0.5) / 2 + ext * 0.25 + 0.06;
+    if (f === 0) { door(g, -w * 0.22, y, zf, 0, 0.8, 1.45); windowAt(g, w * 0.22, y + 1.0, zf, 0, r() < 0.4, 0.6, 0.6); }
+    else { windowAt(g, -w * 0.22, y + 0.95, zf, 0, r() < 0.3, 0.45, 0.7); windowAt(g, w * 0.22, y + 0.95, zf, 0, r() < 0.3, 0.45, 0.7); }
+    y += fh;
+  }
+  const ext = (floors - 1) * 0.18;
+  const rf = gableRoof(d + ext, w + ext, 2.1, r() < 0.3 ? M.roofSlate : M.roofRed, pm, 0.3);
+  rf.rotation.y = Math.PI / 2; rf.position.set(0, y, ext * 0.25); g.add(rf);
+  // Gaube
+  const dm = new THREE.Group(); dm.add(put(m(boxT(0.8, 0.7, 0.8, 1), pm), 0, 0.35, 0)); windowAt(dm, 0, 0.35, 0.42, 0, false, 0.35, 0.4); const dr = gableRoof(0.8, 0.9, 0.45, M.roofRed, pm, 0.1, 0.08); dr.rotation.y = Math.PI / 2; dr.position.y = 0.7; dm.add(dr);
+  put(dm, 0, y + 0.45, (d + ext) / 2 - 0.5); g.add(dm);
+  g.add(put(m(boxT(0.5, 1.4, 0.5, 1), M.stone), w * 0.3, y + 1.3, -0.8));
+  // Ladenschild
+  if (r() < 0.5) { g.add(put(m(cylT(0.02, 0.02, 0.7, 4, 1), M.darkMetal), w / 2, 2.0, d / 2 + 0.3, 0, 0, Math.PI / 2)); g.add(put(m(boxT(0.05, 0.45, 0.45, 1), teamCloth(['#7a2a1a', '#2a4a7a', '#4a6a2a'][seed % 3])), w / 2 + 0.25, 1.7, d / 2 + 0.3)); }
+  return g;
+}
+export function church(color) {
+  const g = new THREE.Group();
+  g.add(put(m(boxT(6, 6, 13, 1.6), M.stone), 0, 3, 0));
+  const rf = gableRoof(13, 6, 3.6, M.roofSlate, M.stone, 0.3); rf.rotation.y = Math.PI / 2; rf.position.y = 6; g.add(rf);
+  for (let k = 0; k < 4; k++) for (const s of [-1, 1]) {
+    g.add(put(m(boxT(0.6, 4.5, 0.9, 1), M.stoneDark), s * 3.25, 2.25, -4.5 + k * 3, 0, 0, s * 0.08));
+    const wg = new THREE.Shape(); wg.moveTo(-0.35, 0); wg.lineTo(0.35, 0); wg.lineTo(0.35, 1.6); wg.absarc(0, 1.6, 0.35, 0, Math.PI, false);
+    g.add(put(m(new THREE.ShapeGeometry(wg), M.glass), s * 3.02, 2.4, -3 + k * 3, 0, s * Math.PI / 2, 0));
+  }
+  // Turm mit Spitzhelm
+  g.add(put(m(boxT(3.4, 11, 3.4, 1.6), M.stone), 0, 5.5, 7.6));
+  for (const s of [-1, 1]) g.add(put(m(boxT(0.9, 1.6, 0.1, 1), col('#1a1410')), s * 0.9, 9.2, 9.32));
+  g.add(put(m(boxT(3.7, 0.4, 3.7, 1.6), M.stoneDark), 0, 11, 7.6));
+  const spire = m(new THREE.ConeGeometry(2.4, 7, 4, 1, true), M.roofSlate); spire.material.side = THREE.DoubleSide; g.add(put(spire, 0, 14.7, 7.6, 0, Math.PI / 4, 0));
+  g.add(put(m(boxT(0.12, 1.1, 0.12, 1), M.gold), 0, 18.6, 7.6)); g.add(put(m(boxT(0.6, 0.12, 0.12, 1), M.gold), 0, 18.8, 7.6));
+  // Rosette & Portal
+  g.add(put(m(new THREE.CircleGeometry(1.1, 24), col('#2a3a6a', 0.2, 0.3)), 0, 8.2, 9.33));
+  g.add(put(m(new THREE.TorusGeometry(1.1, 0.12, 6, 24), M.stoneDark), 0, 8.2, 9.34));
+  const arch = new THREE.Shape(); arch.moveTo(-0.8, 0); arch.lineTo(0.8, 0); arch.lineTo(0.8, 1.8); arch.absarc(0, 1.8, 0.8, 0, Math.PI, false);
+  g.add(put(m(new THREE.ShapeGeometry(arch), M.planks), 0, 0, 9.33));
+  return g;
+}
+export function blacksmith(fireFn) {
+  const g = new THREE.Group();
+  g.add(put(m(boxT(5, 0.3, 4, 1.5), M.stone), 0, 0.15, 0));
+  g.add(put(m(boxT(5, 2.6, 0.3, 1.5), M.stone), 0, 1.6, -1.85));
+  for (const x of [-2.3, 2.3]) g.add(put(m(cylT(0.12, 0.12, 2.8, 8, 1), M.beam), x, 1.7, 1.8));
+  const rf = m(boxT(5.6, 0.15, 4.6, 1.6), M.roofRed); g.add(put(rf, 0, 3.2, 0, 0.25));
+  g.add(put(m(boxT(1.4, 1.0, 1.2, 1), M.stoneDark), -1.4, 0.8, -1.1));
+  g.add(put(m(boxT(0.7, 3.2, 0.7, 1), M.stone), -1.4, 2.5, -1.4));
+  g.add(put(m(boxT(0.9, 0.2, 0.7, 1), M.lit), -1.4, 1.32, -0.9));
+  if (fireFn) g.add(put(fireFn(0.35), -1.4, 1.35, -0.9));
+  const anvil = new THREE.Group(); anvil.add(put(m(cylT(0.18, 0.22, 0.5, 8, 1), M.wood), 0, 0.25, 0)); anvil.add(put(m(boxT(0.6, 0.2, 0.25, 1), M.darkMetal), 0, 0.6, 0)); anvil.add(put(m(new THREE.ConeGeometry(0.12, 0.3, 6), M.darkMetal), 0.4, 0.62, 0, 0, 0, -Math.PI / 2)); put(anvil, 0.6, 0.3, 0); g.add(anvil);
+  for (let k = 0; k < 4; k++) g.add(put(m(new THREE.BoxGeometry(0.05, 0.9, 0.02), M.metal), 1.6 + k * 0.18, 1.1, -1.65, 0, 0, 0.05));
+  g.add(put(barrel(), 2, 0.3, 1.0));
+  return g;
+}
+export function tavern(color) {
+  const g = halfTimberHouse(color, 77, { w: 5.2, d: 4, floors: 2, roof: 'red' });
+  g.add(put(m(cylT(0.03, 0.03, 0.9, 4, 1), M.darkMetal), 2.9, 3.3, 2.1, 0, 0, Math.PI / 2));
+  g.add(put(m(boxT(0.06, 0.6, 0.6, 1), M.planks), 3.25, 2.95, 2.1));
+  g.add(put(m(new THREE.CylinderGeometry(0.12, 0.1, 0.22, 10), M.gold), 3.25, 2.95, 2.4, Math.PI / 2));
+  for (let k = 0; k < 2; k++) { const t = new THREE.Group(); t.add(put(m(boxT(1.4, 0.08, 0.7, 1), M.planks), 0, 0.75, 0)); for (const [x, z] of [[-0.6, -0.3], [0.6, -0.3], [-0.6, 0.3], [0.6, 0.3]]) t.add(put(m(cylT(0.04, 0.04, 0.75, 4, 1), M.wood), x, 0.37, z)); for (const z of [-0.65, 0.65]) t.add(put(m(boxT(1.4, 0.06, 0.25, 1), M.planks), 0, 0.42, z)); put(t, -1.2 + k * 2.4, 0.6, 3.6); g.add(t); }
+  return g;
+}
+export function garden(w = 4, d = 3, seed = 1) {
+  const g = new THREE.Group(), r = TX.rng(seed);
+  g.add(put(m(boxT(w, 0.1, d, 1), col('#4a3420', 1)), 0, 0.05, 0));
+  for (let z = -d / 2 + 0.3; z < d / 2; z += 0.5) for (let x = -w / 2 + 0.3; x < w / 2; x += 0.4) g.add(put(m(new THREE.IcosahedronGeometry(0.13 + r() * 0.06, 0), col(['#4f8a2f', '#6a9a3a', '#8aa848', '#a83a2a'][Math.floor(r() * 4)], 0.8)), x, 0.18, z));
+  for (const [x, z, ry, len] of [[0, d / 2 + 0.15, 0, w], [0, -d / 2 - 0.15, 0, w], [w / 2 + 0.15, 0, Math.PI / 2, d], [-w / 2 - 0.15, 0, Math.PI / 2, d]]) {
+    for (let k = 0; k <= len; k += 0.25) g.add(put(m(boxT(0.06, 0.6, 0.03, 1), M.wood), x + (ry ? 0 : k - len / 2), 0.3, z + (ry ? k - len / 2 : 0)));
+  }
+  return g;
+}
+export function lamp(fireFn) {
+  const g = new THREE.Group();
+  g.add(put(m(cylT(0.05, 0.07, 2.6, 6, 1), M.darkMetal), 0, 1.3, 0));
+  g.add(put(m(boxT(0.4, 0.04, 0.04, 1), M.darkMetal), 0.2, 2.5, 0));
+  g.add(put(m(boxT(0.2, 0.3, 0.2, 1), M.lit), 0.38, 2.3, 0));
+  g.add(put(m(new THREE.ConeGeometry(0.16, 0.15, 4), M.darkMetal), 0.38, 2.52, 0, 0, Math.PI / 4));
+  return g;
+}
+export function hoardingTower(color) {
+  const g = roundTower(color, 8, 1.8);
+  g.add(put(m(cylT(2.15, 2.15, 1.2, 16, 1.2, true), M.planks), 0, 7.6, 0));
+  return g;
+}
