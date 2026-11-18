@@ -271,9 +271,10 @@ function stampVision() {
 }
 
 function onMe(m) {
-  const prevEra = G.me.era;
+  const prevEra = G.me.era, prevChoice = G.me.choice;
   G.me = m;
-  if (m.choice && !G.choiceDismissed && $('choice').classList.contains('hidden')) showChoice();
+  // Dialog neu aufbauen, wenn sich die offene Wahl geändert hat (Kultur -> Nation)
+  if (m.choice && !G.choiceDismissed && ($('choice').classList.contains('hidden') || prevChoice !== m.choice)) showChoice();
   if (!m.choice) $('choice').classList.add('hidden');
   if (m.era !== prevEra) updateCmdCard(true);
 }
