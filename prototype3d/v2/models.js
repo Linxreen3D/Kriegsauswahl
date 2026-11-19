@@ -33,7 +33,7 @@ export function col(c, rough = 0.85, metal = 0) { const k = c + rough + metal; i
 
 // ---------- Geometrie-Helfer ----------
 function m(geo, mat, cast = true) { const o = new THREE.Mesh(geo, mat); o.castShadow = cast; o.receiveShadow = true; return o; }
-function put(o, x, y, z, rx = 0, ry = 0, rz = 0, s) { o.position.set(x, y, z); o.rotation.set(rx, ry, rz); if (s) Array.isArray(s) ? o.scale.set(...s) : o.scale.setScalar(s); return o; }
+function put(o, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s) { o.position.set(x, y, z); o.rotation.set(rx, ry, rz); if (s) Array.isArray(s) ? o.scale.set(...s) : o.scale.setScalar(s); return o; }
 // Box mit maßstabsgerechten UVs (Textur wiederholt sich je `t` Meter)
 export function boxT(w, h, d, t = 2) {
   const g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv;

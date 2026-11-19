@@ -2,6 +2,7 @@
 // Nebel des Krieges im Shader, Effekte, Minimap. Schnittstelle kompatibel zum früheren 2D-Renderer.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as W from './3d/world.js';
 import * as Md from './3d/models.js';
 import * as U from './3d/units.js';
@@ -170,7 +171,34 @@ export class Renderer3D {
     this.projectiles = []; this.effects = []; this.attach = new Map();
     this.resize();
   }
-  async init() { this.figs = await loadFigures(); }
+  async init() {
+    this.figs = await loadFigures();
+    // Blender-Modelle, die bereits im Ordner public/assets/models liegen
+    this.glbIndex = new Set(); this.glb = new Map();
+    try { const r = await fetch('assets/models/index.json'); if (r.ok) for (const f of await r.json()) this.glbIndex.add(f); } catch { /* ohne Modelle weiter */ }
+  }
+  // Lädt ein Blender-Modell einmalig im Hintergrund; liefert die Szene, sobald sie da ist (sonst null)
+  glbScene(path) {
+    if (!this.glbIndex || !this.glbIndex.has(path)) return null;
+    let e = this.glb.get(path);
+    if (!e) {
+      e = { scene: null };
+      this.glb.set(path, e);
+      new GLTFLoader().load('assets/models/' + path, gl => {
+        e.scene = gl.scene;
+      }, undefined, err => console.warn('Modell konnte nicht geladen werden:', path, err && err.message));
+    }
+    return e.scene;
+  }
+  // passender Modellpfad: Weltwunder der Nation > Nationalstil > allgemeines Gebäude der Epoche
+  glbPathFor(type, era, nation) {
+    if (!this.glbIndex || !this.glbIndex.size) return null;
+    const e = Math.min(7, era | 0), cands = [];
+    if (era >= WONDER_ERA && nation) cands.push(`wonders/${nation}_wonder.glb`);
+    if (nation) cands.push(`buildings/nations/${nation}/${type}_e${e}.glb`);
+    cands.push(`buildings/${type}/${type}_e${e}.glb`);
+    return cands.find(c => this.glbIndex.has(c)) || null;
+  }
 
   // ---------- Kamera ----------
   resize() {
@@ -467,14 +495,17 @@ export class Renderer3D {
   }
   // ---------- Gebäude-Modelle ----------
   buildingModel(type, era, color, nation) {
+    const glbPath = this.glbPathFor(type, era, nation), glbKey = glbPath ? '|glb:' + glbPath : '';
     era = modelEra(era);
     // Nationaler Stil gilt ab dem Frühen Mittelalter (für Mittelalter und Industrialisierung je ein Modell)
     const nk = nation && era >= 3 ? nation + (era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : '';
-    const key = type + '|' + era + '|' + color + '|' + nk;
+    // Solange das Blender-Modell lädt, wird der Platzhalter gezeigt; danach greift ein neuer Schlüssel
+    const glb = glbPath ? this.glbScene(glbPath) : null;
+    const key = type + '|' + era + '|' + color + '|' + nk + glbKey + (glb ? '|L' : '');
     let mdl = this.bldModels.get(key);
     if (mdl) return mdl;
     const sz = BUILDINGS[type].size * S;
-    const g = INFRA[type] ? INFRA[type](era, color) : (nk && nationBuilding(type, era, color, nation)) || eraBuilding(type, era, color);
+    const g = glb ? teamColored(glb.clone(true), color) : INFRA[type] ? INFRA[type](era, color) : (nk && nationBuilding(type, era, color, nation)) || eraBuilding(type, era, color);
     const mm = mergeModel(g);
     const size = mm.box.getSize(new THREE.Vector3());
     const fit = type === 'wall' ? (sz * 1.0) / Math.max(size.x, size.z) : (sz * 0.96 * (era === 7 ? 1.55 : 1)) / Math.max(size.x, size.z);
@@ -730,6 +761,22 @@ function tank(color) {
   add(new THREE.BoxGeometry(0.9, 0.08, 0.5), cloth, 0, 1.57, -0.5);
   return g;
 }
+// Blender-Modell einfärben: Material „Team“ bekommt die Spielerfarbe (Textur bleibt als Muster erhalten)
+function teamColored(root, color) {
+  const cache = new Map();
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    o.castShadow = o.receiveShadow = true;
+    const fix = m => {
+      if (!m || !/^team/i.test(m.name || '')) return m;
+      if (!cache.has(m)) { const c = m.clone(); c.color = new THREE.Color(color); cache.set(m, c); }
+      return cache.get(m);
+    };
+    o.material = Array.isArray(o.material) ? o.material.map(fix) : fix(o.material);
+  });
+  return root;
+}
+
 // Straße, Brücke, Außenposten: einfache Platzhalter bis zu den Blender-Modellen
 const INFRA = {
   road(era) {

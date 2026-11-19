@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
@@ -11,7 +11,7 @@ const PORT = Number(process.env.PORT) || 3000;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json', '.bin': 'application/octet-stream', '.mjs': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
+  '.json': 'application/json', '.glb': 'model/gltf-binary', '.jpg': 'image/jpeg', '.bin': 'application/octet-stream', '.mjs': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json',
 };
 const cache = new Map();
 function serveFile(req, res, file) {
@@ -36,6 +36,14 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   let path = decodeURIComponent(url.pathname);
   if (path === '/health') { res.writeHead(200); return res.end('ok'); }
+  // Liste aller vorhandenen Blender-Modelle (public/assets/models/**/*.glb), damit der Client sie statt der Platzhalter lädt
+  if (path === '/assets/models/index.json') {
+    const base = join(ROOT, 'public', 'assets', 'models'), out = [];
+    const walk = (dir, rel) => { if (!existsSync(dir)) return; for (const f of readdirSync(dir, { withFileTypes: true })) { if (f.isDirectory()) walk(join(dir, f.name), rel + f.name + '/'); else if (f.name.endsWith('.glb')) out.push(rel + f.name); } };
+    walk(base, '');
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    return res.end(JSON.stringify(out));
+  }
   if (path === '/') path = '/index.html';
   // /shared/* -> shared/, /vendor/three/* -> node_modules/three/, sonst public/
   const routes = [['/shared/', join(ROOT, 'shared')], ['/vendor/three/', join(ROOT, 'node_modules', 'three')]];
