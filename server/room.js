@@ -231,6 +231,12 @@ export class Room {
         this.sysChat(`Spielstand gewählt: ${meta.label}. Spieler werden über ihren Namen ihrem Reich zugeordnet.`);
         return this.broadcastLobby();
       }
+      case 'dip': {
+        if (this.phase !== 'play' || !this.world || this.paused) return;
+        const out = this.world.diplomacy(p.id, msg);
+        if (out && out.to) for (const pid of out.to) { const q = this.players[pid]; if (q && q.ws) this.send(q.ws, { ...out.msg, with: pid === out.msg.from ? out.to.find(x => x !== pid) : out.msg.from }); }
+        return;
+      }
       case 'surrender':
         if (this.phase === 'play' && this.world) this.world.defeat(this.world.P[p.id], true);
         return;
@@ -316,9 +322,30 @@ export class Room {
     this.subs.clear(); this.paused = false;
     this.result = {
       t: 'end', reason: w.winReason || 'Sieg', winners: winners.map(p => p.id), duration: Math.round(w.time), mode: this.settings.mode,
-      players: w.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, culture: p.culture, nation: p.nation, stats: p.stats, score: w.score(p), history: p.history, defeatedAt: p.defeatedAt })),
+      players: w.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, culture: p.culture, nation: p.nation, stats: p.stats, score: w.score(p), history: p.history, defeatedAt: p.defeatedAt, rep: p.rep })),
+      chron: w.chron, awards: this.awards(w),
     };
     this.broadcast(this.result);
+  }
+  // Auszeichnungen am Spielende (nur vergeben, wenn der Wert > 0 ist)
+  awards(w) {
+    const defs = [
+      ['🗡', 'Größter Verräter', p => p.stats.breaches || 0],
+      ['🕊', 'Friedensstifter', p => p.stats.treaties || 0],
+      ['🌉', 'Brückenbauer', p => p.stats.bridges || 0],
+      ['⚔', 'Feldherr', p => p.stats.kills],
+      ['🏗', 'Baumeister', p => p.stats.built],
+      ['💰', 'Sammler', p => p.stats.gathered],
+      ['🕵', 'Meisterspion', p => p.stats.spied || 0],
+      ['🛡', 'Eiserne Verteidigung', p => p.alive ? Math.max(0, p.stats.kills - p.stats.lost) : 0],
+    ];
+    const out = [];
+    for (const [icon, name, f] of defs) {
+      let best = null, bv = 0;
+      for (const p of w.P) { const v = f(p); if (v > bv) { bv = v; best = p; } }
+      if (best) out.push({ icon, name, p: best.id, v: Math.round(bv) });
+    }
+    return out;
   }
   backToLobby() {
     this.phase = 'lobby';

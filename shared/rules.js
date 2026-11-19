@@ -88,15 +88,17 @@ export const NATIONS = {
 // sie (Belagerung), art (Artillerie), sup (Unterstützung/Sanitäter). Zeile = Angreifer, Spalte = Ziel.
 // Ein Konter gewinnt bei gleichen Kosten etwa 2:1, nicht 10:1.
 export const DMG = {
-  wrk: { wrk: 1, inf: 1, spr: 1, rng: 1, cav: 1, sie: 1, art: 1, sup: 1, bld: 0.4 },
-  inf: { wrk: 1.2, inf: 1, spr: 1.0, rng: 1.0, cav: 0.8, sie: 1.6, art: 1.6, sup: 1.2, bld: 0.6 },
-  spr: { wrk: 1, inf: 1.0, spr: 1, rng: 0.9, cav: 1.3, sie: 1.2, art: 1.2, sup: 1, bld: 0.4 },
-  rng: { wrk: 1.2, inf: 1.9, spr: 1.5, rng: 1, cav: 0.8, sie: 0.5, art: 0.6, sup: 1.2, bld: 0.25 },
-  cav: { wrk: 1.4, inf: 1.4, spr: 0.7, rng: 1.3, cav: 1, sie: 1.8, art: 1.8, sup: 1.4, bld: 0.45 },
-  sie: { wrk: 0.6, inf: 0.6, spr: 0.6, rng: 0.6, cav: 0.5, sie: 1, art: 1, sup: 0.6, bld: 3.2 },
-  art: { wrk: 1.2, inf: 2.0, spr: 2.0, rng: 2.0, cav: 0.8, sie: 1.3, art: 1.3, sup: 1.2, bld: 1.2 },
-  sup: { wrk: 0.5, inf: 0.5, spr: 0.5, rng: 0.5, cav: 0.5, sie: 0.5, art: 0.5, sup: 0.5, bld: 0.2 },
-  bld: { wrk: 1, inf: 1, spr: 1, rng: 1.1, cav: 0.9, sie: 1, art: 1, sup: 1, bld: 0.3 },
+  wrk: { wrk: 1, inf: 1, spr: 1, rng: 1, cav: 1, sie: 1, art: 1, sup: 1, bld: 0.4, env: 1, spy: 1 },
+  inf: { wrk: 1.2, inf: 1, spr: 1.0, rng: 1.0, cav: 0.8, sie: 1.6, art: 1.6, sup: 1.2, bld: 0.6, env: 1, spy: 1 },
+  spr: { wrk: 1, inf: 1.0, spr: 1, rng: 0.9, cav: 1.3, sie: 1.2, art: 1.2, sup: 1, bld: 0.4, env: 1, spy: 1 },
+  rng: { wrk: 1.2, inf: 1.9, spr: 1.5, rng: 1, cav: 0.8, sie: 0.5, art: 0.6, sup: 1.2, bld: 0.25, env: 1, spy: 1 },
+  cav: { wrk: 1.4, inf: 1.4, spr: 0.7, rng: 1.3, cav: 1, sie: 1.8, art: 1.8, sup: 1.4, bld: 0.45, env: 1, spy: 1 },
+  sie: { wrk: 0.6, inf: 0.6, spr: 0.6, rng: 0.6, cav: 0.5, sie: 1, art: 1, sup: 0.6, bld: 3.2, env: 1, spy: 1 },
+  art: { wrk: 1.2, inf: 2.0, spr: 2.0, rng: 2.0, cav: 0.8, sie: 1.3, art: 1.3, sup: 1.2, bld: 1.2, env: 1, spy: 1 },
+  sup: { wrk: 0.5, inf: 0.5, spr: 0.5, rng: 0.5, cav: 0.5, sie: 0.5, art: 0.5, sup: 0.5, bld: 0.2, env: 1, spy: 1 },
+  env: { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.3, sie: 0.3, art: 0.3, sup: 0.3, bld: 0.1, env: 0.3, spy: 0.3 },
+  spy: { wrk: 1, inf: 0.8, spr: 0.8, rng: 0.8, cav: 0.5, sie: 0.8, art: 0.8, sup: 1, bld: 0.3, env: 1, spy: 1 },
+  bld: { wrk: 1, inf: 1, spr: 1, rng: 1.1, cav: 0.9, sie: 1, art: 1, sup: 1, bld: 0.3, env: 1, spy: 1 },
 };
 
 // Linien: pro Epoche ein Name; Werte skalieren mit der Epoche.
@@ -107,7 +109,7 @@ export const LINES = {
   },
   inf: {
     cls: 'inf', at: 'barracks', minEra: 0, key: 'Q', names: ['Keulenträger', 'Axtkämpfer', 'Schwertkämpfer', 'Hauskrieger', 'Fußritter', 'Linieninfanterist', 'Schütze', 'Mechanisierte Infanterie'], late: 'Infanterist',
-    hp: 60, atk: 7, range: 0.5, cd: 1.2, speed: 1.45, sight: 6, cost: { food: 55, wood: 10 }, pop: 1, time: 16,
+    hp: 60, atk: 7, range: 0.5, cd: 1.2, speed: 1.45, sight: 6, cost: { food: 55, wood: 10, env: 1, spy: 1 }, pop: 1, time: 16,
     eraOverride: { 5: { range: 3 }, 6: { range: 4 }, 7: { range: 4.5, speed: 1.7 } },
   },
   spear: {
@@ -117,20 +119,29 @@ export const LINES = {
   },
   rng: {
     cls: 'rng', at: 'range', minEra: 0, key: 'Q', names: ['Steinschleuderer', 'Bogenschütze', 'Kompositbogner', 'Langbogenschütze', 'Armbrustschütze', 'Jäger', 'Scharfschütze', 'MG-Schütze'], late: 'MG-Schütze',
-    hp: 38, atk: 5, range: 5, cd: 1.6, speed: 1.4, sight: 7, cost: { food: 30, wood: 35 }, pop: 1, time: 18,
+    hp: 38, atk: 5, range: 5, cd: 1.6, speed: 1.4, sight: 7, cost: { food: 30, wood: 35, env: 1, spy: 1 }, pop: 1, time: 18,
     eraOverride: { 6: { range: 6 }, 7: { range: 6.5 } },
   },
   cav: {
     cls: 'cav', at: 'stable', minEra: 1, key: 'Q', names: ['', 'Streitwagen', 'Reiter', 'Panzerreiter', 'Ritter', 'Husar', 'Panzerwagen', 'Kampfpanzer'], late: 'Panzer',
-    hp: 110, atk: 9, range: 0.6, cd: 1.4, speed: 2.4, sight: 7, cost: { food: 70, gold: 45 }, pop: 1, time: 22,
+    hp: 110, atk: 9, range: 0.6, cd: 1.4, speed: 2.4, sight: 7, cost: { food: 70, gold: 45, env: 1, spy: 1 }, pop: 1, time: 22,
     eraOverride: { 5: { range: 3.5 }, 6: { range: 5, speed: 2.0, hpMul: 1.6, pop: 2 }, 7: { range: 6, speed: 2.2, hpMul: 1.7, pop: 2 } },
   },
   sie: {
     cls: 'sie', at: 'workshop', minEra: 2, key: 'Q', names: ['', '', 'Torsionsgeschütz', 'Blide', 'Bombarde', 'Belagerungsmörser', 'Schwerer Mörser', 'Raketenartillerie'], late: 'Schwere Haubitze',
-    hp: 120, atk: 38, range: 7, minRange: 2, cd: 4, speed: 0.95, sight: 8, cost: { wood: 160, gold: 90 }, pop: 2, time: 32, splash: 1.2,
+    hp: 120, atk: 38, range: 7, minRange: 2, cd: 4, speed: 0.95, sight: 8, cost: { wood: 160, gold: 90, env: 1, spy: 1 }, pop: 2, time: 32, splash: 1.2,
   },  art: {
     cls: 'art', at: 'workshop', minEra: 5, key: 'W', names: ['', '', '', '', '', 'Feldkanone', 'Feldgeschütz', 'Panzerhaubitze'], late: 'Haubitze',
-    hp: 110, atk: 40, range: 9, minRange: 2.5, cd: 3.5, speed: 1.0, sight: 8, cost: { wood: 140, gold: 110 }, pop: 3, time: 30, splash: 1.6,
+    hp: 110, atk: 40, range: 9, minRange: 2.5, cd: 3.5, speed: 1.0, sight: 8, cost: { wood: 140, gold: 110, env: 1, spy: 1 }, pop: 3, time: 30, splash: 1.6,
+  },
+  envoy: {
+    cls: 'env', at: 'town', minEra: 0, key: 'T', names: ['Läufer', 'Reitender Bote', 'Reitender Bote', 'Gesandter', 'Gesandter mit Eskorte', 'Kurier', 'Kurier im Automobil', 'Diplomat im Regierungsjet'],
+    hp: 50, atk: 0, range: 0.5, cd: 1, speed: 1.9, sight: 8, cost: { food: 40, gold: 10 }, pop: 1, time: 15, grow: 0.12,
+    eraOverride: { 1: { speed: 2.9 }, 2: { speed: 2.9 }, 3: { speed: 3.2 }, 4: { speed: 3.3 }, 5: { speed: 3.6 }, 6: { speed: 4.4 }, 7: { speed: 6 } },
+  },
+  spy: {
+    cls: 'spy', at: 'town', minEra: 4, key: 'A', names: ['', '', '', '', 'Kundschafter', 'Spion', 'Agent', 'Geheimagent'],
+    hp: 40, atk: 4, range: 0.5, cd: 1.2, speed: 1.7, sight: 9, cost: { food: 50, gold: 80 }, pop: 1, time: 25, grow: 0.15,
   },
   med: {
     cls: 'sup', at: 'town', minEra: 1, key: 'E', names: ['', 'Heiler', 'Feldarzt', 'Mönch', 'Feldscher', 'Sanitäter', 'Sanitäter', 'Sanitäter'],
@@ -161,6 +172,64 @@ export const FORMATIONS = {
 export const FORMATION_KEYS = Object.keys(FORMATIONS);
 export const SUPPLY_RANGE = 16; // Kacheln um Haupthaus, Lager und Türme
 export const SUPPLY_GRACE = 120; // Sekunden ohne Nachschub, bevor Leben verloren geht
+
+// ---------------- Diplomatie ----------------
+export const REP_START = 70, REP_LOW = 35; // Ansehen 0–100; unter REP_LOW keine gemeinsame Sicht im Bündnis
+export const REP_LOSS = { breach: 30, envoy: 20, spy: 5 };
+export const CONTACT_RANGE = 7; // Botschafter so nah an einem fremden Gebäude = Kontakt
+export const ALLIANCE_NOTICE = 120; // Kündigungsfrist eines Bündnisses in Sekunden
+export const PACT_MINUTES = [10, 20, 30];
+export const repLabel = r => r >= 80 ? 'hoch' : r >= 55 ? 'gut' : r >= REP_LOW ? 'mäßig' : 'niedrig';
+
+// ---------------- Spionage ----------------
+export const SPY_MISSIONS = {
+  sabotage: { name: 'Sabotage', key: 'Q', range: 1.5, cd: 90, desc: 'Legt ein feindliches Gebäude 2 Minuten lahm: keine Ausbildung, Türme schießen nicht.' },
+  steal: { name: 'Pläne stehlen', key: 'W', range: 1.5, cd: 180, desc: 'An einem feindlichen Haupthaus: dein nächster Epochenaufstieg kostet 25 % weniger.' },
+  scout: { name: 'Aufklären', key: 'E', range: 0, cd: 60, desc: 'Deckt den Umkreis des Spions 3 Minuten lang für dich auf.' },
+};
+export const SPY_DETECT = 10; // Haupthaus, Türme und Außenposten enttarnen Spione in diesem Umkreis
+
+// ---------------- Ereignisse (etwa alle 15–20 Minuten, zwei Möglichkeiten) ----------------
+// e: Effekte – res (einmalig), buff {k, v, res, s} (k: gather|farm|train|dmg), workers (Verlust-Chance), morale, rep, eraDiscount
+export const EVENTS = {
+  harvest: { title: 'Reiche Ernte', minEra: 0, text: 'Das Wetter war gnädig, die Speicher quellen über.', options: [
+    { label: '+300 Nahrung einlagern', e: { res: { food: 300 } } },
+    { label: 'Felder 5 Minuten +25 %', e: { buff: { k: 'farm', v: 1.25, s: 300 } } }] },
+  famine: { title: 'Missernte', minEra: 1, text: 'Dürre hat die Felder ausgedörrt.', options: [
+    { label: 'Vorräte öffnen (−200 Nahrung)', e: { res: { food: -200 } } },
+    { label: 'Rationieren: Felder 4 Minuten −30 %', e: { buff: { k: 'farm', v: 0.7, s: 240 } } }] },
+  caravan: { title: 'Händlerkarawane', minEra: 1, maxEra: 4, text: 'Fremde Händler bieten Gold gegen Holz.', options: [
+    { label: '200 Holz gegen 150 Gold tauschen', e: { res: { wood: -200, gold: 150 } } },
+    { label: 'Ablehnen', e: {} }] },
+  plague: { title: 'Die Pest', minEra: 4, maxEra: 5, text: 'Eine Seuche breitet sich in den Siedlungen aus.', options: [
+    { label: 'Quarantäne: 3 Minuten −20 % Sammeln', e: { buff: { k: 'gather', v: 0.8, s: 180 } } },
+    { label: 'Weiterarbeiten (25 % Risiko, 10 Arbeiter zu verlieren)', e: { workers: { chance: 0.25, n: 10 } } }] },
+  deserters: { title: 'Deserteure', minEra: 2, text: 'Ein Teil der Truppe ist des Kämpfens müde.', options: [
+    { label: 'Amnestie und Sold (−150 Gold, +Moral)', e: { res: { gold: -150 }, morale: 20 } },
+    { label: 'Hart durchgreifen (−10 Moral)', e: { morale: -10 } }] },
+  goldrush: { title: 'Goldrausch', minEra: 5, text: 'In den Bergen wurde Gold gefunden!', options: [
+    { label: 'Arbeiter abziehen: 5 Min. +50 % Gold, −20 % Nahrung', e: { buff: [{ k: 'gather', res: 'gold', v: 1.5, s: 300 }, { k: 'gather', res: 'food', v: 0.8, s: 300 }] } },
+    { label: 'Ignorieren', e: {} }] },
+  espionage: { title: 'Industriespionage', minEra: 6, text: 'Ein Unbekannter bietet fremde Baupläne an.', options: [
+    { label: 'Kaufen (300 Gold): nächster Aufstieg −20 %', e: { res: { gold: -300 }, eraDiscount: 0.2 } },
+    { label: 'Ablehnen und melden (+5 Ansehen)', e: { rep: 5 } }] },
+  election: { title: 'Wahlkampf', minEra: 7, text: 'Das Volk wählt. Was steht im Mittelpunkt?', options: [
+    { label: 'Wirtschaft: 5 Min. +15 % Sammeln', e: { buff: { k: 'gather', v: 1.15, s: 300 } } },
+    { label: 'Rüstung: 5 Min. +20 % Ausbildungstempo', e: { buff: { k: 'train', v: 1.2, s: 300 } } }] },
+  reichsgruendung: { title: 'Reichsgründung 1871', nation: 'germany', minEra: 6, text: 'Die deutschen Staaten vereinen sich zum Kaiserreich.', options: [
+    { label: 'Kaiserproklamation: 5 Min. +10 % Schaden', e: { buff: { k: 'dmg', v: 1.1, s: 300 } } },
+    { label: 'Reichsgold: +400 Gold', e: { res: { gold: 400 } } }] },
+  titostalin: { title: 'Bruch mit Stalin 1948', nation: 'yugoslavia', minEra: 7, text: 'Jugoslawien geht einen eigenen Weg zwischen den Blöcken.', options: [
+    { label: 'Blockfreiheit: +10 Ansehen, 5 Min. +10 % Sammeln', e: { rep: 10, buff: { k: 'gather', v: 1.1, s: 300 } } },
+    { label: 'Aufrüsten: 5 Min. +20 % Ausbildungstempo', e: { buff: { k: 'train', v: 1.2, s: 300 } } }] },
+  gallipoli: { title: 'Gallipoli 1915', nation: 'ottoman', minEra: 6, text: 'Die Verteidiger der Dardanellen halten stand.', options: [
+    { label: 'Halten: 5 Min. +20 % Schaden', e: { buff: { k: 'dmg', v: 1.2, s: 300 } } },
+    { label: 'Neu aufstellen: +300 Nahrung, +200 Gold', e: { res: { food: 300, gold: 200 } } }] },
+  winterwar: { title: 'Strenger Winter', nation: 'russia', minEra: 3, text: 'Der Frost kommt früh – für den Feind.', options: [
+    { label: 'Vorräte anlegen: +300 Holz', e: { res: { wood: 300 } } },
+    { label: 'Mobilmachen: 5 Min. +20 % Ausbildungstempo', e: { buff: { k: 'train', v: 1.2, s: 300 } } }] },
+};
+export const EVENT_FIRST = 600, EVENT_GAP = [900, 1200], EVENT_TIMEOUT = 60;
 
 // ---------------- Gelände, Jahreszeiten, Provinzen ----------------
 export const TERRAIN = ['Wiese', 'Erde', 'Strand', 'Wasser', 'Fels', 'Hügel', 'Schnee', 'Wüste', 'Sumpf', 'Furt'];

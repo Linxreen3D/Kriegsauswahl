@@ -25,6 +25,7 @@ export class AI {
     if (!pl.alive || w.time < this.next) return;
     this.next = w.time + this.prof.think;
 
+    this.handleProposals(pl);
     if (pl.choice === 'culture') this.cmd({ c: 'choose', kind: 'culture', value: pick(Object.keys(CULTURES)) });
     else if (pl.choice === 'nation') this.cmd({ c: 'choose', kind: 'nation', value: pick(CULTURES[pl.culture].nations) });
 
@@ -133,6 +134,22 @@ export class AI {
     }
   }
 
+  // Vertragsangebote bewerten: Rohstoffwert, Provinzen, Truppen; Pakte/Bündnisse je nach Stärke
+  handleProposals(pl) {
+    const w = this.w;
+    for (const p of w.proposals.filter(x => x.to === this.pid)) {
+      const o = p.offer, from = w.P[p.from];
+      const val = s => Object.values(s.res).reduce((a, b) => a + b, 0) + s.prov.length * 600 + (s.tribute ? s.tribute.perMin * s.tribute.min : 0)
+        + s.units.reduce((a, id) => { const u = w.ents.get(id); return a + (u && u.st ? Object.values(u.st.cost).reduce((x, y) => x + y, 0) : 0); }, 0);
+      let score = val(o.give) - val(o.get);
+      const strength = q => q.military * (1 + q.era) + 1, ratio = strength(from) / strength(pl);
+      if (o.pact) score += ratio > 0.8 ? 300 : -100;
+      if (o.alliance) score += ratio > 0.6 && from.rep >= 35 ? 400 : -400;
+      if (from.rep < 35) score -= 300;
+      this.cmd2({ op: 'respond', id: p.id, accept: score >= 0 });
+    }
+  }
+  cmd2(m) { this.w.diplomacy(this.pid, m); }
   pickTarget() {
     const w = this.w;
     let best = null, bd = Infinity;

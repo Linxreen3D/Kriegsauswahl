@@ -2,17 +2,18 @@
 import {
   TICK_MS, RES, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, RESOURCE_TYPES, RESOURCE_KINDS,
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
-  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, isProducer, DEPOSIT_LAYERS, hasLayers,
+  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, scaleCost, isProducer, DEPOSIT_LAYERS, hasLayers,
   VET_RANKS, VET_BONUS, FORMATIONS, FORMATION_KEYS, SUPPLY_RANGE, SUPPLY_GRACE,
   seasonAt, PROVINCE_BONUS, PROVINCE_WEIGHT,
 } from '../shared/rules.js';
+import { installDiplomacy } from './diplomacy.js';
 import { generateMap, blockedTerrain, waterTerrain, T_HILL, T_SNOW, T_DESERT, T_SWAMP, T_FORD, T_GRASS, T_DIRT } from './mapgen.js';
 
 const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
 const isVehicle = u => (u.cls === 'cav' && u.era >= 6) || u.cls === 'art' || u.cls === 'sie';
 
-const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3 };
-const MILITARY = cls => cls !== 'wrk' && cls !== 'sup'; // kämpft selbstständig
+const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3, env: 0.3, spy: 0.3 };
+const MILITARY = cls => cls !== 'wrk' && cls !== 'sup' && cls !== 'env' && cls !== 'spy'; // kämpft selbstständig
 const START_RES = { low: { food: 150, wood: 150, stone: 50, gold: 50 }, normal: { food: 250, wood: 250, stone: 150, gold: 100 }, high: { food: 600, wood: 600, stone: 400, gold: 400 } };
 const ST = { idle: 0, move: 1, attack: 2, gather: 3, build: 4, carry: 5 };
 const DIRS = [[1, 0, 10], [-1, 0, 10], [0, 1, 10], [0, -1, 10], [1, 1, 14], [1, -1, 14], [-1, 1, 14], [-1, -1, 14]];
@@ -71,6 +72,7 @@ export class World {
     for (const pl of this.P) if (pl.era >= 1) pl.choice = 'culture';
     for (const r of map.resources) this.addResource(r.type, r.x, r.y, r.mul);
     this.computeTreeDensity();
+    this.initDiplomacy();
     // Startbasis
     for (const pl of this.P) {
       const s = pl.start;
@@ -89,8 +91,6 @@ export class World {
   idx(x, y) { return y * this.W + x; }
   inBounds(x, y) { return x >= 0 && y >= 0 && x < this.W && y < this.H; }
   passableAt(x, y) { const tx = Math.floor(x), ty = Math.floor(y); return this.inBounds(tx, ty) && this.pass[ty * this.W + tx] === 1; }
-  allied(a, b) { return a === b || (a >= 0 && b >= 0 && this.P[a].team === this.P[b].team); }
-  enemy(a, b) { return a >= 0 && b >= 0 && !this.allied(a, b); }
 
   addResource(type, x, y, mul = 1) {
     const d = RESOURCE_TYPES[type];
@@ -363,7 +363,7 @@ export class World {
       case 'attack': {
         const t = this.ents.get(c.target);
         if (!t || t.dead || t.kind === 'r') return;
-        for (const u of own(c.ids)) if (u.kind === 'u') { u.order = { t: 'attack', target: t.id, forced: true }; u.buildQ = []; }
+        for (const u of own(c.ids)) if (u.kind === 'u' && u.cls !== 'env') { u.order = { t: 'attack', target: t.id, forced: true }; u.buildQ = []; }
         break;
       }
       case 'gather': {
@@ -425,10 +425,11 @@ export class World {
         const b = own([c.id])[0];
         if (!b || b.type !== 'town' || !b.built || pl.advancing || pl.era >= ERAS.length - 1 || pl.choice) return;
         if (pl.lateResearch) { this.notice(pid, 'Erst die laufende Forschung abschließen.'); return; }
-        const next = ERAS[pl.era + 1], cost = eraCost(pl.era + 1, this.leaderEra());
+        const next = ERAS[pl.era + 1], cost = pl.eraDiscount ? scaleCost(eraCost(pl.era + 1, this.leaderEra()), 1 - pl.eraDiscount) : eraCost(pl.era + 1, this.leaderEra());
         if (!this.canAfford(pl, cost)) { this.notice(pid, 'Nicht genug Rohstoffe für die nächste Epoche.'); return; }
         this.pay(pl, cost);
         b.queue.unshift({ era: pl.era + 1, cost, time: next.time });
+        pl.eraDiscount = 0;
         b.qProg = 0;
         pl.advancing = b.id;
         break;
@@ -471,6 +472,10 @@ export class World {
       }
       case 'rally': {
         for (const b of own(c.ids)) if (b.kind === 'b') b.rally = { x: +c.x, y: +c.y, target: c.target || 0 };
+        break;
+      }
+      case 'spy': {
+        for (const u of own(c.ids)) if (u.kind === 'u') this.spyCommand(pid, u, c.mission, c.target);
         break;
       }
       case 'formation': {
@@ -616,7 +621,7 @@ export class World {
     if (this.units.some(u => u.dead)) this.units = this.units.filter(u => !u.dead);
     if (this.buildings.some(b => b.dead)) this.buildings = this.buildings.filter(b => !b.dead);
 
-    if (this.tickNo % 10 === 0) this.updateSupply(1 * this.settings.speed);
+    if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); }
     if (this.tickNo % 50 === 0) this.updateProvinces();
     if (this.tickNo % 5 === 0) this.recount();
     if (this.tickNo % 10 === 0) this.checkDefeat();
@@ -701,7 +706,8 @@ export class World {
   findTarget(owner, x, y, r, preferUnits = true) {
     let best = null, bd = Infinity;
     this.nearbyUnits(x, y, r, o => {
-      if (o.dead || !this.enemy(owner, o.owner)) return;
+      if (o.dead || o.cls === 'env' || !this.enemy(owner, o.owner)) return;
+      if ((o.cls === 'spy' || CAMO[o.cls]) && !this.visibleTo(owner, o)) return;
       const d = Math.hypot(o.x - x, o.y - y) - (o.cls === 'wrk' ? -0.5 : 0);
       if (d < r && d < bd) { bd = d; best = o; }
     });
@@ -756,6 +762,7 @@ export class World {
       case 'attack': this.doAttack(u, dt); break;
       case 'gather': this.doGather(u, dt, pl); break;
       case 'build': this.doBuild(u, dt, pl); break;
+      case 'spy': this.doSpy(u, dt); break;
       default: u.order = { t: 'idle' };
     }
   }
@@ -810,7 +817,7 @@ export class World {
   }
   // Schadensfaktor des Angreifers: Veteranenrang, Moral, Formation
   dealMul(u, range) {
-    let m = 1 + u.rank * VET_BONUS;
+    let m = (1 + u.rank * VET_BONUS) * this.buffMul(this.P[u.owner], 'dmg');
     if (u.morale < 50) m *= 0.8;
     const f = FORMATIONS[u.form];
     if (f) {
@@ -830,6 +837,7 @@ export class World {
     return m;
   }
   hit(src, t, atk, cls, splash) {
+    if (t.owner !== src.owner && !this.enemy(src.owner, t.owner)) this.checkBreach(src.owner, t.owner);
     const dcls = t.kind === 'u' ? t.cls : 'bld';
     let dmg = atk * (DMG[cls][dcls] || 1) * this.takeMul(t, cls, false);
     if (t.kind === 'b' && !t.built) dmg *= 1.5;
@@ -868,6 +876,7 @@ export class World {
   }
   kill(e, by, src) {
     if (e.dead) return;
+    if (e.kind === 'u' && e.cls === 'env') this.envoyKilled(e, by);
     // Erfahrung und Moral für den Sieger
     if (src && src.kind === 'u' && !src.dead && e.kind === 'u' && src.cls !== 'wrk') {
       src.xp += sumCost(e.st.cost) / Math.max(1, sumCost(src.st.cost));
@@ -1020,7 +1029,8 @@ export class World {
     u.state = ST.gather;
     u.dir = Math.atan2(t.cy - u.y, t.cx - u.x);
     const rate = (isFarm ? BUILDINGS[o.rtype].rate : RESOURCE_TYPES[o.rtype].rate) * pl.mods.gather[resKind] * (1 + pl.era * 0.06)
-      * (this.ownProvince(u.owner, t.cx, t.cy) ? 1 + PROVINCE_BONUS : 1) * (o.rtype === 'farm' && this.season() === 3 ? 0.7 : 1);
+      * (this.ownProvince(u.owner, t.cx, t.cy) ? 1 + PROVINCE_BONUS : 1) * (o.rtype === 'farm' && this.season() === 3 ? 0.7 : 1)
+      * this.buffMul(pl, 'gather', resKind) * (o.rtype === 'farm' ? this.buffMul(pl, 'farm') : 1);
     let amt = rate * dt;
     if (!u.carry) u.carry = { res: resKind, amt: 0 };
     if (!isFarm) {
@@ -1059,7 +1069,7 @@ export class World {
       b.hp = Math.min(b.maxHp, b.hp + b.maxHp * inc);
       if (b.progress >= 1) {
         b.built = true;
-        if (b.type === 'bridge') { this.pass[this.idx(b.x, b.y)] = 1; this.blockVer++; }
+        if (b.type === 'bridge') { this.pass[this.idx(b.x, b.y)] = 1; this.blockVer++; this.P[b.owner].stats.bridges = (this.P[b.owner].stats.bridges || 0) + 1; }
         if (b.type === 'road') this.road[this.idx(b.x, b.y)] = 1;
         this.P[b.owner].stats.built++;
         this.event({ k: 'built', to: b.owner, id: b.id, type: b.type });
@@ -1079,6 +1089,7 @@ export class World {
 
   updateBuilding(b, dt) {
     if (!b.built) return;
+    if (b.sabotaged && b.sabotaged > this.time) return; // sabotiert: keine Ausbildung, kein Beschuss
     const pl = this.P[b.owner];
     // Angriff (Haupthaus, Turm)
     if (b.st.atk) {
@@ -1106,6 +1117,7 @@ export class World {
         b.wonder = true; b.wonderAt = this.time; b.era = WONDER_ERA;
         const ratio = b.hp / b.maxHp; b.maxHp = Math.round(b.st.hp * WONDER.hpMul); b.hp = b.maxHp * ratio;
         this.event({ k: 'wonder', p: pl.id, what: 'done', hold: wonderHold(this.W) });
+        this.chronicle(`🏛 ${pl.name} vollendet ein Weltwunder.`, 'wonder');
       }
       return;
     }
@@ -1127,6 +1139,7 @@ export class World {
         if (pl.era === 1 && !pl.culture) pl.choice = 'culture';
         else if (pl.era === 3 && !pl.nation) pl.choice = pl.culture ? 'nation' : 'culture';
         this.event({ k: 'era', p: pl.id, era: pl.era });
+        this.chronicle(`${pl.name} erreicht die Epoche „${ERAS[pl.era].name}“.`, 'era');
         // Gebäude werden mit der Epoche robuster
         for (const x of this.buildings) if (x.owner === pl.id && !x.dead) {
           const st = buildingStats(x.type, pl.era, pl.mods);
@@ -1138,7 +1151,7 @@ export class World {
       return;
     }
     const st = unitStats(q.line, Math.max(pl.era, LINES[q.line].minEra), q.unique, pl.mods);
-    if (b.qProg < q.time) b.qProg += dt;
+    if (b.qProg < q.time) b.qProg += dt * this.buffMul(pl, 'train');
     if (b.qProg >= q.time) {
       if (pl.pop + st.pop > pl.popCap) { b.blocked = true; return; }
       b.blocked = false;
@@ -1227,6 +1240,7 @@ export class World {
     };
     for (const u of this.units) if (!u.dead) { const v = this.vis.get(this.P[u.owner].team); stamp(v, u.x, u.y, this.sightOf(u)); stamp(v, u.x, u.y, 3, 2); }
     for (const b of this.buildings) if (!b.dead) stamp(this.vis.get(this.P[b.owner].team), b.cx, b.cy, b.st.sight + b.size / 2);
+    for (const r of this.reveals || []) stamp(this.vis.get(this.P[r.pid].team), r.x, r.y, 12);
   }
   visibleTo(pid, e) {
     if (this.allied(pid, e.owner)) return true;
@@ -1234,10 +1248,14 @@ export class World {
     if (!v) return true;
     if (e.kind === 'u') {
       const s = v[this.idx(Math.floor(e.x), Math.floor(e.y))];
-      // Infanterie im Wald ist erst aus der Nähe (3 Kacheln) zu sehen
-      return CAMO[e.cls] && this.inForest(e) ? s === 2 : s >= 1;
+      // Infanterie im Wald und Spione sind erst aus der Nähe (3 Kacheln) zu sehen; Wachgebäude enttarnen Spione
+      const seen = v2 => (e.cls === 'spy' ? v2 === 2 || this.detectedSpy(e) : CAMO[e.cls] && this.inForest(e) ? v2 === 2 : v2 >= 1);
+      if (seen(s)) return true;
+      for (const q of this.P) if (q.team !== this.P[pid].team && this.sharesVision(pid, q.id)) { const v2 = this.vis.get(q.team); if (v2 && seen(v2[this.idx(Math.floor(e.x), Math.floor(e.y))])) return true; }
+      return false;
     }
     for (let yy = e.y; yy < e.y + e.size; yy++) for (let xx = e.x; xx < e.x + e.size; xx++) if (v[this.idx(xx, yy)]) return true;
+    for (const q of this.P) if (q.team !== this.P[pid].team && this.sharesVision(pid, q.id)) { const v2 = this.vis.get(q.team); if (v2 && v2[this.idx(Math.floor(e.cx), Math.floor(e.cy))]) return true; }
     return false;
   }
 
@@ -1292,17 +1310,18 @@ export class World {
       for (const b of this.buildings) if (b.owner === pl.id) this.kill(b, -1);
     }
     this.event({ k: 'defeat', p: pl.id, s: surrendered });
+    this.chronicle(`☠ ${pl.name} ist ${surrendered ? 'ausgeschieden (aufgegeben)' : 'besiegt'}.`, 'defeat');
   }
   winners() {
     for (const b of this.buildings) if (b.wonder && !b.dead && this.time - b.wonderAt >= wonderHold(this.W)) {
       this.winReason = 'Weltwunder';
-      return this.P.filter(p => p.team === this.P[b.owner].team);
+      return this.P.filter(p => this.allied(p.id, b.owner));
     }
     const alive = this.P.filter(p => p.alive);
     if (!alive.length) return [];
-    const teams = new Set(alive.map(p => p.team));
-    if (teams.size <= 1) return this.P.filter(p => p.team === alive[0].team);
-    return null;
+    // gemeinsamer Sieg, wenn alle Überlebenden miteinander verbündet sind
+    for (let i = 0; i < alive.length; i++) for (let j = i + 1; j < alive.length; j++) if (!this.allied(alive[i].id, alive[j].id)) return null;
+    return this.P.filter(p => this.allied(p.id, alive[0].id));
   }
   recordStats() {
     for (const pl of this.P) pl.history.push([Math.round(this.time), pl.pop, pl.military, pl.era, pl.stats.gathered]);
@@ -1320,6 +1339,7 @@ export class World {
       buildings: this.buildings.filter(b => !b.dead),
       resources: [...this.resources.values()],
       prov: Buffer.from(this.prov.buffer, this.prov.byteOffset, this.prov.byteLength).toString('base64'), provinces: this.provinces, provOwner: Array.from(this.provOwner),
+      rel: this.rel, proposals: this.proposals, dchat: this.dchat, tributes: this.tributes, chron: this.chron, nextPropId: this.nextPropId,
     };
   }
   static restore(room, d) {
@@ -1362,6 +1382,8 @@ export class World {
     w.computeTreeDensity();
     w.P = [];
     for (const pl of d.P) { pl.mods = playerMods(pl.culture, pl.nation, pl.late); w.P[pl.id] = pl; }
+    Object.assign(w, { rel: d.rel || {}, proposals: d.proposals || [], dchat: d.dchat || {}, tributes: d.tributes || [], chron: d.chron || [], nextPropId: d.nextPropId || 1 });
+    w.initDiplomacy();
     w.recount();
     return w;
   }
@@ -1374,13 +1396,13 @@ export class World {
       t: 'start', w: this.W, h: this.H, terrain: Buffer.from(this.terrain).toString('base64'), res, you: pid,
       map: this.mapInfo, wonderHold: wonderHold(this.W), players: this.playersPublic(), settings: this.settings, time: this.time,
       prov: Buffer.from(this.prov.buffer, this.prov.byteOffset, this.prov.byteLength).toString('base64'), provinces: this.provinces, provOwner: Array.from(this.provOwner),
-      start: this.P[pid] ? this.P[pid].start : this.P[0].start,
+      start: this.P[pid] ? this.P[pid].start : this.P[0].start, dip: this.diploInit(pid),
     };
   }
   playersPublic() {
     const won = {};
     for (const b of this.buildings) if (b.wonder && !b.dead) won[b.owner] = Math.max(0, Math.ceil(wonderHold(this.W) - (this.time - b.wonderAt)));
-    return this.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, pop: p.pop, culture: p.culture, nation: p.nation, score: this.score(p), isBot: p.isBot, wonder: won[p.id] ?? null }));
+    return this.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, pop: p.pop, culture: p.culture, nation: p.nation, score: this.score(p), isBot: p.isBot, wonder: won[p.id] ?? null, ...this.diploPublic(p) }));
   }
   privateState(pl) {
     const qs = [];
@@ -1388,7 +1410,7 @@ export class World {
     return {
       t: 'me', res: Object.fromEntries(RES.map(k => [k, Math.floor(pl.res[k])])), pop: pl.pop, cap: pl.popCap, era: pl.era,
       culture: pl.culture, nation: pl.nation, choice: pl.choice, adv: pl.advancing, wonderB: pl.wonderBuilding, q: qs, alive: pl.alive,
-      late: pl.late, lateR: pl.lateResearch,
+      late: pl.late, lateR: pl.lateResearch, dip: this.diploPrivate(pl),
     };
   }
   entTuple(e, pid) {
@@ -1457,3 +1479,5 @@ export class World {
     return out;
   }
 }
+
+installDiplomacy(World);
