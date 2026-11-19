@@ -274,3 +274,38 @@ body:not(.is-host) .settings input, body:not(.is-host) .settings select { pointe
 .mm-wrap { position: relative; }
 .prov-label { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; font-size: 11px; color: #f3e6c4; text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
 @media (max-width: 1200px) { .res.season { font-size: 0; } .res.season .ri { font-size: 20px; } }
+
+/* Diplomatie */
+.dip-card { max-width: 980px !important; width: 96vw; max-height: 90vh; }
+.dip-head { display: flex; align-items: center; gap: 14px; }
+.dip-head h2 { flex: 1; }
+.dip-grid { display: grid; grid-template-columns: 280px 1fr; gap: 12px; min-height: 0; overflow: hidden; }
+.dip-list { display: flex; flex-direction: column; gap: 4px; overflow: auto; max-height: 72vh; }
+.dip-row { text-align: left; background: rgba(255,255,255,.04); border: 1px solid rgba(200,149,46,.25); border-radius: 6px; color: inherit; padding: 6px 8px; cursor: pointer; font: inherit; }
+.dip-row.on { border-color: var(--gold1); background: rgba(200,149,46,.18); }
+.dip-row.dead { opacity: .45; }
+.dip-sub { display: block; font-size: 12px; opacity: .85; margin-top: 2px; }
+.hot { color: #ffcf6b; }
+.dip-pane { overflow: auto; max-height: 72vh; display: flex; flex-direction: column; gap: 8px; }
+.dip-pane-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dip-pane-head h3 { margin: 0; }
+.dip-chat { background: rgba(0,0,0,.3); border-radius: 6px; padding: 6px 8px; height: 150px; overflow: auto; font-size: 13px; }
+.dip-chat .dc.me b { color: var(--gold1); }
+.dip-offer { border: 1px solid var(--gold2); border-radius: 6px; padding: 8px; font-size: 13px; }
+.dip-offer.in { background: rgba(80,140,60,.15); }
+.dip-offer h4, .treaty-grid h4 { margin: 0 0 4px; }
+.treaty-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; }
+.res-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.ri-in { display: flex; align-items: center; gap: 2px; }
+.ri-in input, .trib input { width: 64px; }
+.trib { margin: 4px 0; }
+.provs { display: flex; flex-direction: column; max-height: 90px; overflow: auto; }
+.event-card { max-width: 520px !important; }
+.ev-opts { display: flex; flex-direction: column; gap: 6px; }
+.chron-card { max-width: 640px !important; }
+.chron-list { max-height: 55vh; overflow: auto; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
+.chron-row.k-breach { color: #ff9a80; } .chron-row.k-treaty { color: #b8e6a0; } .chron-row.k-wonder { color: #ffd77a; }
+.awards { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.awards .aw { border: 1px solid var(--gold2); border-radius: 6px; padding: 4px 8px; font-size: 13px; }
+.end-chron summary { cursor: pointer; }
+@media (max-width: 760px) { .dip-grid, .treaty-grid { grid-template-columns: 1fr; } }

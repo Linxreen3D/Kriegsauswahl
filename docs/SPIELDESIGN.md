@@ -767,7 +767,7 @@ Formationen werden per Taste gewählt. Die Einheiten halten sie beim Marschieren
 1. ✅ **Grundgerüst:** 8 Epochen mit zwei Stufen in VII, Spieltempo, Rohstofferschöpfung, Aufholhilfe, **Speichern/Fortsetzen und Bot-Vertretung**.
 2. ✅ **Landtruppen:** neue Linien, Konter-System, **Veteranenränge**, **Formationen**, **Nachschub und Moral**.
 3. ✅ **Karte:** **Provinzen**, Außenposten, **Gelände** (Hügel, Wald, Flüsse, Brücken, Straßen), **Klimazonen und Jahreszeiten**.
-4. **Diplomatie:** Botschafter, privater Chat, Vertragsfenster, Ansehen, **Spionage**, **Ereignisse**, **Chronik und Endstatistik**.
+4. ✅ **Diplomatie:** Botschafter, privater Chat, Vertragsfenster, Ansehen, **Spionage**, **Ereignisse**, **Chronik und Endstatistik**.
 5. **Nationen:** 12 Nationen mit Boni und eigenen Einheiten IV–VI.
 6. **Eisenbahn:** Gleise, Bahnhöfe, Truppen- und Güterzüge, Sabotage.
 7. **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“ mit Meerengen, **Brückenbau**.

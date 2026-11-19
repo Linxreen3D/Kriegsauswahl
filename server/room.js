@@ -231,6 +231,12 @@ export class Room {
         this.sysChat(`Spielstand gewählt: ${meta.label}. Spieler werden über ihren Namen ihrem Reich zugeordnet.`);
         return this.broadcastLobby();
       }
+      case 'debug': // nur für automatisierte Tests (Server mit FL_DEBUG=1 starten)
+        if (!process.env.FL_DEBUG || !this.world) return;
+        if (msg.op === 'contact') this.world.makeContact(p.id, msg.with | 0);
+        if (msg.op === 'event') this.world.P[p.id].nextEvent = this.world.time;
+        if (msg.op === 'res') this.world.P[p.id].res = { food: 9999, wood: 9999, stone: 9999, gold: 9999 };
+        return;
       case 'dip': {
         if (this.phase !== 'play' || !this.world || this.paused) return;
         const out = this.world.diplomacy(p.id, msg);

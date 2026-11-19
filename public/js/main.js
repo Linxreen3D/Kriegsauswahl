@@ -1,8 +1,9 @@
 import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
+import { createDiplomacy } from './diplomacy.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -34,10 +35,10 @@ const G = {
   W: 0, H: 0, terrain: null, res: new Map(), resAt: null, bldAt: null, ents: new Map(),
   me: { res: { food: 0, wood: 0, stone: 0, gold: 0 }, pop: 0, cap: 0, era: 0, q: [], alive: true },
   vis: null, explored: null, selected: new Set(), groups: {}, time: 0,
-  allied(o) { const a = this.players[this.you], b = this.players[o]; return o === this.you || (a && b && a.team === b.team); },
+  allied(o) { const a = this.players[this.you], b = this.players[o]; return o === this.you || (a && b && (a.team === b.team || (a.allies || []).includes(o))); },
 };
 const UI = { box: null, ghost: null, rally: null, markers: [], pings: [], mode: null, lastAlert: null };
-let renderer = null, ws = null, reconnectDelay = 500;
+let renderer = null, ws = null, reconnectDelay = 500, DIP = null;
 let wantSession = null;
 try { wantSession = JSON.parse(sessionStorage.getItem('fl_session') || 'null'); } catch { /* egal */ }
 
@@ -86,6 +87,7 @@ function handle(m) {
     case 'me': onMe(m); break;
     case 'end': onEnd(m); break;
     case 'chat': addChat(m); break;
+    case 'dchat': if (DIP) DIP.onChat(m); break;
     case 'pause': G.paused = m.on; $('pauseOverlay').classList.toggle('hidden', !m.on); $('pauseBtn').textContent = m.on ? '▶ Fortsetzen' : '⏸ Pause'; break;
     case 'saves': showSaves(m.list); break;
     case 'chatlog': $('lobbyChatLog').innerHTML = ''; m.list.forEach(c => addChat(c, true)); break;
@@ -222,6 +224,7 @@ function onStart(m) {
   $('menuCode').textContent = G.code;
   renderer.setMap(G);
   renderer.setProvinces(G);
+  if (DIP) DIP.onStart(m);
   renderer.resize();
   renderer.cam.z = 1.7;
   renderer.cam.x = m.start.x + 0.5; renderer.cam.y = m.start.y + 2;
@@ -256,7 +259,7 @@ function onDelta(m) {
     G.res.delete(id);
     for (let y = r.y; y < r.y + r.size; y++) for (let x = r.x; x < r.x + r.size; x++) { G.resAt[y * G.W + x] = 0; renderer.invalidateTile(x, y); }
   }
-  if (m.p) G.players = m.p;
+  if (m.p) { G.players = m.p; if (DIP) DIP.render(true); }
   if (m.po) { G.provOwner = m.po; G.provVer++; renderer.setProvinces(G); }
   updateSeason(m.time);
   if (m.e) for (const e of m.e) onEvent(e, now);
@@ -317,10 +320,12 @@ function onMe(m) {
   if (m.choice && !G.choiceDismissed && ($('choice').classList.contains('hidden') || prevChoice !== m.choice)) showChoice();
   if (!m.choice) $('choice').classList.add('hidden');
   if (m.era !== prevEra) updateCmdCard(true);
+  if (DIP) DIP.onMe();
 }
 
 function pname(id) { const p = G.players[id]; return p ? `<b style="color:${p.color}">${esc(p.name)}</b>` : '?'; }
 function onEvent(e, now) {
+  if (DIP && (e.k === 'proposal' || e.k === 'proposalEnd' || e.k === 'chron' || e.k === 'contact')) { DIP.onEvent(e); return; }
   switch (e.k) {
     case 'shot': renderer.addShot(e, now); if (Math.random() < 0.15) sfx.shot(e.c); break;
     case 'death': renderer.addEffect('death', e.x, e.y); if (e.o === G.you && Math.random() < 0.5) sfx.lost(); break;
@@ -379,7 +384,10 @@ function onEnd(m) {
     rows.map(p => `<tr><td><span class="sw" style="background:${p.color}"></span>${esc(p.name)}${m.winners.includes(p.id) ? ' 👑' : ''}</td><td>${ERAS[p.era].name}</td><td>${p.culture ? CULTURES[p.culture].icon + ' ' + CULTURES[p.culture].name : '–'}</td><td>${p.stats.gathered}</td><td>${p.stats.kills}</td><td>${p.stats.lost}</td><td><b>${p.score}</b></td></tr>`).join('');
   $('rematchBtn').classList.toggle('hidden', G.hostId !== G.you);
   $('endScreen').classList.remove('hidden');
+  G.endMsg = m;
   drawEndChart(m);
+  $('endAwards').innerHTML = (m.awards || []).map(a => `<span class="aw">${a.icon} <b>${esc(a.name)}</b>: <span style="color:${m.players[a.p].color}">${esc(m.players[a.p].name)}</span> (${a.v})</span>`).join('');
+  $('endChron').innerHTML = (m.chron || []).map(c => `<div class="chron-row k-${c.k}"><span class="muted">${Math.floor(c.t / 60)}:${String(c.t % 60).padStart(2, '0')}</span> ${esc(c.text)}</div>`).join('') || '<p class="muted">Keine Einträge.</p>';
   stampVision(); renderer.updateFog();
   if (won) sfx.win();
 }
@@ -387,13 +395,14 @@ function drawEndChart(m) {
   const c = $('endChart'), g = c.getContext('2d'), W = c.width, H = c.height, pad = 30;
   g.clearRect(0, 0, W, H);
   const maxT = Math.max(1, ...m.players.flatMap(p => p.history.map(h => h[0])));
-  const maxV = Math.max(1, ...m.players.flatMap(p => p.history.map(h => h[1])));
+  const k = +($('endMetric').value || 1), label = { 1: 'Bevölkerung', 2: 'Armee', 3: 'Epoche', 4: 'Gesammelte Rohstoffe' }[k];
+  const maxV = Math.max(1, ...m.players.flatMap(p => p.history.map(h => h[k])));
   g.strokeStyle = 'rgba(255,255,255,0.08)'; g.fillStyle = '#8d9ab3'; g.font = '11px Inter, sans-serif';
   for (let i = 0; i <= 4; i++) { const y = H - pad - (H - 2 * pad) * i / 4; g.beginPath(); g.moveTo(pad, y); g.lineTo(W - 10, y); g.stroke(); g.fillText(Math.round(maxV * i / 4), 4, y + 4); }
-  g.fillText('Bevölkerung im Verlauf', pad, 16);
+  g.fillText(label + ' im Verlauf', pad, 16);
   for (const p of m.players) {
     g.strokeStyle = p.color; g.lineWidth = 2; g.beginPath();
-    p.history.forEach(([t, v], i) => { const x = pad + (W - pad - 10) * t / maxT, y = H - pad - (H - 2 * pad) * v / maxV; if (i) g.lineTo(x, y); else g.moveTo(x, y); });
+    p.history.forEach((h, i) => { const t = h[0], v = h[k], x = pad + (W - pad - 10) * t / maxT, y = H - pad - (H - 2 * pad) * v / maxV; if (i) g.lineTo(x, y); else g.moveTo(x, y); });
     g.stroke();
   }
 }
@@ -472,6 +481,7 @@ function smartCommand(wx, wy, attackMove = false) {
     const workers = units.filter(u => u.def.cls === 'wrk').map(u => u.id);
     const others = units.filter(u => u.def.cls !== 'wrk').map(u => u.id);
     if (t && !t.isRes && !G.allied(t.owner)) {
+      if (DIP.isPact(t.owner) && !confirm(`Mit ${G.players[t.owner].name} besteht ein Nichtangriffspakt. Angreifen bricht den Vertrag und kostet viel Ansehen. Trotzdem angreifen?`)) return;
       cmd({ c: 'attack', ids, target: t.id });
       UI.markers.push({ x: wx, y: wy, t0: now, color: '#ff5a46' });
       sfx.command();
@@ -588,8 +598,14 @@ function updateCmdCard(force) {
           });
         }
       } else {
+        // Spione
+        const spies = units.filter(u => u.def.cls === 'spy');
+        if (spies.length) for (const [mk, M] of Object.entries(SPY_MISSIONS)) {
+          put(M.key, { icon: { sabotage: '💣', steal: '📜', scout: '👁' }[mk], title: `${M.name} (${M.key})`, desc: M.desc + (mk === 'scout' ? '' : ' Danach Ziel anklicken.'), on: UI.mode && UI.mode.spy === mk,
+            fn: () => { if (mk === 'scout') cmd({ c: 'spy', ids: spies.map(u => u.id), mission: mk }); else { UI.mode = { spy: mk }; renderer.canvas.style.cursor = 'crosshair'; updateCmdCard(true); } } });
+        }
         // Formationen
-        const mil = units.filter(u => u.def.cls !== 'wrk');
+        const mil = spies.length ? [] : units.filter(u => u.def.cls !== 'wrk' && u.def.cls !== 'env');
         if (mil.length) {
           const FICONS = { line: '➖', column: '⏬', wedge: '🔺', square: '⬛', loose: '⁘' };
           for (const fk of FORMATION_KEYS) {
@@ -620,9 +636,9 @@ function updateCmdCard(force) {
         });
         if (type === 'town' && era < ERAS.length - 1) {
           const next = ERAS[era + 1], leader = Math.max(0, ...Object.values(G.players).filter(p => p && p.alive).map(p => p.era));
-          const cost = eraCost(era + 1, leader), help = cost !== next.cost;
+          const disc = (G.me.dip && G.me.dip.eraDiscount) || 0, base = eraCost(era + 1, leader), cost = disc ? scaleCost(base, 1 - disc) : base, help = base !== next.cost;
           put('W', {
-            icon: '⬆', title: `Aufstieg: ${next.name}`, cost, desc: `Dauer ${fmtDur(next.time)}. Schaltet neue Einheiten und Gebäude frei` + (era + 1 === 1 ? ' – danach wählst du eine Kultur.' : era + 1 === 3 ? ' – danach wählst du eine Nation.' : '.') + (help ? ' Aufholhilfe: billiger, weil du hinter dem Führenden liegst.' : ''),
+            icon: '⬆', title: `Aufstieg: ${next.name}`, cost, desc: `Dauer ${fmtDur(next.time)}. Schaltet neue Einheiten und Gebäude frei` + (era + 1 === 1 ? ' – danach wählst du eine Kultur.' : era + 1 === 3 ? ' – danach wählst du eine Nation.' : '.') + (help ? ' Aufholhilfe: billiger, weil du hinter dem Führenden liegst.' : '') + (disc ? ` Gestohlene/gekaufte Pläne: −${Math.round(disc * 100)} %.` : ''),
             off: !affordable(cost) || !!G.me.adv || !!G.me.choice || !!G.me.lateR, fn: () => {
               if (G.me.choice) { G.choiceDismissed = false; showChoice(); return; }
               cmd({ c: 'era', id: same[0].id });
@@ -749,9 +765,11 @@ function updateHud() {
 function idleWorkers() { return [...G.ents.values()].filter(e => e.owner === G.you && e.def.kind === 'u' && e.def.cls === 'wrk' && e.state === 0); }
 function updateScore() {
   const rows = [...G.players].sort((a, b) => b.score - a.score);
-  $('scoreTable').innerHTML = '<tr><th>Nation</th><th>Team</th><th>Epoche</th><th>Kultur</th><th>Bev.</th><th>Punkte</th></tr>' + rows.map(p => `
+  const mine = G.players[G.you] || {};
+  const rel = p => p.id === G.you ? '' : (mine.allies || []).includes(p.id) ? '🤝' : (mine.pacts || []).some(x => x[0] === p.id) ? '🕊' : '';
+  $('scoreTable').innerHTML = '<tr><th>Nation</th><th>Team</th><th>Epoche</th><th>Kultur</th><th>Bev.</th><th>Ansehen</th><th>Punkte</th></tr>' + rows.map(p => `
     <tr class="${p.alive ? '' : 'dead'}"><td><span class="sw" style="background:${p.color}"></span>${esc(p.name)}${p.id === G.you ? ' (Du)' : ''}${p.isBot ? ' 🤖' : ''}</td>
-    <td>${G.settings.mode === 'teams' ? p.team : '–'}</td><td>${ERAS[p.era].short}</td><td>${p.culture ? CULTURES[p.culture].icon : ''}${p.nation ? ' ' + esc(NATIONS[p.nation].name) : ''}</td><td>${p.pop}</td><td>${p.alive ? p.score : '☠'}</td></tr>`).join('');
+    <td>${G.settings.mode === 'teams' ? p.team : '–'}</td><td>${ERAS[p.era].short}</td><td>${p.culture ? CULTURES[p.culture].icon : ''}${p.nation ? ' ' + esc(NATIONS[p.nation].name) : ''}</td><td>${p.pop}</td><td>${rel(p)} ${repLabel(p.rep ?? 70)}</td><td>${p.alive ? p.score : '☠'}</td></tr>`).join('');
 }
 function showChoice() {
   const m = G.me;
@@ -793,6 +811,13 @@ function setupInput() {
     if (UI.mode && UI.mode.build) {
       if (BUILDINGS[UI.mode.build].line) { UI.wallStart = [Math.floor(wx), Math.floor(wy)]; return; }
       placeBuilding(e.shiftKey);
+      return;
+    }
+    if (UI.mode && UI.mode.spy) {
+      const t = entAt(wx, wy);
+      if (t && !t.isRes && t.def && t.def.kind === 'b') cmd({ c: 'spy', ids: selectedOwn().filter(x => x.def.cls === 'spy').map(x => x.id), mission: UI.mode.spy, target: t.id });
+      else notice('Ein fremdes Gebäude anklicken.', 'bad');
+      cancelMode();
       return;
     }
     if (UI.mode && UI.mode.amove) {
@@ -909,6 +934,7 @@ function setupInput() {
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const up = k.toUpperCase();
+    if (up === 'P') { DIP.open(); return; }
     if (up === 'H') { const tc = [...G.ents.values()].find(x => x.owner === G.you && x.def.key === 'town'); if (tc) { setSelection([tc.id]); centerOn([tc.id]); } return; }
     if (up === 'A' && selectedOwn().some(x => x.def.kind === 'u')) {
       UI.mode = { amove: true }; renderer.canvas.style.cursor = 'crosshair'; updateCmdCard(true); return;
@@ -1015,6 +1041,8 @@ function setupUi() {
   $('menuBtn').onclick = () => $('menu').classList.toggle('hidden');
   $('closeMenu').onclick = () => $('menu').classList.add('hidden');
   $('pauseBtn').onclick = () => send({ t: 'pause' });
+  $('chronBtn').onclick = () => { $('menu').classList.add('hidden'); DIP.openChron(); };
+  $('endMetric').onchange = () => G.endMsg && drawEndChart(G.endMsg);
   $('pauseResume').onclick = () => send({ t: 'pause' });
   $('saveBtn').onclick = () => { send({ t: 'save' }); $('menu').classList.add('hidden'); };
   $('loadSaveBtn').onclick = () => send({ t: 'saves' });
@@ -1084,7 +1112,8 @@ function drawMenuBackground() {
 async function init() {
   setupUi();
   renderer = new Renderer3D($('game'), $('overlay'));
-  window.__renderer = renderer; // für automatisierte Tests
+  DIP = createDiplomacy({ G, send, notice, selectedOwn });
+  window.__renderer = renderer; window.__send = send; window.__G = G; // für automatisierte Tests
   await renderer.init();
   window.__G = G; window.__R = renderer; // Debug-Zugriff
   setupInput();

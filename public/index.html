@@ -117,6 +117,7 @@
       </div>
       <div class="tb-right">
         <button id="idleBtn" class="icon-btn" title="Untätiger Arbeiter (.)">💤<span id="idleCount" class="badge hidden"></span></button>
+        <button id="dipBtn" class="icon-btn" title="Diplomatie (P)">🕊<span id="dipBadge" class="badge hidden"></span></button>
         <button id="scoreBtn" class="icon-btn" title="Nationen (Tab)">🏳</button>
         <button id="soundBtn" class="icon-btn" title="Ton an/aus">🔊</button>
         <button id="menuBtn" class="icon-btn" title="Menü (F10)">☰</button>
@@ -157,10 +158,26 @@
         <button id="pauseBtn" class="btn host-only">⏸ Pause</button>
         <button id="saveBtn" class="btn host-only">💾 Spiel speichern</button>
         <p class="muted small">Alle 5 Spielminuten wird automatisch gespeichert.</p>
+        <button id="chronBtn" class="btn">📜 Chronik</button>
         <button id="surrenderBtn" class="btn danger">Aufgeben</button>
         <button id="leaveGame" class="btn">Spiel verlassen</button>
         <button id="closeMenu" class="btn primary">Weiterspielen</button>
       </div>
+    </div>
+
+    <div id="dipDlg" class="modal hidden">
+      <div class="card dip-card">
+        <div class="dip-head"><h2>🕊 Diplomatie</h2><span id="dipRep" class="muted"></span><button id="dipClose" class="icon-btn" title="Schließen">✕</button></div>
+        <div class="dip-grid"><div id="dipList" class="dip-list"></div><div id="dipPane" class="dip-pane"></div></div>
+      </div>
+    </div>
+
+    <div id="eventDlg" class="modal hidden">
+      <div class="card event-card"><h2 id="evTitle"></h2><p id="evText"></p><div id="evOpts" class="ev-opts"></div><p id="evTimer" class="muted small"></p></div>
+    </div>
+
+    <div id="chronDlg" class="modal hidden">
+      <div class="card chron-card"><h2>📜 Chronik</h2><div id="chronList" class="chron-list"></div><button id="chronClose" class="btn">Schließen</button></div>
     </div>
 
     <div id="pauseOverlay" class="modal hidden">
@@ -171,8 +188,11 @@
       <div class="card end-card">
         <h1 id="endTitle"></h1>
         <p id="endReason" class="muted"></p>
+        <div class="row"><select id="endMetric"><option value="1">Bevölkerung</option><option value="2">Armee</option><option value="3">Epoche</option><option value="4">Gesammelte Rohstoffe</option></select></div>
         <canvas id="endChart" width="680" height="220"></canvas>
+        <div id="endAwards" class="awards"></div>
         <table id="endTable"></table>
+        <details class="end-chron"><summary>📜 Chronik der Partie</summary><div id="endChron" class="chron-list"></div></details>
         <div class="row center">
           <button id="rematchBtn" class="btn primary">Zurück zur Lobby</button>
           <button id="endLeave" class="btn">Hauptmenü</button>
