@@ -530,10 +530,11 @@ export class Renderer3D {
     return this.attachment('sie' + e.id, () => {
       const era = e.def.era;
       let g;
-      if (e.def.cls === 'cav') g = tank(color);
+      if (e.def.line === 'train') g = trainModel(era, color);
+      else if (e.def.cls === 'cav') g = tank(color);
       else if (era <= 3) g = Md.trebuchet(color);
       else g = cannon(era, color);
-      const box = new THREE.Box3().setFromObject(g), s = (e.def.cls === 'cav' ? 3.6 : 3.4) / Math.max(1e-3, Math.max(box.max.x - box.min.x, box.max.z - box.min.z));
+      const box = new THREE.Box3().setFromObject(g), s = (e.def.line === 'train' ? 7 : e.def.cls === 'cav' ? 3.6 : 3.4) / Math.max(1e-3, Math.max(box.max.x - box.min.x, box.max.z - box.min.z));
       g.scale.setScalar(s);
       const o = new THREE.Group(); o.add(g); return o;
     });
@@ -587,7 +588,7 @@ export class Renderer3D {
         const moving = e.state === 1 || e.state === 5;
         const bob = moving ? Math.abs(Math.sin(now / 90 + e.id)) * 0.05 : 0;
         pos.set(X, this.T.height(X, Z) + bob, Z);
-        if (line === 'sie' || line === 'art' || (line === 'cav' && era >= 6)) {
+        if (line === 'sie' || line === 'art' || line === 'train' || (line === 'cav' && era >= 6)) {
           const o = this.siegeModel(e, color); o.position.copy(pos); o.quaternion.copy(q);
           if (e.state === 2 && line === 'sie') o.children[0].rotation.x = Math.sin(now / 120) * 0.02;
           continue;
@@ -608,7 +609,7 @@ export class Renderer3D {
         const mdl = this.buildingModel(e.def.key, e.era || 0, color, p ? p.nation : null);
         const X = (e.x + sz / 2) * S, Z = (e.y + sz / 2) * S;
         let h = Infinity; for (const [dx, dz] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) h = Math.min(h, this.T.height(X + dx * sz * 0.4 * S, Z + dz * sz * 0.4 * S));
-        if (e.def.key === 'bridge') h = 0.25; else if (e.def.key === 'road') h = this.T.height(X, Z) + 0.02;
+        if (e.def.key === 'bridge') h = 0.25; else if (e.def.key === 'road' || e.def.key === 'rail') h = this.T.height(X, Z) + 0.02;
         const prog = (e.prog ?? 100) / 100;
         const sink = prog < 1 ? -(1 - prog) * mdl.h * 0.92 : 0;
         m4.compose(pos.set(X, h - 0.05 + sink, Z), q.identity(), one);
@@ -778,7 +779,39 @@ function teamColored(root, color) {
 }
 
 // Straße, Brücke, Außenposten: einfache Platzhalter bis zu den Blender-Modellen
+function trainModel(era, color) {
+  const g = new THREE.Group(), dark = U.mat('#2a2a2c', 0.6, 0.6), body = U.mat(era >= 7 ? '#5a6a4a' : '#3a3f45', 0.6, 0.4), cloth = U.mat(color, 0.8);
+  const add = (geo, m, x, y, z, rx = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.x = rx; o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+  // Lok vorne (+Z), zwei Wagen dahinter
+  add(new THREE.BoxGeometry(1.2, 1.1, 2.6), body, 0, 0.9, 2.4);
+  if (era < 7) { add(new THREE.CylinderGeometry(0.5, 0.5, 2.2, 12), dark, 0, 1.1, 2.6, Math.PI / 2); add(new THREE.CylinderGeometry(0.16, 0.2, 0.8, 8), dark, 0, 1.9, 3.3); }
+  add(new THREE.BoxGeometry(1.2, 0.5, 0.9), cloth, 0, 1.75, 1.6);
+  for (const z of [-0.6, -3.4]) { add(new THREE.BoxGeometry(1.2, 1.2, 2.6), body, 0, 0.95, z); add(new THREE.BoxGeometry(1.25, 0.18, 2.65), cloth, 0, 1.6, z); }
+  for (const z of [3.3, 1.5, 0.2, -1.4, -2.6, -4.2]) for (const x of [-0.55, 0.55]) add(new THREE.CylinderGeometry(0.3, 0.3, 0.12, 10), dark, x, 0.3, z).rotation.z = Math.PI / 2;
+  return g;
+}
+
 const INFRA = {
+  rail(era) {
+    const g = new THREE.Group(), wood = U.wood(), steel = U.mat('#55585c', 0.4, 0.8), bed = U.mat('#6d6458', 0.95, 0);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.receiveShadow = true; g.add(o); };
+    add(new THREE.BoxGeometry(2, 0.1, 2), bed, 0, 0.05, 0);
+    for (let k = -2; k <= 2; k++) add(new THREE.BoxGeometry(1.6, 0.08, 0.22), era >= 7 ? U.mat('#9a968e', 0.9, 0) : wood, 0, 0.13, k * 0.4);
+    for (const x of [-0.45, 0.45]) add(new THREE.BoxGeometry(0.08, 0.09, 2), steel, x, 0.2, 0);
+    return g;
+  },
+  station(era, color) {
+    const g = new THREE.Group(), brick = U.mat(era >= 7 ? '#8a8a86' : '#9a5a44', 0.9, 0), roof = U.mat('#4a4d52', 0.6, 0.4), stone = U.mat('#b8b1a3', 0.95, 0);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.BoxGeometry(4, 0.4, 4), stone, 0, 0.2, 0);
+    add(new THREE.BoxGeometry(3.2, 2.2, 1.6), brick, 0, 1.5, -0.9);
+    add(new THREE.BoxGeometry(3.6, 0.25, 2.2), roof, 0, 2.7, -0.9);
+    add(new THREE.BoxGeometry(3.8, 0.12, 1.6), roof, 0, 2.2, 1.0);
+    for (const x of [-1.6, 0, 1.6]) add(new THREE.CylinderGeometry(0.07, 0.07, 1.8, 6), roof, x, 1.3, 1.6);
+    add(new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16), U.mat('#f2efe6', 0.5, 0), 0, 2.1, -0.08).rotation.x = Math.PI / 2;
+    const flag = Md.banner(color, 3.2, 0.6, 0.9, 0.15); flag.position.set(1.6, 0, -1.6); g.add(flag);
+    return g;
+  },
   road(era) {
     const g = new THREE.Group();
     const m = U.mat(era >= 6 ? '#3a3a3c' : era >= 5 ? '#8a8378' : '#9c8d74', 0.95, 0);

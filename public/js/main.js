@@ -18,12 +18,13 @@ const UNIT_ICONS = {
   med: ['', '🌿', '🌿', '✚', '✚', '✚', '✚', '✚'],
   envoy: ['🕊', '🕊', '🕊', '🕊', '🕊', '🕊', '🕊', '🕊'],
   spy: ['', '', '', '', '🕵', '🕵', '🕵', '🕵'],
+  train: ['', '', '', '', '', '🚂', '🚂', '🚆'],
   rng: ['🪨', '🏹', '🏹', '🏹', '🔫', '🔫', '🔫', '🔫'],
   cav: ['', '🛞', '🐎', '🏇', '🏇', '🏇', '🚜', '🚜'],
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
-const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
+const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 function iconOf(def) {
   if (def.kind === 'b') return BLD_ICONS[def.key];
   if (def.unique) return def.icon || UNIQUE_ICONS[def.unique];
@@ -482,6 +483,11 @@ function smartCommand(wx, wy, attackMove = false) {
     const ids = units.map(u => u.id);
     const workers = units.filter(u => u.def.cls === 'wrk').map(u => u.id);
     const others = units.filter(u => u.def.cls !== 'wrk').map(u => u.id);
+    if (t && t.def && t.def.key === 'station' && t.prog >= 100 && G.allied(t.owner) && units.some(u => u.def.cls !== 'wrk' || !blds.length)) {
+      cmd({ c: 'rail', ids, to: t.id });
+      renderer.addMarker && renderer.addMarker(wx, wy, '#7fd3ff');
+      return;
+    }
     if (t && !t.isRes && !G.allied(t.owner)) {
       if (DIP.isPact(t.owner) && !confirm(`Mit ${G.players[t.owner].name} besteht ein Nichtangriffspakt. Angreifen bricht den Vertrag und kostet viel Ansehen. Trotzdem angreifen?`)) return;
       cmd({ c: 'attack', ids, target: t.id });
@@ -590,8 +596,11 @@ function updateCmdCard(force) {
     if (units.length) {
       const hasWorker = units.some(u => u.def.cls === 'wrk');
       if (hasWorker) {
+        const page = UI.buildPage || 1;
+        put('F', { icon: page === 1 ? '🛠' : '◀', title: page === 1 ? 'Infrastruktur (F): Außenposten, Straßen, Brücken, Gleise, Bahnhöfe' : 'Zurück zu den Gebäuden (F)', fn: () => { UI.buildPage = page === 1 ? 2 : 1; updateCmdCard(true); } });
         for (const type of BUILD_ORDER) {
           const b = BUILDINGS[type];
+          if ((b.page || 1) !== page) continue;
           const st = buildingStats(type, era, mods);
           const ok = era >= b.minEra;
           put(b.key, {
@@ -719,6 +728,8 @@ function updateSelInfo() {
       if (st.atk) stats += `<span>⚔ ${st.atk.toFixed(0)}</span><span>🎯 ${st.range}</span>`;
       if (st.pop) stats += `<span>👥 +${st.pop}</span>`;
       if (e.prog < 100) stats += `<span>🏗 ${e.prog}%</span>`;
+      const stn = e.def.key === 'station' && e.owner === G.you && (G.me.st || []).find(x => x[0] === e.id);
+      if (stn) stats += `<span>${stn[3] ? '🏠 Heimatbahnhof' : `📦 Vorrat ${stn[2]} (Güterzug alle 40 s)`}</span><span>🚉 ${stn[4]} Bahnhöfe erreichbar</span>${stn[1] ? `<span>🧍 ${stn[1]} warten auf den Zug</span>` : ''}`;
     }
     let queue = '';
     if (e.def.kind === 'b' && e.owner === G.you) {

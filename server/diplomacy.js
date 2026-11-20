@@ -52,7 +52,7 @@ export function installDiplomacy(World) {
     const t = this.time;
     // Kontakt durch Botschafter in der Nähe fremder Gebäude
     for (const u of this.units) {
-      if (u.dead || u.cls !== 'env') continue;
+      if (u.dead || u.cls !== 'env' || u.aboard) continue;
       this.nearbyBuildings(u.x, u.y, CONTACT_RANGE, b => {
         if (b.dead || b.owner === u.owner || this.P[u.owner].contacts.includes(b.owner) || !this.P[b.owner].alive) return;
         if (Math.hypot(b.cx - u.x, b.cy - u.y) > CONTACT_RANGE + b.size / 2) return;
@@ -248,7 +248,11 @@ export function installDiplomacy(World) {
     if (r === true) return;
     if (r === 'fail') { u.order = { t: 'idle' }; return; }
     const victim = this.P[t.owner], me = this.P[u.owner];
-    if (o.mission === 'sabotage') {
+    if (o.mission === 'sabotage' && (t.type === 'rail' || t.type === 'bridge' || t.type === 'road')) {
+      this.kill(t, u.owner);
+      this.notice(u.owner, `🕵 Sabotage gelungen: ${BUILDINGS[t.type].name} von ${victim.name} gesprengt.`);
+      this.notice(t.owner, `💥 Sabotage! Ein Abschnitt (${BUILDINGS[t.type].name}) wurde gesprengt.`);
+    } else if (o.mission === 'sabotage') {
       t.sabotaged = this.time + 120;
       this.notice(u.owner, `🕵 Sabotage gelungen: ${BUILDINGS[t.type].name} von ${victim.name} steht 2 Minuten still.`);
       this.notice(t.owner, `💥 Sabotage! Dein Gebäude (${BUILDINGS[t.type].name}) steht 2 Minuten still.`);

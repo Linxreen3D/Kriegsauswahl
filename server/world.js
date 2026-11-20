@@ -4,16 +4,17 @@ import {
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
   WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, scaleCost, isProducer, DEPOSIT_LAYERS, hasLayers,
   VET_RANKS, VET_BONUS, FORMATIONS, FORMATION_KEYS, SUPPLY_RANGE, SUPPLY_GRACE,
-  seasonAt, PROVINCE_BONUS, PROVINCE_WEIGHT,
+  seasonAt, PROVINCE_BONUS, PROVINCE_WEIGHT, RAIL,
 } from '../shared/rules.js';
 import { installDiplomacy } from './diplomacy.js';
+import { installRail } from './rail.js';
 import { generateMap, blockedTerrain, waterTerrain, T_HILL, T_SNOW, T_DESERT, T_SWAMP, T_FORD, T_GRASS, T_DIRT } from './mapgen.js';
 
 const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
 const isVehicle = u => (u.cls === 'cav' && u.era >= 6) || u.cls === 'art' || u.cls === 'sie';
 
-const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3, env: 0.3, spy: 0.3 };
-const MILITARY = cls => cls !== 'wrk' && cls !== 'sup' && cls !== 'env' && cls !== 'spy'; // kämpft selbstständig
+const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3, env: 0.3, spy: 0.3, trn: 0.5 };
+const MILITARY = cls => cls !== 'wrk' && cls !== 'sup' && cls !== 'env' && cls !== 'spy' && cls !== 'trn'; // kämpft selbstständig
 const START_RES = { low: { food: 150, wood: 150, stone: 50, gold: 50 }, normal: { food: 250, wood: 250, stone: 150, gold: 100 }, high: { food: 600, wood: 600, stone: 400, gold: 400 } };
 const ST = { idle: 0, move: 1, attack: 2, gather: 3, build: 4, carry: 5 };
 const DIRS = [[1, 0, 10], [-1, 0, 10], [0, 1, 10], [0, -1, 10], [1, 1, 14], [1, -1, 14], [-1, 1, 14], [-1, -1, 14]];
@@ -73,6 +74,7 @@ export class World {
     for (const r of map.resources) this.addResource(r.type, r.x, r.y, r.mul);
     this.computeTreeDensity();
     this.initDiplomacy();
+    this.initRail();
     // Startbasis
     for (const pl of this.P) {
       const s = pl.start;
@@ -173,6 +175,8 @@ export class World {
     return null;
   }
   removeBuilding(b) {
+    if (b.built && this.railAt) this.railMark(b, 0);
+    if (b.type === 'station' && b.waiting) { for (const w of b.waiting) this.unboard(this.ents.get(w.id), null, b); b.waiting = []; }
     for (let yy = b.y; yy < b.y + b.size; yy++) for (let xx = b.x; xx < b.x + b.size; xx++) {
       const i = this.idx(xx, yy);
       if (this.occ[i] === b.id) { this.occ[i] = 0; this.pass[i] = blockedTerrain(this.terrain[i]) ? 0 : 1; this.road[i] = 0; }
@@ -353,7 +357,7 @@ export class World {
   command(pid, c) {
     const pl = this.P[pid];
     if (!pl || !pl.alive) return;
-    const own = ids => (Array.isArray(ids) ? ids : []).slice(0, 300).map(id => this.ents.get(id)).filter(e => e && e.owner === pid && !e.dead);
+    const own = ids => (Array.isArray(ids) ? ids : []).slice(0, 300).map(id => this.ents.get(id)).filter(e => e && e.owner === pid && !e.dead && !e.aboard && e.cls !== 'trn');
     switch (c.c) {
       case 'move': {
         const us = own(c.ids).filter(e => e.kind === 'u');
@@ -476,6 +480,10 @@ export class World {
       }
       case 'spy': {
         for (const u of own(c.ids)) if (u.kind === 'u') this.spyCommand(pid, u, c.mission, c.target);
+        break;
+      }
+      case 'rail': {
+        this.railCommand(pid, own(c.ids).filter(e => e.kind === 'u'), this.ents.get(c.to));
         break;
       }
       case 'formation': {
@@ -611,9 +619,9 @@ export class World {
     this.fieldBudget = 6;
     // Raster für Nachbarschaftsabfragen
     for (const c of this.cells) c.length = 0;
-    for (const u of this.units) this.cells[this.cellOf(u.x, u.y)].push(u);
+    for (const u of this.units) if (!u.aboard) this.cells[this.cellOf(u.x, u.y)].push(u);
 
-    for (const u of this.units) if (!u.dead) this.updateUnit(u, dt);
+    for (const u of this.units) if (!u.dead && !u.aboard) this.updateUnit(u, dt);
     for (const b of this.buildings) if (!b.dead) this.updateBuilding(b, dt);
     this.separate(dt);
     this.updateMeteors(dt);
@@ -621,7 +629,7 @@ export class World {
     if (this.units.some(u => u.dead)) this.units = this.units.filter(u => !u.dead);
     if (this.buildings.some(b => b.dead)) this.buildings = this.buildings.filter(b => !b.dead);
 
-    if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); }
+    if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); this.updateRail(1 * this.settings.speed); }
     if (this.tickNo % 50 === 0) this.updateProvinces();
     if (this.tickNo % 5 === 0) this.recount();
     if (this.tickNo % 10 === 0) this.checkDefeat();
@@ -658,7 +666,7 @@ export class World {
     }
     const R2 = SUPPLY_RANGE * SUPPLY_RANGE;
     for (const u of this.units) {
-      if (u.dead || u.cls === 'wrk') continue;
+      if (u.dead || u.cls === 'wrk' || u.aboard || u.cls === 'trn') continue;
       const list = src.get(this.P[u.owner].team) || [];
       let ok = false;
       for (const b of list) if ((b.cx - u.x) ** 2 + (b.cy - u.y) ** 2 <= R2) { ok = true; break; }
@@ -763,6 +771,9 @@ export class World {
       case 'gather': this.doGather(u, dt, pl); break;
       case 'build': this.doBuild(u, dt, pl); break;
       case 'spy': this.doSpy(u, dt); break;
+      case 'board': this.doBoard(u, dt); break;
+      case 'ride': this.doRide(u, dt); break;
+      case 'wait': break;
       default: u.order = { t: 'idle' };
     }
   }
@@ -842,6 +853,15 @@ export class World {
     const dcls = t.kind === 'u' ? t.cls : 'bld';
     let dmg = atk * (DMG[cls][dcls] || 1) * this.takeMul(t, cls, false) * ((src.st && src.st.dmgVs && src.st.dmgVs[dcls]) || 1);
     if (t.kind === 'b' && !t.built) dmg *= 1.5;
+    if (t.kind === 'b' && t.type === 'station' && t.built && (src.cls === 'inf' || src.cls === 'spr') && this.enemy(src.owner, t.owner) && t.hp - dmg < t.maxHp * RAIL.captureHp) {
+      const prev = t.owner;
+      if (t.waiting) { for (const w of t.waiting) this.unboard(this.ents.get(w.id), null, t); t.waiting = []; }
+      if (t.stock) { for (const k in t.stock) this.P[src.owner].res[k] += t.stock[k]; t.stock = {}; }
+      t.owner = src.owner; t.hp = t.maxHp * 0.4; t.queue = [];
+      this.notice(src.owner, '🚉 Bahnhof erobert! Du kannst jetzt das Gleisnetz des Gegners nutzen.');
+      this.notice(prev, '🚉 Einer deiner Bahnhöfe wurde erobert!');
+      return;
+    }
     this.damage(t, dmg, src.owner, src);
     if (splash) {
       const tx = t.kind === 'u' ? t.x : t.cx, ty = t.kind === 'u' ? t.y : t.cy;
@@ -877,6 +897,8 @@ export class World {
   }
   kill(e, by, src) {
     if (e.dead) return;
+    if (e.kind === 'u' && e.cls === 'trn') this.trainDestroyed(e);
+    if (e.kind === 'b' && e.type === 'station' && e.stock && by >= 0) for (const k in e.stock) this.P[by].res[k] += Math.round(e.stock[k] * 0.5);
     if (e.kind === 'u' && e.cls === 'env') this.envoyKilled(e, by);
     // Erfahrung und Moral für den Sieger
     if (src && src.kind === 'u' && !src.dead && e.kind === 'u' && src.cls !== 'wrk') {
@@ -985,8 +1007,7 @@ export class World {
       const r = this.approach(u, drop, 0.6, dt);
       if (r === true) { u.state = ST.carry; return; }
       if (u.carry) {
-        pl.res[u.carry.res] += u.carry.amt;
-        pl.stats.gathered += u.carry.amt;
+        this.deliverAt(drop, pl, u.carry.res, u.carry.amt);
         u.carry = null;
       }
       o.returning = false;
@@ -1078,6 +1099,7 @@ export class World {
         b.built = true;
         if (b.type === 'bridge') { this.pass[this.idx(b.x, b.y)] = 1; this.blockVer++; this.P[b.owner].stats.bridges = (this.P[b.owner].stats.bridges || 0) + 1; }
         if (b.type === 'road') this.road[this.idx(b.x, b.y)] = 1;
+        this.railMark(b, 1);
         this.P[b.owner].stats.built++;
         this.event({ k: 'built', to: b.owner, id: b.id, type: b.type });
         if (isProducer(b.type) && b.owner === u.owner) { b.worker = u.id; u.order = { t: 'gather', target: b.id, rtype: b.type }; }
@@ -1154,6 +1176,7 @@ export class World {
           x.st = st; x.maxHp = Math.round(st.hp * (x.wonder ? WONDER.hpMul : 1)); x.hp = x.maxHp * ratio;
           if (!x.wonder) x.era = pl.era; // Gebäude wechseln zum Baustil der neuen Epoche
         }
+        this.initRail(); // eiserne Brücken tragen ab der 1. IR Gleise
       }
       return;
     }
@@ -1191,7 +1214,7 @@ export class World {
   separate(dt) {
     for (const c of this.cells) {
       for (let i = 0; i < c.length; i++) {
-        const a = c[i]; if (a.dead) continue;
+        const a = c[i]; if (a.dead || a.cls === 'trn') continue;
         // Nachbarzellen rechts/unten einbeziehen
         const cx = Math.floor(a.x / CELL), cy = Math.floor(a.y / CELL);
         for (let oy = 0; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
@@ -1201,7 +1224,7 @@ export class World {
           const arr = this.cells[ny * this.cellsW + nx];
           const start = arr === c ? i + 1 : 0;
           for (let j = start; j < arr.length; j++) {
-            const b = arr[j]; if (b.dead) continue;
+            const b = arr[j]; if (b.dead || b.cls === 'trn') continue;
             const dx = b.x - a.x, dy = b.y - a.y, min = a.r + b.r;
             const d2 = dx * dx + dy * dy;
             if (d2 >= min * min) continue;
@@ -1245,7 +1268,7 @@ export class World {
         if (nx >= 0 && ny >= 0 && nx < this.W && ny < this.H && v[ny * this.W + nx] < val) v[ny * this.W + nx] = val;
       }
     };
-    for (const u of this.units) if (!u.dead) { const v = this.vis.get(this.P[u.owner].team); stamp(v, u.x, u.y, this.sightOf(u)); stamp(v, u.x, u.y, 3, 2); }
+    for (const u of this.units) if (!u.dead && !u.aboard) { const v = this.vis.get(this.P[u.owner].team); stamp(v, u.x, u.y, this.sightOf(u)); stamp(v, u.x, u.y, 3, 2); }
     for (const b of this.buildings) if (!b.dead) stamp(this.vis.get(this.P[b.owner].team), b.cx, b.cy, b.st.sight + b.size / 2);
     for (const r of this.reveals || []) stamp(this.vis.get(this.P[r.pid].team), r.x, r.y, 12);
   }
@@ -1391,6 +1414,7 @@ export class World {
     for (const pl of d.P) { pl.mods = playerMods(pl.culture, pl.nation, pl.late); w.P[pl.id] = pl; }
     Object.assign(w, { rel: d.rel || {}, proposals: d.proposals || [], dchat: d.dchat || {}, tributes: d.tributes || [], chron: d.chron || [], nextPropId: d.nextPropId || 1 });
     w.initDiplomacy();
+    w.initRail();
     w.recount();
     return w;
   }
@@ -1418,6 +1442,7 @@ export class World {
       t: 'me', res: Object.fromEntries(RES.map(k => [k, Math.floor(pl.res[k])])), pop: pl.pop, cap: pl.popCap, era: pl.era,
       culture: pl.culture, nation: pl.nation, choice: pl.choice, adv: pl.advancing, wonderB: pl.wonderBuilding, q: qs, alive: pl.alive,
       late: pl.late, lateR: pl.lateResearch, dip: this.diploPrivate(pl),
+      st: this.buildings.filter(b => !b.dead && b.owner === pl.id && b.type === 'station' && b.built).map(b => [b.id, (b.waiting || []).length, Math.round(Object.values(b.stock || {}).reduce((x, y) => x + y, 0)), this.isHomeStation(b) ? 1 : 0, this.reachableStations(b, pl.id).length]),
     };
   }
   entTuple(e, pid) {
@@ -1450,7 +1475,7 @@ export class World {
       if (posOnly && e.kind === 'u') mv.push(e.id, t[3], t[4], t[9]); else full.push(t);
       sent.set(e.id, t);
     };
-    for (const u of this.units) consider(u);
+    for (const u of this.units) if (!u.aboard) consider(u);
     for (const b of this.buildings) consider(b);
     for (const id of sent.keys()) {
       if (seen.has(id)) continue;
@@ -1488,3 +1513,4 @@ export class World {
 }
 
 installDiplomacy(World);
+installRail(World);
