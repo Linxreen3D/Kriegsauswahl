@@ -19,12 +19,17 @@ const UNIT_ICONS = {
   envoy: ['🕊', '🕊', '🕊', '🕊', '🕊', '🕊', '🕊', '🕊'],
   spy: ['', '', '', '', '🕵', '🕵', '🕵', '🕵'],
   train: ['', '', '', '', '', '🚂', '🚂', '🚆'],
+  fishboat: ['', '🛶', '🛶', '🛶', '⛵', '⛵', '🚤', '🚤'],
+  transport: ['', '🛶', '⛵', '⛵', '⛵', '⛴', '⛴', '🚢'],
+  warship: ['', '⛵', '⛵', '⛵', '⛵', '⛵', '🚢', '🚢'],
+  battleship: ['', '', '', '', '', '⛵', '🚢', '🚢'],
+  sub: ['', '', '', '', '', '', '🐋', '🐋'],
   rng: ['🪨', '🏹', '🏹', '🏹', '🔫', '🔫', '🔫', '🔫'],
   cav: ['', '🛞', '🐎', '🏇', '🏇', '🏇', '🚜', '🚜'],
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
-const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
+const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 function iconOf(def) {
   if (def.kind === 'b') return BLD_ICONS[def.key];
   if (def.unique) return def.icon || UNIQUE_ICONS[def.unique];
@@ -142,7 +147,7 @@ function showScreen(name) {
 // ---------------- Lobby ----------------
 const SETTINGS_DEF = [
   { key: 'mode', label: 'Spielmodus', type: 'select', options: [['ffa', 'Jeder gegen jeden'], ['teams', 'Teams'], ['armageddon', 'Armageddon (Meteore)']] },
-  { key: 'mapType', label: 'Kartentyp', type: 'select', options: [['random', 'Zufällig'], ['continent', 'Kontinent'], ['lakes', 'Seenplatte'], ['highlands', 'Hochland'], ['forest', 'Urwald']] },
+  { key: 'mapType', label: 'Kartentyp', type: 'select', options: [['random', 'Zufällig'], ['continent', 'Kontinent'], ['lakes', 'Seenplatte'], ['highlands', 'Hochland'], ['forest', 'Urwald'], ['islands', 'Inseln']] },
   { key: 'mapSize', label: 'Kartengröße', type: 'select', options: [['auto', 'Automatisch'], ['small', 'Klein'], ['medium', 'Mittel'], ['large', 'Groß'], ['huge', 'Riesig']] },
   { key: 'resources', label: 'Startressourcen', type: 'select', options: [['low', 'Wenig'], ['normal', 'Normal'], ['high', 'Viel']] },
   { key: 'startEra', label: 'Startepoche', type: 'select', options: ERAS.map((e, i) => [String(i), e.name]) },
@@ -483,6 +488,15 @@ function smartCommand(wx, wy, attackMove = false) {
     const ids = units.map(u => u.id);
     const workers = units.filter(u => u.def.cls === 'wrk').map(u => u.id);
     const others = units.filter(u => u.def.cls !== 'wrk').map(u => u.id);
+    const ships = units.filter(u => LINES[u.def.line] && LINES[u.def.line].naval);
+    if (t && t.def && t.def.kind === 'u' && t.owner === G.you && LINES[t.def.line].capacity && units.some(u => !LINES[u.def.line].naval)) {
+      cmd({ c: 'board', ids: units.filter(u => !LINES[u.def.line].naval).map(u => u.id), ship: t.id });
+      return;
+    }
+    if (ships.length && ships.every(u => LINES[u.def.line].capacity) && (!t || t.isRes === undefined) && G.terrain[Math.floor(wy) * G.W + Math.floor(wx)] !== 3 && !(t && !t.isRes)) {
+      cmd({ c: 'unload', ids: ships.map(u => u.id), x: wx, y: wy });
+      return;
+    }
     if (t && t.def && t.def.key === 'station' && t.prog >= 100 && G.allied(t.owner) && units.some(u => u.def.cls !== 'wrk' || !blds.length)) {
       cmd({ c: 'rail', ids, to: t.id });
       renderer.addMarker && renderer.addMarker(wx, wy, '#7fd3ff');
@@ -532,6 +546,11 @@ function placeOk(type, x, y) {
     const t = G.terrain[i];
     if (G.resAt[i] || G.bldAt[i] || !G.explored[i]) return false;
     if (BUILDINGS[type].onWater ? !(t === 3 || t === 9) : (t === 3 || t === 4 || t === 9)) return false;
+  }
+  if (BUILDINGS[type].coastal) {
+    let c = false;
+    for (let yy = y - 1; yy <= y + sz && !c; yy++) for (let xx = x - 1; xx <= x + sz; xx++) if (xx >= 0 && yy >= 0 && xx < G.W && yy < G.H && G.terrain[yy * G.W + xx] === 3) { c = true; break; }
+    if (!c) return false;
   }
   return true;
 }

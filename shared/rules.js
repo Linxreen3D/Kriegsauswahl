@@ -161,18 +161,20 @@ export const isNationUnit = uq => !!uq && uq.startsWith('nu_');
 // sie (Belagerung), art (Artillerie), sup (Unterstützung/Sanitäter). Zeile = Angreifer, Spalte = Ziel.
 // Ein Konter gewinnt bei gleichen Kosten etwa 2:1, nicht 10:1.
 export const DMG = {
-  wrk: { wrk: 1, inf: 1, spr: 1, rng: 1, cav: 1, sie: 1, art: 1, sup: 1, bld: 0.4, env: 1, spy: 1, trn: 0.3 },
-  inf: { wrk: 1.2, inf: 1, spr: 1.0, rng: 1.0, cav: 0.8, sie: 1.6, art: 1.6, sup: 1.2, bld: 0.6, env: 1, spy: 1, trn: 0.6 },
-  spr: { wrk: 1, inf: 1.0, spr: 1, rng: 0.9, cav: 1.3, sie: 1.2, art: 1.2, sup: 1, bld: 0.4, env: 1, spy: 1, trn: 1.5 },
-  rng: { wrk: 1.2, inf: 1.9, spr: 1.5, rng: 1, cav: 0.8, sie: 0.5, art: 0.6, sup: 1.2, bld: 0.25, env: 1, spy: 1, trn: 0.5 },
-  cav: { wrk: 1.4, inf: 1.4, spr: 0.7, rng: 1.3, cav: 1, sie: 1.8, art: 1.8, sup: 1.4, bld: 0.45, env: 1, spy: 1, trn: 0.8 },
-  sie: { wrk: 0.6, inf: 0.6, spr: 0.6, rng: 0.6, cav: 0.5, sie: 1, art: 1, sup: 0.6, bld: 3.2, env: 1, spy: 1, trn: 1.5 },
-  art: { wrk: 1.2, inf: 2.0, spr: 2.0, rng: 2.0, cav: 0.8, sie: 1.3, art: 1.3, sup: 1.2, bld: 1.2, env: 1, spy: 1, trn: 1.5 },
-  sup: { wrk: 0.5, inf: 0.5, spr: 0.5, rng: 0.5, cav: 0.5, sie: 0.5, art: 0.5, sup: 0.5, bld: 0.2, env: 1, spy: 1, trn: 0.3 },
-  env: { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.3, sie: 0.3, art: 0.3, sup: 0.3, bld: 0.1, env: 0.3, spy: 0.3, trn: 0.3 },
-  spy: { wrk: 1, inf: 0.8, spr: 0.8, rng: 0.8, cav: 0.5, sie: 0.8, art: 0.8, sup: 1, bld: 0.3, env: 1, spy: 1, trn: 0.3 },
-  trn: { wrk: 0, inf: 0, spr: 0, rng: 0, cav: 0, sie: 0, art: 0, sup: 0, bld: 0, env: 0, spy: 0, trn: 0 },
-  bld: { wrk: 1, inf: 1, spr: 1, rng: 1.1, cav: 0.9, sie: 1, art: 1, sup: 1, bld: 0.3, env: 1, spy: 1, trn: 1 },
+  wrk: { wrk: 1, inf: 1, spr: 1, rng: 1, cav: 1, sie: 1, art: 1, sup: 1, bld: 0.4, env: 1, spy: 1, trn: 0.3, shp: 0.2, sub: 0 },
+  inf: { wrk: 1.2, inf: 1, spr: 1.0, rng: 1.0, cav: 0.8, sie: 1.6, art: 1.6, sup: 1.2, bld: 0.6, env: 1, spy: 1, trn: 0.6, shp: 0.3, sub: 0 },
+  spr: { wrk: 1, inf: 1.0, spr: 1, rng: 0.9, cav: 1.3, sie: 1.2, art: 1.2, sup: 1, bld: 0.4, env: 1, spy: 1, trn: 1.5, shp: 0.4, sub: 0 },
+  rng: { wrk: 1.2, inf: 1.9, spr: 1.5, rng: 1, cav: 0.8, sie: 0.5, art: 0.6, sup: 1.2, bld: 0.25, env: 1, spy: 1, trn: 0.5, shp: 0.6, sub: 0 },
+  cav: { wrk: 1.4, inf: 1.4, spr: 0.7, rng: 1.3, cav: 1, sie: 1.8, art: 1.8, sup: 1.4, bld: 0.45, env: 1, spy: 1, trn: 0.8, shp: 0.3, sub: 0 },
+  sie: { wrk: 0.6, inf: 0.6, spr: 0.6, rng: 0.6, cav: 0.5, sie: 1, art: 1, sup: 0.6, bld: 3.2, env: 1, spy: 1, trn: 1.5, shp: 1, sub: 0 },
+  art: { wrk: 1.2, inf: 2.0, spr: 2.0, rng: 2.0, cav: 0.8, sie: 1.3, art: 1.3, sup: 1.2, bld: 1.2, env: 1, spy: 1, trn: 1.5, shp: 1.5, sub: 0 },
+  sup: { wrk: 0.5, inf: 0.5, spr: 0.5, rng: 0.5, cav: 0.5, sie: 0.5, art: 0.5, sup: 0.5, bld: 0.2, env: 1, spy: 1, trn: 0.3, shp: 0, sub: 0 },
+  env: { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.3, sie: 0.3, art: 0.3, sup: 0.3, bld: 0.1, env: 0.3, spy: 0.3, trn: 0.3, shp: 0, sub: 0 },
+  spy: { wrk: 1, inf: 0.8, spr: 0.8, rng: 0.8, cav: 0.5, sie: 0.8, art: 0.8, sup: 1, bld: 0.3, env: 1, spy: 1, trn: 0.3, shp: 0.2, sub: 0 },
+  trn: { wrk: 0, inf: 0, spr: 0, rng: 0, cav: 0, sie: 0, art: 0, sup: 0, bld: 0, env: 0, spy: 0, trn: 0, shp: 0, sub: 0 },
+  shp: { wrk: 0.8, inf: 0.8, spr: 0.8, rng: 0.8, cav: 0.8, sie: 1, art: 1, sup: 0.8, env: 0.5, spy: 0.8, bld: 1, trn: 1, shp: 1.2, sub: 1.5 },
+  sub: { wrk: 0, inf: 0, spr: 0, rng: 0, cav: 0, sie: 0, art: 0, sup: 0, env: 0, spy: 0, bld: 0, trn: 0, shp: 2.5, sub: 1 },
+  bld: { wrk: 1, inf: 1, spr: 1, rng: 1.1, cav: 0.9, sie: 1, art: 1, sup: 1, bld: 0.3, env: 1, spy: 1, trn: 1, shp: 1.2, sub: 0 },
 };
 
 // Linien: pro Epoche ein Name; Werte skalieren mit der Epoche.
@@ -183,7 +185,7 @@ export const LINES = {
   },
   inf: {
     cls: 'inf', at: 'barracks', minEra: 0, key: 'Q', names: ['Keulenträger', 'Axtkämpfer', 'Schwertkämpfer', 'Hauskrieger', 'Fußritter', 'Linieninfanterist', 'Schütze', 'Mechanisierte Infanterie'], late: 'Infanterist',
-    hp: 60, atk: 7, range: 0.5, cd: 1.2, speed: 1.45, sight: 6, cost: { food: 55, wood: 10, env: 1, spy: 1, trn: 0.6 }, pop: 1, time: 16,
+    hp: 60, atk: 7, range: 0.5, cd: 1.2, speed: 1.45, sight: 6, cost: { food: 55, wood: 10, env: 1, spy: 1, trn: 0.6, shp: 0.3, sub: 0 }, pop: 1, time: 16,
     eraOverride: { 5: { range: 3 }, 6: { range: 4 }, 7: { range: 4.5, speed: 1.7 } },
   },
   spear: {
@@ -193,20 +195,20 @@ export const LINES = {
   },
   rng: {
     cls: 'rng', at: 'range', minEra: 0, key: 'Q', names: ['Steinschleuderer', 'Bogenschütze', 'Kompositbogner', 'Langbogenschütze', 'Armbrustschütze', 'Jäger', 'Scharfschütze', 'MG-Schütze'], late: 'MG-Schütze',
-    hp: 38, atk: 5, range: 5, cd: 1.6, speed: 1.4, sight: 7, cost: { food: 30, wood: 35, env: 1, spy: 1, trn: 0.5 }, pop: 1, time: 18,
+    hp: 38, atk: 5, range: 5, cd: 1.6, speed: 1.4, sight: 7, cost: { food: 30, wood: 35, env: 1, spy: 1, trn: 0.5, shp: 0.6, sub: 0 }, pop: 1, time: 18,
     eraOverride: { 6: { range: 6 }, 7: { range: 6.5 } },
   },
   cav: {
     cls: 'cav', at: 'stable', minEra: 1, key: 'Q', names: ['', 'Streitwagen', 'Reiter', 'Panzerreiter', 'Ritter', 'Husar', 'Panzerwagen', 'Kampfpanzer'], late: 'Panzer',
-    hp: 110, atk: 9, range: 0.6, cd: 1.4, speed: 2.4, sight: 7, cost: { food: 70, gold: 45, env: 1, spy: 1, trn: 0.8 }, pop: 1, time: 22,
+    hp: 110, atk: 9, range: 0.6, cd: 1.4, speed: 2.4, sight: 7, cost: { food: 70, gold: 45, env: 1, spy: 1, trn: 0.8, shp: 0.3, sub: 0 }, pop: 1, time: 22,
     eraOverride: { 5: { range: 3.5 }, 6: { range: 5, speed: 2.0, hpMul: 1.6, pop: 2 }, 7: { range: 6, speed: 2.2, hpMul: 1.7, pop: 2 } },
   },
   sie: {
     cls: 'sie', at: 'workshop', minEra: 2, key: 'Q', names: ['', '', 'Torsionsgeschütz', 'Blide', 'Bombarde', 'Belagerungsmörser', 'Schwerer Mörser', 'Raketenartillerie'], late: 'Schwere Haubitze',
-    hp: 120, atk: 38, range: 7, minRange: 2, cd: 4, speed: 0.95, sight: 8, cost: { wood: 160, gold: 90, env: 1, spy: 1, trn: 1.5 }, pop: 2, time: 32, splash: 1.2,
+    hp: 120, atk: 38, range: 7, minRange: 2, cd: 4, speed: 0.95, sight: 8, cost: { wood: 160, gold: 90, env: 1, spy: 1, trn: 1.5, shp: 1, sub: 0 }, pop: 2, time: 32, splash: 1.2,
   },  art: {
     cls: 'art', at: 'workshop', minEra: 5, key: 'W', names: ['', '', '', '', '', 'Feldkanone', 'Feldgeschütz', 'Panzerhaubitze'], late: 'Haubitze',
-    hp: 110, atk: 40, range: 9, minRange: 2.5, cd: 3.5, speed: 1.0, sight: 8, cost: { wood: 140, gold: 110, env: 1, spy: 1, trn: 1.5 }, pop: 3, time: 30, splash: 1.6,
+    hp: 110, atk: 40, range: 9, minRange: 2.5, cd: 3.5, speed: 1.0, sight: 8, cost: { wood: 140, gold: 110, env: 1, spy: 1, trn: 1.5, shp: 1.5, sub: 0 }, pop: 3, time: 30, splash: 1.6,
   },
   envoy: {
     cls: 'env', at: 'town', minEra: 0, key: 'T', names: ['Läufer', 'Reitender Bote', 'Reitender Bote', 'Gesandter', 'Gesandter mit Eskorte', 'Kurier', 'Kurier im Automobil', 'Diplomat im Regierungsjet'],
@@ -215,11 +217,31 @@ export const LINES = {
   },
   spy: {
     cls: 'spy', at: 'town', minEra: 4, key: 'A', names: ['', '', '', '', 'Kundschafter', 'Spion', 'Agent', 'Geheimagent'],
-    hp: 40, atk: 4, range: 0.5, cd: 1.2, speed: 1.7, sight: 9, cost: { food: 50, gold: 80, trn: 0.3 }, pop: 1, time: 25, grow: 0.15,
+    hp: 40, atk: 4, range: 0.5, cd: 1.2, speed: 1.7, sight: 9, cost: { food: 50, gold: 80, trn: 0.3, shp: 0.2, sub: 0 }, pop: 1, time: 25, grow: 0.15,
   },
   train: {
     cls: 'trn', at: null, minEra: 5, key: '', names: ['', '', '', '', '', 'Dampfzug', 'Dampfzug', 'Diesellok'],
     hp: 600, atk: 0, range: 0.5, cd: 1, speed: 6, sight: 7, cost: {}, pop: 0, time: 0, grow: 0.25,
+  },
+  fishboat: {
+    cls: 'wrk', naval: true, at: 'dock', minEra: 1, key: 'Q', names: ['', 'Fischerboot', 'Fischerboot', 'Fischerboot', 'Fischerkogge', 'Fischkutter', 'Dampftrawler', 'Fangschiff'],
+    hp: 60, atk: 0, range: 0.5, cd: 1, speed: 1.8, sight: 6, cost: { wood: 60 }, pop: 1, time: 14, grow: 0.12, costGrow: 1.05,
+  },
+  transport: {
+    cls: 'shp', naval: true, at: 'dock', minEra: 1, key: 'W', names: ['', 'Lastkahn', 'Frachtgaleere', 'Transportschiff', 'Karacke', 'Truppentransporter', 'Truppendampfer', 'Landungsschiff'],
+    hp: 200, atk: 0, range: 0.5, cd: 1, speed: 2.2, sight: 7, cost: { wood: 120, gold: 20 }, pop: 1, time: 25, grow: 0.25, capacity: 10,
+  },
+  warship: {
+    cls: 'shp', naval: true, at: 'dock', minEra: 1, key: 'E', names: ['', 'Galeere', 'Trireme', 'Langschiff', 'Kogge', 'Fregatte', 'Panzerschiff', 'Lenkwaffenzerstörer'], late: 'Zerstörer',
+    hp: 220, atk: 12, range: 5, cd: 2, speed: 2.1, sight: 8, cost: { wood: 140, gold: 60 }, pop: 2, time: 30, detects: true,
+  },
+  battleship: {
+    cls: 'shp', naval: true, at: 'dock', minEra: 5, key: 'R', names: ['', '', '', '', '', 'Linienschiff', 'Schlachtschiff', 'Kreuzer'], late: 'Schlachtschiff',
+    hp: 700, atk: 40, range: 10, minRange: 2, cd: 4, speed: 1.5, sight: 10, cost: { wood: 250, gold: 250, stone: 100 }, pop: 5, time: 50, splash: 1.5,
+  },
+  sub: {
+    cls: 'sub', naval: true, at: 'dock', minEra: 6, key: 'T', names: ['', '', '', '', '', '', 'U-Boot', 'Atom-U-Boot'],
+    hp: 260, atk: 45, range: 5, cd: 4, speed: 1.9, sight: 8, cost: { wood: 100, gold: 220 }, pop: 3, time: 45,
   },
   med: {
     cls: 'sup', at: 'town', minEra: 1, key: 'E', names: ['', 'Heiler', 'Feldarzt', 'Mönch', 'Feldscher', 'Sanitäter', 'Sanitäter', 'Sanitäter'],
@@ -341,6 +363,8 @@ export const BUILDINGS = {
   bridge: { name: 'Brücke', size: 1, hp: 400, cost: { wood: 20, stone: 6 }, time: 6, walkable: true, sight: 2, minEra: 1, key: 'W', page: 2, line: true, onWater: true, desc: 'Wie eine Mauer über Wasser ziehen, Abschnitt für Abschnitt vom Ufer aus. Jeder kann sie benutzen; Abschnitte lassen sich zerstören.' },
   rail: { name: 'Gleis', size: 1, hp: 250, cost: { wood: 8, stone: 8 }, time: 3, walkable: true, sight: 1, minEra: 5, key: 'E', page: 2, line: true, desc: 'Wie eine Mauer ziehen und an Bahnhöfe anschließen. Eiserne Brücken (ab 1. IR) tragen Gleise.' },
   station: { name: 'Bahnhof', size: 2, hp: 900, cost: { wood: 150, stone: 100, gold: 50 }, time: 35, sight: 7, minEra: 5, key: 'R', page: 2, drop: true, desc: 'Truppen: Rechtsklick auf einen angeschlossenen Bahnhof – sie steigen am nächsten Bahnhof in den Zug. Fern vom Haupthaus sammelt er Rohstoffe, die Güterzüge mit +10 % nach Hause bringen.' },
+  dock: { name: 'Werft', size: 3, hp: 900, cost: { wood: 200 }, time: 35, sight: 7, minEra: 1, key: 'X', coastal: true, drop: true, desc: 'Muss an die Küste gebaut werden. Baut Fischerboote, Transporter und Kriegsschiffe; Abgabestelle für alle Rohstoffe.' },
+  coastgun: { name: 'Küstenbatterie', size: 2, hp: 900, cost: { stone: 200, gold: 80 }, time: 35, atk: 20, range: 11, cd: 3, sight: 11, minEra: 5, key: 'A', page: 2, coastal: true, vsShip: 2.2, desc: 'An der Küste: schwere Geschütze gegen Schiffe (große Reichweite, doppelter Schaden gegen Schiffe).' },
   wall: { name: 'Palisade', size: 1, hp: 350, cost: { wood: 4 }, time: 3, sight: 2, minEra: 0, key: 'C', line: true, desc: 'Günstiges Hindernis (ab Mittelalter Steinmauer).' },
 };
 // Weltwunder: Ausbau des Haupthauses in der letzten Epoche. Wer es 30 Minuten (große Karten: 60) hält, gewinnt.
@@ -349,7 +373,7 @@ export const WONDER = { name: 'Weltwunder', cost: { food: 6000, wood: 5000, ston
 export const wonderHold = mapW => (mapW >= 160 ? WONDER.holdLarge : WONDER.hold);
 export const WONDER_ERA = 8; // Anzeige-Epoche für das Modell (nach der letzten Epoche)
 
-export const BUILD_ORDER = ['house', 'storage', 'farm', 'outpost', 'road', 'bridge', 'rail', 'station', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
+export const BUILD_ORDER = ['house', 'storage', 'farm', 'outpost', 'road', 'bridge', 'rail', 'station', 'dock', 'coastgun', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
 
 // ---------------- Rohstoffe auf der Karte ----------------
 export const RESOURCE_TYPES = {
@@ -357,6 +381,7 @@ export const RESOURCE_TYPES = {
   berry: { res: 'food', amount: 150, size: 1, rate: 0.8 },
   gold: { res: 'gold', amount: 1500, size: 2, rate: 0.6 },
   stone: { res: 'stone', amount: 1200, size: 2, rate: 0.6 },
+  fish: { res: 'food', amount: 700, size: 1, rate: 0.75, water: true },
 };
 // Tiefere Schichten: Ein erschöpftes Gold- oder Steinvorkommen bleibt an seinem Ort und lässt sich
 // mit besserer Bergbautechnik weiter abbauen. Es entstehen keine neuen Vorkommen – Lagerstätten bleiben umkämpft.
@@ -368,7 +393,7 @@ export const DEPOSIT_LAYERS = [
   { era: 7, mul: 2, name: 'Großtagebau' },
 ];
 export const hasLayers = rtype => rtype === 'gold' || rtype === 'stone';
-export const RESOURCE_KINDS = ['tree', 'berry', 'gold', 'stone'];
+export const RESOURCE_KINDS = ['tree', 'berry', 'gold', 'stone', 'fish'];
 export const FARM_RATE = 0.6;
 export const CARRY = 10;
 // Gebäude, in denen ein Arbeiter dauerhaft sammelt (Feld, Bergwerk, Steinbruch)
@@ -423,6 +448,7 @@ export function unitBase(line, era, unique) {
     minRange: d.minRange || 0,
     cd: d.cd, speed: ov.speed || d.speed, sight: d.sight, pop: ov.pop || d.pop,
     time: d.time * (1 + steps * 0.05), splash: d.splash || 0, heal: d.heal ? d.heal * Math.pow(1 + g, steps) : 0,
+    naval: !!d.naval, capacity: d.capacity || 0, detects: !!d.detects,
     cost: scaleCost(d.cost, Math.pow(cg, steps)),
   };
   if (isNationUnit(unique)) {
@@ -483,6 +509,7 @@ export function unitStats(line, era, unique, mods) {
   if (s.cls === 'cav') { s.speed *= mods.cavSpeed; s.hp *= mods.cavHp; s.cost = scaleCost(s.cost, mods.cavCost); }
   if (s.cls === 'inf') { s.atk *= mods.infAtk; s.hp *= mods.infHp; s.speed *= mods.infSpeed; s.cost = scaleCost(s.cost, mods.infCost); }
   if (unique) s.cost = scaleCost(s.cost, mods.uniqueCost);
+  if (s.naval) { s.cost = scaleCost(s.cost, mods.shipCost); s.time /= mods.shipBuild; }
   if (s.cls === 'rng' && s.range > 1) s.range += mods.rangedRange;
   if (s.cls === 'sie') s.atk *= mods.siegeDmg;
   if (mil) { s.hp *= mods.armyHp; s.atk *= mods.armyDmg; s.cost = scaleCost(s.cost, mods.armyCost); }

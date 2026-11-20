@@ -451,6 +451,20 @@ export class Renderer3D {
     });
     bb.count = bi;
     for (const m of [rocks, whites, nugs, bush, bb]) { m.castShadow = true; m.receiveShadow = true; this.mapRoot.add(m); }
+    const fish = [...G.res.values()].filter(r => r.kind === 'fish');
+    if (fish.length) {
+      const ringMat = new THREE.MeshStandardMaterial({ color: '#cfe9f2', roughness: 0.3, transparent: true, opacity: 0.55 });
+      const finMat = new THREE.MeshStandardMaterial({ color: '#5f7d88', roughness: 0.5 });
+      const rings = new THREE.InstancedMesh(new THREE.TorusGeometry(0.9, 0.06, 4, 18), ringMat, fish.length * 2), fins = new THREE.InstancedMesh(new THREE.ConeGeometry(0.12, 0.35, 4), finMat, fish.length * 4);
+      let ri2 = 0, fi = 0;
+      fish.forEach(r => {
+        const X = (r.x + 0.5) * S, Z = (r.y + 0.5) * S, refs = [];
+        for (let k = 0; k < 2; k++) { m4.compose(new THREE.Vector3(X + (R() - 0.5), -0.5, Z + (R() - 0.5)), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2), new THREE.Vector3(0.6 + k * 0.5, 0.6 + k * 0.5, 1)); rings.setMatrixAt(ri2, m4); refs.push([rings, ri2++]); }
+        for (let k = 0; k < 4; k++) { m4.makeTranslation(X + (R() - 0.5) * 2, -0.42, Z + (R() - 0.5) * 2); fins.setMatrixAt(fi, m4); refs.push([fins, fi++]); }
+        this.mineRefs.set(r.id, refs);
+      });
+      fowify(ringMat); fowify(finMat); this.mapRoot.add(rings); this.mapRoot.add(fins);
+    }
   }
   // Rohstoff abgebaut -> Instanzen ausblenden
   invalidateTile(tx, ty) {
@@ -530,11 +544,12 @@ export class Renderer3D {
     return this.attachment('sie' + e.id, () => {
       const era = e.def.era;
       let g;
-      if (e.def.line === 'train') g = trainModel(era, color);
+      if (NAVAL[e.def.line]) g = shipModel(e.def.line, era, color);
+      else if (e.def.line === 'train') g = trainModel(era, color);
       else if (e.def.cls === 'cav') g = tank(color);
       else if (era <= 3) g = Md.trebuchet(color);
       else g = cannon(era, color);
-      const box = new THREE.Box3().setFromObject(g), s = (e.def.line === 'train' ? 7 : e.def.cls === 'cav' ? 3.6 : 3.4) / Math.max(1e-3, Math.max(box.max.x - box.min.x, box.max.z - box.min.z));
+      const box = new THREE.Box3().setFromObject(g), s = (NAVAL[e.def.line] ? NAVAL[e.def.line] : e.def.line === 'train' ? 7 : e.def.cls === 'cav' ? 3.6 : 3.4) / Math.max(1e-3, Math.max(box.max.x - box.min.x, box.max.z - box.min.z));
       g.scale.setScalar(s);
       const o = new THREE.Group(); o.add(g); return o;
     });
@@ -588,7 +603,8 @@ export class Renderer3D {
         const moving = e.state === 1 || e.state === 5;
         const bob = moving ? Math.abs(Math.sin(now / 90 + e.id)) * 0.05 : 0;
         pos.set(X, this.T.height(X, Z) + bob, Z);
-        if (line === 'sie' || line === 'art' || line === 'train' || (line === 'cav' && era >= 6)) {
+        if (NAVAL[line]) pos.y = -0.55 + Math.sin(now / 700 + e.id) * 0.06;
+        if (NAVAL[line] || line === 'sie' || line === 'art' || line === 'train' || (line === 'cav' && era >= 6)) {
           const o = this.siegeModel(e, color); o.position.copy(pos); o.quaternion.copy(q);
           if (e.state === 2 && line === 'sie') o.children[0].rotation.x = Math.sin(now / 120) * 0.02;
           continue;
@@ -733,7 +749,7 @@ export class Renderer3D {
     g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = true;
     g.drawImage(this.miniBase, 0, 0, canvas.width, canvas.height);
     g.setTransform(sx, 0, 0, sy, 0, 0);
-    for (const r of G.res.values()) { if (r.kind === 'tree' || !G.explored[r.y * G.W + r.x]) continue; g.fillStyle = r.kind === 'gold' ? '#ffd34d' : r.kind === 'stone' ? '#d8d8e0' : '#d6324a'; g.fillRect(r.x, r.y, r.kind === 'berry' ? 1 : 2, r.kind === 'berry' ? 1 : 2); }
+    for (const r of G.res.values()) { if (r.kind === 'tree' || !G.explored[r.y * G.W + r.x]) continue; g.fillStyle = r.kind === 'gold' ? '#ffd34d' : r.kind === 'stone' ? '#d8d8e0' : r.kind === 'fish' ? '#9fe3ff' : '#d6324a'; g.fillRect(r.x, r.y, r.kind === 'berry' ? 1 : 2, r.kind === 'berry' ? 1 : 2); }
     for (const e of G.ents.values()) { const p = G.players[e.owner]; g.fillStyle = p ? p.color : '#fff'; if (e.def.kind === 'b') { const s2 = BUILDINGS[e.def.key].size; g.fillRect(e.x - 0.5, e.y - 0.5, s2 + 1, s2 + 1); } else g.fillRect(e.rx - 1, e.ry - 1, 2, 2); }
     if (G.prov && G.provOwner) {
       if (!this.provCanvas || this.provVer !== G.provVer) {
@@ -779,6 +795,38 @@ function teamColored(root, color) {
 }
 
 // Straße, Brücke, Außenposten: einfache Platzhalter bis zu den Blender-Modellen
+// Schiffe: Länge in Kacheln je Typ; Holz mit Segeln bis zur 1. IR, danach Stahl mit Aufbauten
+const NAVAL = { fishboat: 2.2, transport: 3.6, warship: 4.2, battleship: 6.5, sub: 4.5 };
+function shipModel(line, era, color) {
+  const g = new THREE.Group(), steel = era >= 6, wood = U.wood();
+  const hullM = steel ? U.mat(line === 'sub' ? '#2c3136' : '#5d646b', 0.6, 0.5) : wood, deck = steel ? U.mat('#4a5056', 0.7, 0.4) : U.mat('#8a6a46', 0.85, 0);
+  const sail = U.mat('#efe6d0', 0.9, 0), team = U.mat(color, 0.8), dark = U.mat('#2a2a2c', 0.6, 0.6);
+  const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+  const L = 4, B = line === 'fishboat' ? 1.1 : line === 'battleship' ? 1.6 : 1.3;
+  if (line === 'sub') {
+    const hull = add(new THREE.CapsuleGeometry(0.5, L, 4, 12), hullM, 0, 0.05, 0); hull.rotation.x = Math.PI / 2;
+    add(new THREE.BoxGeometry(0.4, 0.7, 1), hullM, 0, 0.6, 0.3); add(new THREE.BoxGeometry(0.42, 0.12, 0.5), team, 0, 0.98, 0.3);
+    return g;
+  }
+  // Rumpf: Kasten mit spitzem Bug
+  const sh = new THREE.Shape(); sh.moveTo(-B / 2, -L / 2); sh.lineTo(B / 2, -L / 2); sh.lineTo(B / 2, L / 2 - 0.9); sh.lineTo(0, L / 2 + 0.3); sh.lineTo(-B / 2, L / 2 - 0.9); sh.closePath();
+  const hullGeo = new THREE.ExtrudeGeometry(sh, { depth: 0.7, bevelEnabled: false }); hullGeo.rotateX(-Math.PI / 2);
+  add(hullGeo, hullM, 0, -0.2, 0); add(new THREE.BoxGeometry(B * 0.9, 0.06, L * 0.9), deck, 0, 0.52, -0.1);
+  if (!steel) {
+    const masts = line === 'battleship' ? 3 : line === 'fishboat' ? 1 : 2;
+    for (let k = 0; k < masts; k++) { const z = -1 + k * (2 / Math.max(1, masts - 1)) * (masts > 1 ? 1 : 0); add(new THREE.CylinderGeometry(0.05, 0.06, 2.6, 6), wood, 0, 1.8, z); add(new THREE.BoxGeometry(1.4, 1.3, 0.04), k === 0 ? team : sail, 0, 2.1, z); }
+    if (era <= 2 && line !== 'fishboat') for (let k = -3; k <= 3; k++) for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.9, 0.04, 0.06), wood, sx * (B / 2 + 0.35), 0.2, k * 0.45);
+  } else {
+    add(new THREE.BoxGeometry(B * 0.6, 0.6, 1.2), deck, 0, 0.85, -0.3); add(new THREE.BoxGeometry(B * 0.4, 0.5, 0.6), deck, 0, 1.4, -0.3);
+    add(new THREE.CylinderGeometry(0.16, 0.2, 0.9, 8), dark, 0, 1.4, -1.0);
+    if (line !== 'transport' && line !== 'fishboat') for (const z of line === 'battleship' ? [1.3, 0.6, -1.7] : [1.2]) { add(new THREE.CylinderGeometry(0.32, 0.36, 0.25, 10), deck, 0, 0.7, z); add(new THREE.CylinderGeometry(0.05, 0.05, 1.1, 6), dark, 0, 0.78, z + 0.55).rotation.x = Math.PI / 2; }
+    add(new THREE.BoxGeometry(0.5, 0.3, 0.04), team, 0, 1.85, -0.3);
+  }
+  if (line === 'transport') add(new THREE.BoxGeometry(B * 0.7, 0.35, 1.4), team, 0, 0.75, 0.6);
+  if (line === 'fishboat') add(new THREE.TorusGeometry(0.25, 0.04, 4, 10), U.mat('#c9b07a', 0.9, 0), 0.3, 0.6, -0.8);
+  return g;
+}
+
 function trainModel(era, color) {
   const g = new THREE.Group(), dark = U.mat('#2a2a2c', 0.6, 0.6), body = U.mat(era >= 7 ? '#5a6a4a' : '#3a3f45', 0.6, 0.4), cloth = U.mat(color, 0.8);
   const add = (geo, m, x, y, z, rx = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.x = rx; o.castShadow = o.receiveShadow = true; g.add(o); return o; };
@@ -792,6 +840,27 @@ function trainModel(era, color) {
 }
 
 const INFRA = {
+  dock(era, color) {
+    const g = new THREE.Group(), wood = U.wood(), stone = U.mat(era >= 5 ? '#8f8b84' : '#a08a6a', 0.9, 0), roof = U.mat(era >= 5 ? '#4d5257' : '#7a4a30', 0.8, era >= 5 ? 0.3 : 0);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.BoxGeometry(6, 0.4, 6), stone, 0, 0.2, 0);
+    add(new THREE.BoxGeometry(3.4, 2.4, 2.6), era >= 5 ? stone : wood, -1.1, 1.4, -1.4);
+    const r = add(new THREE.ConeGeometry(2.6, 1.2, 4), roof, -1.1, 3.2, -1.4); r.rotation.y = Math.PI / 4;
+    for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(0.9, 0.25, 2.8), wood, 1.6 - k * 1.1, 0.45, 2.2);
+    add(new THREE.CylinderGeometry(0.08, 0.1, 3.6, 6), era >= 5 ? U.mat('#3b3f44', 0.5, 0.7) : wood, 2.2, 2.2, -1.8);
+    add(new THREE.BoxGeometry(1.6, 0.08, 0.08), era >= 5 ? U.mat('#3b3f44', 0.5, 0.7) : wood, 1.6, 3.9, -1.8);
+    const flag = Md.banner(color, 3.4, 0.7, 1, 0.2); flag.position.set(-2.6, 0, 1.6); g.add(flag);
+    return g;
+  },
+  coastgun(era, color) {
+    const g = new THREE.Group(), conc = U.mat('#9a968c', 0.95, 0), steel = U.mat('#3f4448', 0.5, 0.6);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.CylinderGeometry(3.4, 3.8, 1.2, 16), conc, 0, 0.6, 0);
+    add(new THREE.CylinderGeometry(1.4, 1.6, 0.9, 12), steel, 0, 1.6, 0);
+    const b = add(new THREE.CylinderGeometry(0.16, 0.2, 3.6, 8), steel, 0, 1.8, 1.9); b.rotation.x = Math.PI / 2 - 0.12;
+    add(new THREE.BoxGeometry(1, 0.15, 0.6), U.mat(color, 0.8), 0, 2.1, -0.4);
+    return g;
+  },
   rail(era) {
     const g = new THREE.Group(), wood = U.wood(), steel = U.mat('#55585c', 0.4, 0.8), bed = U.mat('#6d6458', 0.95, 0);
     const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.receiveShadow = true; g.add(o); };

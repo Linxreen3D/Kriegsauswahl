@@ -8,12 +8,13 @@ import {
 } from '../shared/rules.js';
 import { installDiplomacy } from './diplomacy.js';
 import { installRail } from './rail.js';
+import { installNaval } from './naval.js';
 import { generateMap, blockedTerrain, waterTerrain, T_HILL, T_SNOW, T_DESERT, T_SWAMP, T_FORD, T_GRASS, T_DIRT } from './mapgen.js';
 
 const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
 const isVehicle = u => (u.cls === 'cav' && u.era >= 6) || u.cls === 'art' || u.cls === 'sie';
 
-const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3, env: 0.3, spy: 0.3, trn: 0.5 };
+const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3, env: 0.3, spy: 0.3, trn: 0.5, shp: 0.7, sub: 0.6 };
 const MILITARY = cls => cls !== 'wrk' && cls !== 'sup' && cls !== 'env' && cls !== 'spy' && cls !== 'trn'; // kämpft selbstständig
 const START_RES = { low: { food: 150, wood: 150, stone: 50, gold: 50 }, normal: { food: 250, wood: 250, stone: 150, gold: 100 }, high: { food: 600, wood: 600, stone: 400, gold: 400 } };
 const ST = { idle: 0, move: 1, attack: 2, gather: 3, build: 4, carry: 5 };
@@ -75,6 +76,7 @@ export class World {
     this.computeTreeDensity();
     this.initDiplomacy();
     this.initRail();
+    this.buildWPass();
     // Startbasis
     for (const pl of this.P) {
       const s = pl.start;
@@ -97,7 +99,7 @@ export class World {
   addResource(type, x, y, mul = 1) {
     const d = RESOURCE_TYPES[type];
     const r = { id: this.nextId++, kind: 'r', rtype: type, res: d.res, amount: Math.round(d.amount * mul), base: Math.round(d.amount * mul), layer: 0, depleted: false, x, y, size: d.size, cx: x + d.size / 2, cy: y + d.size / 2 };
-    for (let yy = y; yy < y + d.size; yy++) for (let xx = x; xx < x + d.size; xx++) { const i = this.idx(xx, yy); this.pass[i] = 0; this.occ[i] = r.id; }
+    for (let yy = y; yy < y + d.size; yy++) for (let xx = x; xx < x + d.size; xx++) { const i = this.idx(xx, yy); this.pass[i] = 0; this.occ[i] = r.id; this.updateWTile(i); }
     this.resources.set(r.id, r); this.ents.set(r.id, r);
     return r;
   }
@@ -116,7 +118,7 @@ export class World {
   removeResource(r) {
     if (r.rtype === 'tree' && this.treeD) this.treeAdd(r, -1);
     for (let yy = r.y; yy < r.y + r.size; yy++) for (let xx = r.x; xx < r.x + r.size; xx++) {
-      const i = this.idx(xx, yy); this.occ[i] = 0; if (!blockedTerrain(this.terrain[i])) this.pass[i] = 1;
+      const i = this.idx(xx, yy); this.occ[i] = 0; if (!blockedTerrain(this.terrain[i])) this.pass[i] = 1; this.updateWTile(i);
     }
     this.resources.delete(r.id); this.ents.delete(r.id);
     this.resRemoved.push(r.id);
@@ -131,6 +133,7 @@ export class World {
       if (this.occ[i]) return false;
       if (water ? !waterTerrain(t) : (blockedTerrain(t) || t === T_FORD)) return false;
     }
+    if (BUILDINGS[type].coastal && !this.coastal(x, y, sz)) return false;
     return true;
   }
   addBuilding(owner, type, x, y, built = false) {
@@ -145,6 +148,7 @@ export class World {
       const i = this.idx(xx, yy);
       this.occ[i] = b.id;
       if (!st.walkable) this.pass[i] = 0;
+      this.updateWTile(i);
     }
     if (!st.walkable) { this.blockVer++; this.evictUnits(b); }
     this.buildings.push(b); this.ents.set(b.id, b);
@@ -179,7 +183,7 @@ export class World {
     if (b.type === 'station' && b.waiting) { for (const w of b.waiting) this.unboard(this.ents.get(w.id), null, b); b.waiting = []; }
     for (let yy = b.y; yy < b.y + b.size; yy++) for (let xx = b.x; xx < b.x + b.size; xx++) {
       const i = this.idx(xx, yy);
-      if (this.occ[i] === b.id) { this.occ[i] = 0; this.pass[i] = blockedTerrain(this.terrain[i]) ? 0 : 1; this.road[i] = 0; }
+      if (this.occ[i] === b.id) { this.occ[i] = 0; this.pass[i] = blockedTerrain(this.terrain[i]) ? 0 : 1; this.road[i] = 0; this.updateWTile(i); }
     }
     this.blockVer++;
     if (b.type === 'bridge' && b.built && this.units) {
@@ -206,7 +210,7 @@ export class World {
       id: this.nextId++, kind: 'u', owner, line, unique, era, cls: st.cls, typeIdx: TYPE_INDEX[unitKey(line, era, unique)], st,
       x, y, hp: st.hp, maxHp: st.hp, r: RADIUS[st.cls], order: { t: 'idle' }, state: ST.idle, cd: 0, carry: null,
       scan: Math.random() * 0.5, stuck: 0, lastProg: 0, buildQ: [],
-      xp: 0, rank: 0, morale: 100, unsup: 0, form: 'none',
+      xp: 0, rank: 0, morale: 100, unsup: 0, form: 'none', naval: !!st.naval,
     };
     this.units.push(u); this.ents.set(u.id, u);
     return u;
@@ -215,6 +219,7 @@ export class World {
 
   // ---------------- Wegfindung (Flow-Fields mit Cache) ----------------
   field(key, sourcesFn) {
+    if (this.pass === this.wpass) key = 'w' + key;
     let f = this.fields.get(key);
     if (f && f.ver === this.blockVer) { f.used = this.tickNo; return f.dist; }
     if (this.fieldBudget > 0) {
@@ -361,7 +366,9 @@ export class World {
     switch (c.c) {
       case 'move': {
         const us = own(c.ids).filter(e => e.kind === 'u');
-        this.groupMove(us, +c.x, +c.y, !!c.amove);
+        const sea = us.filter(u => u.naval);
+        this.groupMove(us.filter(u => !u.naval), +c.x, +c.y, !!c.amove);
+        if (sea.length) this.withWater(() => this.groupMove(sea, +c.x, +c.y, !!c.amove));
         break;
       }
       case 'attack': {
@@ -378,7 +385,7 @@ export class World {
           this.notice(pid, `Erschöpft. Die nächste Schicht (${nx.name}) lässt sich ab der Epoche „${ERAS[nx.era].name}“ abbauen.`);
           return;
         }
-        for (const u of own(c.ids)) if (u.kind === 'u' && u.cls === 'wrk') this.orderGather(u, t);
+        for (const u of own(c.ids)) if (u.kind === 'u' && u.cls === 'wrk' && (u.naval === (t.rtype === 'fish'))) this.orderGather(u, t);
         break;
       }
       case 'repair': {
@@ -480,6 +487,14 @@ export class World {
       }
       case 'spy': {
         for (const u of own(c.ids)) if (u.kind === 'u') this.spyCommand(pid, u, c.mission, c.target);
+        break;
+      }
+      case 'board': {
+        this.boardCommand(pid, own(c.ids).filter(e => e.kind === 'u'), this.ents.get(c.ship));
+        break;
+      }
+      case 'unload': {
+        for (const s of own(c.ids)) if (s.kind === 'u' && s.st.capacity) this.unloadCommand(s, +c.x, +c.y);
         break;
       }
       case 'rail': {
@@ -621,7 +636,7 @@ export class World {
     for (const c of this.cells) c.length = 0;
     for (const u of this.units) if (!u.aboard) this.cells[this.cellOf(u.x, u.y)].push(u);
 
-    for (const u of this.units) if (!u.dead && !u.aboard) this.updateUnit(u, dt);
+    for (const u of this.units) if (!u.dead && !u.aboard) { if (u.naval) this.withWater(() => this.updateUnit(u, dt)); else this.updateUnit(u, dt); }
     for (const b of this.buildings) if (!b.dead) this.updateBuilding(b, dt);
     this.separate(dt);
     this.updateMeteors(dt);
@@ -666,7 +681,7 @@ export class World {
     }
     const R2 = SUPPLY_RANGE * SUPPLY_RANGE;
     for (const u of this.units) {
-      if (u.dead || u.cls === 'wrk' || u.aboard || u.cls === 'trn') continue;
+      if (u.dead || u.cls === 'wrk' || u.aboard || u.cls === 'trn' || u.naval) continue;
       const list = src.get(this.P[u.owner].team) || [];
       let ok = false;
       for (const b of list) if ((b.cx - u.x) ** 2 + (b.cy - u.y) ** 2 <= R2) { ok = true; break; }
@@ -711,17 +726,19 @@ export class World {
     const c0y = Math.max(0, Math.floor((y - rr) / CELL)), c1y = Math.min(this.cellsH - 1, Math.floor((y + rr) / CELL));
     for (let cy = c0y; cy <= c1y; cy++) for (let cx = c0x; cx <= c1x; cx++) for (const b of this.bcells[cy * this.cellsW + cx]) fn(b);
   }
-  findTarget(owner, x, y, r, preferUnits = true) {
+  findTarget(owner, x, y, r, preferUnits = true, cls = null) {
     let best = null, bd = Infinity;
+    const row = cls && DMG[cls];
     this.nearbyUnits(x, y, r, o => {
       if (o.dead || o.cls === 'env' || !this.enemy(owner, o.owner)) return;
-      if ((o.cls === 'spy' || CAMO[o.cls]) && !this.visibleTo(owner, o)) return;
+      if (row && row[o.cls] === 0) return;
+      if ((o.cls === 'spy' || o.cls === 'sub' || CAMO[o.cls]) && !this.visibleTo(owner, o)) return;
       const d = Math.hypot(o.x - x, o.y - y) - (o.cls === 'wrk' ? -0.5 : 0);
       if (d < r && d < bd) { bd = d; best = o; }
     });
     if (best && preferUnits) return best;
     this.nearbyBuildings(x, y, r, b => {
-      if (b.dead || !this.enemy(owner, b.owner) || b.type === 'wall' && best) return;
+      if (b.dead || !this.enemy(owner, b.owner) || b.type === 'wall' && best || (row && row.bld === 0)) return;
       const d = Math.hypot(b.cx - x, b.cy - y) - b.size / 2 + 3; // Gebäude nachrangig
       if (d < r && d < bd) { bd = d; best = b; }
     });
@@ -736,11 +753,11 @@ export class World {
     u.state = ST.idle;
     switch (o.t) {
       case 'idle': {
-        if (MILITARY(u.cls)) {
+        if (MILITARY(u.cls) && u.st.atk > 0) {
           u.scan -= dt;
           if (u.scan <= 0) {
             u.scan = 0.5;
-            const t = this.findTarget(u.owner, u.x, u.y, this.sightOf(u));
+            const t = this.findTarget(u.owner, u.x, u.y, this.sightOf(u), true, u.cls);
             if (t) u.order = { t: 'attack', target: t.id, guard: { x: u.x, y: u.y } };
           }
         } else if (u.buildQ.length) {
@@ -754,7 +771,7 @@ export class World {
           u.scan -= dt;
           if (u.scan <= 0) {
             u.scan = 0.4;
-            const t = this.findTarget(u.owner, u.x, u.y, this.sightOf(u));
+            const t = this.findTarget(u.owner, u.x, u.y, this.sightOf(u), true, u.cls);
             if (t) { u.order = { t: 'attack', target: t.id, resume: o }; break; }
           }
         }
@@ -772,6 +789,8 @@ export class World {
       case 'build': this.doBuild(u, dt, pl); break;
       case 'spy': this.doSpy(u, dt); break;
       case 'board': this.doBoard(u, dt); break;
+      case 'boardShip': this.doBoardShip(u, dt); break;
+      case 'unload': this.doUnload(u, dt); break;
       case 'ride': this.doRide(u, dt); break;
       case 'wait': break;
       default: u.order = { t: 'idle' };
@@ -790,7 +809,7 @@ export class World {
     const done = () => {
       if (o.resume) u.order = o.resume;
       else if (o.guard && u.cls !== 'wrk') {
-        const nt = this.findTarget(u.owner, u.x, u.y, this.sightOf(u));
+        const nt = this.findTarget(u.owner, u.x, u.y, this.sightOf(u), true, u.cls);
         u.order = nt ? { t: 'attack', target: nt.id, guard: o.guard } : { t: 'move', x: o.guard.x, y: o.guard.y, key: 'p' + Math.floor(o.guard.x) + ',' + Math.floor(o.guard.y), tx: Math.floor(o.guard.x), ty: Math.floor(o.guard.y) };
       } else u.order = { t: 'idle' };
     };
@@ -851,7 +870,7 @@ export class World {
   hit(src, t, atk, cls, splash) {
     if (t.owner !== src.owner && !this.enemy(src.owner, t.owner)) this.checkBreach(src.owner, t.owner);
     const dcls = t.kind === 'u' ? t.cls : 'bld';
-    let dmg = atk * (DMG[cls][dcls] || 1) * this.takeMul(t, cls, false) * ((src.st && src.st.dmgVs && src.st.dmgVs[dcls]) || 1);
+    let dmg = atk * (DMG[cls][dcls] ?? 1) * this.takeMul(t, cls, false) * ((src.st && src.st.dmgVs && src.st.dmgVs[dcls]) || 1);
     if (t.kind === 'b' && !t.built) dmg *= 1.5;
     if (t.kind === 'b' && t.type === 'station' && t.built && (src.cls === 'inf' || src.cls === 'spr') && this.enemy(src.owner, t.owner) && t.hp - dmg < t.maxHp * RAIL.captureHp) {
       const prev = t.owner;
@@ -867,7 +886,7 @@ export class World {
       const tx = t.kind === 'u' ? t.x : t.cx, ty = t.kind === 'u' ? t.y : t.cy;
       this.nearbyUnits(tx, ty, splash, o => {
         if (o === t || o.dead || !this.enemy(src.owner, o.owner)) return;
-        if (Math.hypot(o.x - tx, o.y - ty) <= splash) this.damage(o, atk * 0.5 * (DMG[cls][o.cls] || 1) * this.takeMul(o, cls, true), src.owner, src);
+        if (Math.hypot(o.x - tx, o.y - ty) <= splash) this.damage(o, atk * 0.5 * (DMG[cls][o.cls] ?? 1) * this.takeMul(o, cls, true), src.owner, src);
       });
     }
     // Vergeltung
@@ -898,6 +917,7 @@ export class World {
   kill(e, by, src) {
     if (e.dead) return;
     if (e.kind === 'u' && e.cls === 'trn') this.trainDestroyed(e);
+    if (e.kind === 'u' && e.cargo && e.cargo.length) this.shipSunk(e);
     if (e.kind === 'b' && e.type === 'station' && e.stock && by >= 0) for (const k in e.stock) this.P[by].res[k] += Math.round(e.stock[k] * 0.5);
     if (e.kind === 'u' && e.cls === 'env') this.envoyKilled(e, by);
     // Erfahrung und Moral für den Sieger
@@ -941,7 +961,7 @@ export class World {
   dropoffFor(u) {
     let best = null, bd = Infinity;
     for (const b of this.buildings) {
-      if (b.dead || b.owner !== u.owner || !b.built || !b.st.drop) continue;
+      if (b.dead || b.owner !== u.owner || !b.built || !b.st.drop || (u.naval && b.type !== 'dock')) continue;
       const d = Math.hypot(b.cx - u.x, b.cy - u.y);
       if (d < bd) { bd = d; best = b; }
     }
@@ -1124,10 +1144,10 @@ export class World {
     if (b.st.atk) {
       b.cd -= dt;
       if (b.cd <= 0) {
-        const t = this.findTarget(b.owner, b.cx, b.cy, b.st.range + b.size / 2, true);
+        const t = this.findTarget(b.owner, b.cx, b.cy, b.st.range + b.size / 2, true, 'bld');
         if (t && t.kind === 'u') {
           b.cd = b.st.cd;
-          this.damage(t, b.st.atk * (DMG.bld[t.cls] || 1), b.owner);
+          this.damage(t, b.st.atk * (DMG.bld[t.cls] ?? 1) * (b.st.vsShip && (t.cls === 'shp' || t.cls === 'sub') ? b.st.vsShip : 1), b.owner);
           this.event({ k: 'shot', x: b.cx, y: b.cy - 0.5, tx: t.x, ty: t.y, c: pl.era >= 4 ? 2 : 0 });
         } else b.cd = 0.4;
       }
@@ -1185,7 +1205,7 @@ export class World {
     if (b.qProg >= q.time) {
       if (pl.pop + st.pop > pl.popCap) { b.blocked = true; return; }
       b.blocked = false;
-      const spawn = this.spawnPoint(b);
+      const spawn = LINES[q.line].naval ? this.withWater(() => this.spawnPoint(b)) : this.spawnPoint(b);
       if (!spawn) return;
       b.queue.shift(); b.qProg = 0;
       const u = this.addUnit(b.owner, q.line, q.unique, spawn[0], spawn[1]);
@@ -1195,7 +1215,7 @@ export class World {
       if (b.rally) {
         const rt = b.rally.target ? this.ents.get(b.rally.target) : null;
         if (rt && u.cls === 'wrk' && (rt.kind === 'r' || isProducer(rt.type))) this.orderGather(u, rt);
-        else this.groupMove([u], b.rally.x, b.rally.y, u.cls !== 'wrk');
+        else if (u.naval) this.withWater(() => this.groupMove([u], b.rally.x, b.rally.y, u.cls !== 'wrk')); else this.groupMove([u], b.rally.x, b.rally.y, u.cls !== 'wrk');
       }
     }
   }
@@ -1224,7 +1244,7 @@ export class World {
           const arr = this.cells[ny * this.cellsW + nx];
           const start = arr === c ? i + 1 : 0;
           for (let j = start; j < arr.length; j++) {
-            const b = arr[j]; if (b.dead || b.cls === 'trn') continue;
+            const b = arr[j]; if (b.dead || b.cls === 'trn' || b.naval !== a.naval) continue;
             const dx = b.x - a.x, dy = b.y - a.y, min = a.r + b.r;
             const d2 = dx * dx + dy * dy;
             if (d2 >= min * min) continue;
@@ -1238,8 +1258,8 @@ export class World {
             const s = wa + wb || 1;
             const ax = a.x - ux * push * 2 * wa / s, ay = a.y - uy * push * 2 * wa / s;
             const bx = b.x + ux * push * 2 * wb / s, by = b.y + uy * push * 2 * wb / s;
-            if (this.passableAt(ax, ay)) { a.x = ax; a.y = ay; }
-            if (this.passableAt(bx, by)) { b.x = bx; b.y = by; }
+            if (this.passFor(a, ax, ay)) { a.x = ax; a.y = ay; }
+            if (this.passFor(b, bx, by)) { b.x = bx; b.y = by; }
           }
         }
       }
@@ -1268,7 +1288,7 @@ export class World {
         if (nx >= 0 && ny >= 0 && nx < this.W && ny < this.H && v[ny * this.W + nx] < val) v[ny * this.W + nx] = val;
       }
     };
-    for (const u of this.units) if (!u.dead && !u.aboard) { const v = this.vis.get(this.P[u.owner].team); stamp(v, u.x, u.y, this.sightOf(u)); stamp(v, u.x, u.y, 3, 2); }
+    for (const u of this.units) if (!u.dead && !u.aboard) { const v = this.vis.get(this.P[u.owner].team); stamp(v, u.x, u.y, this.sightOf(u)); stamp(v, u.x, u.y, u.st.detects ? 6 : 3, 2); }
     for (const b of this.buildings) if (!b.dead) stamp(this.vis.get(this.P[b.owner].team), b.cx, b.cy, b.st.sight + b.size / 2);
     for (const r of this.reveals || []) stamp(this.vis.get(this.P[r.pid].team), r.x, r.y, 12);
   }
@@ -1279,7 +1299,7 @@ export class World {
     if (e.kind === 'u') {
       const s = v[this.idx(Math.floor(e.x), Math.floor(e.y))];
       // Infanterie im Wald und Spione sind erst aus der Nähe (3 Kacheln) zu sehen; Wachgebäude enttarnen Spione
-      const seen = v2 => (e.cls === 'spy' ? v2 === 2 || this.detectedSpy(e) : CAMO[e.cls] && this.inForest(e) ? v2 === 2 : v2 >= 1);
+      const seen = v2 => (e.cls === 'sub' ? v2 === 2 : e.cls === 'spy' ? v2 === 2 || this.detectedSpy(e) : CAMO[e.cls] && this.inForest(e) ? v2 === 2 : v2 >= 1);
       if (seen(s)) return true;
       for (const q of this.P) if (q.team !== this.P[pid].team && this.sharesVision(pid, q.id)) { const v2 = this.vis.get(q.team); if (v2 && seen(v2[this.idx(Math.floor(e.x), Math.floor(e.y))])) return true; }
       return false;
@@ -1415,6 +1435,7 @@ export class World {
     Object.assign(w, { rel: d.rel || {}, proposals: d.proposals || [], dchat: d.dchat || {}, tributes: d.tributes || [], chron: d.chron || [], nextPropId: d.nextPropId || 1 });
     w.initDiplomacy();
     w.initRail();
+    w.buildWPass();
     w.recount();
     return w;
   }
@@ -1514,3 +1535,4 @@ export class World {
 
 installDiplomacy(World);
 installRail(World);
+installNaval(World);

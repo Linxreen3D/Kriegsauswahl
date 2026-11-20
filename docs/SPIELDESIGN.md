@@ -770,7 +770,7 @@ Formationen werden per Taste gewählt. Die Einheiten halten sie beim Marschieren
 4. ✅ **Diplomatie:** Botschafter, privater Chat, Vertragsfenster, Ansehen, **Spionage**, **Ereignisse**, **Chronik und Endstatistik**.
 5. ✅ **Nationen:** 12 Nationen mit Boni und eigenen Einheiten IV–VI.
 6. ✅ **Eisenbahn:** Gleise, Bahnhöfe, Truppen- und Güterzüge, Sabotage.
-7. **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“ mit Meerengen, **Brückenbau**.
+7. ✅ **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“ mit Meerengen, **Brückenbau**.
 8. **Luft:** Flugplatz mit Tanken/Aufmunitionieren, Jäger, Bomber, Hubschrauber, Fallschirmjäger, Flugabwehr.
 9. **Spätphase:** Nationseinheiten VII–VIII, **Sondereinheit Celo**, Signatur-Einheiten, **Staatsführer mit Porträts**, **Friedenskonferenz**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
 10. **Feinschliff:** Simulationen und Balancing.

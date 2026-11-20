@@ -45,6 +45,7 @@ export const MAP_TYPES = {
   continent: { name: 'Kontinent', water: 0.30, rock: 0.80, forest: 0.60, snow: 0.08, desert: 0.06 },
   lakes: { name: 'Seenplatte', water: 0.42, rock: 0.86, forest: 0.62, snow: 0.06, desert: 0.04 },
   highlands: { name: 'Hochland', water: 0.26, rock: 0.66, forest: 0.62, ridges: true, snow: 0.14, desert: 0.03 },
+  islands: { name: 'Inseln', water: 0.5, rock: 0.9, forest: 0.6, snow: 0.04, desert: 0.03, islands: true },
   forest: { name: 'Urwald', water: 0.30, rock: 0.82, forest: 0.52, snow: 0.04, desert: 0.03 },
 };
 
@@ -65,8 +66,18 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
   const elev = makeNoise(rand), moist = makeNoise(rand), forestN = makeNoise(rand), detail = makeNoise(rand), climate = makeNoise(rand);
   const terrain = new Uint8Array(W * H), tempA = new Float32Array(W * H), moistA = new Float32Array(W * H), elevA = new Float32Array(W * H);
   const freq = 4.5 / 128;
+  // Inselkarte: je Spieler eine Insel auf dem Startkreis, dazu kleinere Inseln; Meerengen dazwischen
+  let isleCenters = null;
+  if (T.islands) {
+    const ir = rng(seed + 991), R0 = W * (players <= 2 ? 0.30 : 0.37), off0 = ir() * Math.PI * 2;
+    isleCenters = [];
+    for (let i = 0; i < players; i++) { const a = off0 + (i / players) * Math.PI * 2; isleCenters.push({ x: Math.round(W / 2 + Math.cos(a) * R0), y: Math.round(H / 2 + Math.sin(a) * R0), r: W * Math.min(0.2, 0.62 / Math.max(2, players) + 0.07), start: true }); }
+    isleCenters.push({ x: W / 2, y: H / 2, r: W * 0.1 });
+    for (let k = 0; k < players; k++) { const a = off0 + ((k + 0.5) / players) * Math.PI * 2, rr = W * (0.18 + ir() * 0.25); isleCenters.push({ x: W / 2 + Math.cos(a) * rr, y: H / 2 + Math.sin(a) * rr, r: W * (0.04 + ir() * 0.04) }); }
+  }
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     let e = elev(x * freq, y * freq, 5);
+    if (isleCenters) { let m = 0; for (const c of isleCenters) m = Math.max(m, 1 - Math.hypot(x - c.x, y - c.y) / c.r); e = e * 0.45 + Math.max(0, m) * 0.75; }
     if (T.ridges) e = Math.max(e, 1 - Math.abs(elev(x * freq * 0.7 + 50, y * freq * 0.7 + 50, 3) - 0.5) * 2.6);
     const m = moist(x * freq * 1.3 + 100, y * freq * 1.3, 3);
     let t = T_GRASS;
@@ -128,6 +139,7 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
     const r = R * (0.92 + rand() * 0.12);
     starts.push({ x: Math.round(W / 2 + Math.cos(a) * r), y: Math.round(H / 2 + Math.sin(a) * r) });
   }
+  if (isleCenters) for (let i = 0; i < players; i++) { starts[i].x = isleCenters[i].x; starts[i].y = isleCenters[i].y; }
   const clear = (cx, cy, rad) => {
     for (let y = cy - rad; y <= cy + rad; y++) for (let x = cx - rad; x <= cx + rad; x++) {
       if (x < 1 || y < 1 || x >= W - 1 || y >= H - 1) continue;
@@ -161,7 +173,7 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
     }
     return seen;
   };
-  for (let guard = 0; guard < players + 2; guard++) {
+  for (let guard = 0; guard < (T.islands ? 0 : players + 2); guard++) {
     const seen = reach();
     const bad = starts.findIndex(s => !seen[s.y * W + s.x]);
     if (bad < 0) break;
@@ -243,6 +255,12 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
   scatter('gold', Math.round(area / 1000), 2, 16);
   scatter('stone', Math.round(area / 1300), 2, 16);
   scatter('berry', Math.round(area / 1800), 1, 14);
+  // Fischgründe: Wasserkacheln nahe der Küste (für Fischerboote)
+  const isWater = (x, y) => x > 0 && y > 0 && x < W - 1 && y < H - 1 && terrain[y * W + x] === T_WATER && !occ[y * W + x];
+  const nearCoast = (x, y) => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const t = terrain[(y + dy) * W + x + dx]; if (t !== undefined && t !== T_WATER) return true; } return false; };
+  const fishAt = (x, y) => { if (!isWater(x, y) || !nearCoast(x, y)) return false; occ[y * W + x] = 1; resList.push({ type: 'fish', x, y, mul: resMul }); return true; };
+  for (const s of starts) for (let k = 0, t = 0; k < 3 && t < 300; t++) { const a = rand() * Math.PI * 2, d = 7 + rand() * 12; if (fishAt(Math.round(s.x + Math.cos(a) * d), Math.round(s.y + Math.sin(a) * d))) k++; }
+  for (let k = 0, t = 0; k < Math.round(area / 700) && t < area / 20; t++) if (fishAt(2 + Math.floor(rand() * (W - 4)), 2 + Math.floor(rand() * (H - 4)))) k++;
 
   // Provinzen: Voronoi um Startpunkte und weitere Zentren (ca. 6 je Spieler)
   const centers = starts.map(s => ({ x: s.x, y: s.y }));
