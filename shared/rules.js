@@ -54,7 +54,7 @@ export function eraCost(targetEra, leaderEra) {
 // ---------------- Kulturen & Nationen ----------------
 // Kultur wird beim Erreichen der Bronzezeit gewählt, die Nation im Frühen Mittelalter.
 // Alle Nationen stehen jeder Kultur offen
-const ALL_NATIONS = ['usa', 'russia', 'germany', 'china', 'austria', 'yugoslavia', 'india'];
+const ALL_NATIONS = ['usa', 'russia', 'germany', 'china', 'austria', 'yugoslavia', 'india', 'france', 'britain', 'italy', 'japan', 'ottoman'];
 export const CULTURES = {
   steppe: {
     name: 'Steppenvolk', icon: '🐎', desc: 'Reiterei ist 15 % schneller und 15 % billiger. Spezialeinheit: Steppenreiter (berittener Bogenschütze).',
@@ -74,14 +74,87 @@ export const CULTURES = {
   },
 };
 export const NATIONS = {
-  usa: { name: 'USA', desc: 'Alle Ressourcen werden 15 % schneller gesammelt. Weltwunder: Freiheitsstatue.', bonus: { gather: 1.15 } },
-  russia: { name: 'Russland', desc: 'Militäreinheiten haben 10 % mehr Leben. „General Winter“: keine Nachteile durch Schnee und Winter in eigenen Provinzen. Weltwunder: Kathedrale mit Zwiebelkuppeln.', bonus: { armyHp: 1.1, winter: true } },
-  germany: { name: 'Deutschland', desc: 'Militäreinheiten verursachen 10 % mehr Schaden. Weltwunder: gotischer Dom.', bonus: { armyDmg: 1.1 } },
+  usa: { name: 'USA', desc: 'Alle Rohstoffe werden 15 % schneller gesammelt (gleicht die fehlenden Einheiten im Mittelalter aus). Weltwunder: Freiheitsstatue.', bonus: { gather: 1.15 } },
+  russia: { name: 'Russland', desc: 'Militäreinheiten haben 10 % mehr Leben. „General Winter“: keine Nachteile durch Schnee und Winter in eigenen Provinzen. Weltwunder: Basilius-Kathedrale.', bonus: { armyHp: 1.1, winter: true } },
+  germany: { name: 'Deutschland', desc: 'Militäreinheiten verursachen 10 % mehr Schaden. Weltwunder: Kölner Dom.', bonus: { armyDmg: 1.1 } },
   china: { name: 'China', desc: 'Einheiten werden 25 % schneller ausgebildet. Weltwunder: Himmelstempel.', bonus: { trainSpeed: 1.25 } },
-  austria: { name: 'Österreich-Ungarn', desc: 'Türme haben +2 Reichweite. Weltwunder: Parlament.', bonus: { towerRange: 2 } },
-  yugoslavia: { name: 'Jugoslawien', desc: 'Infanterie bewegt sich 15 % schneller. Weltwunder: Kuppeltempel.', bonus: { infSpeed: 1.15 } },
-  india: { name: 'Indien', desc: 'Häuser geben +4 Bevölkerung, Belagerung +25 % Schaden. Weltwunder: Marmormausoleum.', bonus: { housePop: 4, siegeDmg: 1.25 } },
+  austria: { name: 'Österreich-Ungarn', desc: 'Türme haben +2 Reichweite. Weltwunder: Parlament Budapest.', bonus: { towerRange: 2 } },
+  yugoslavia: { name: 'Jugoslawien', desc: 'Infanterie bewegt sich 15 % schneller. Weltwunder: Tempel des hl. Sava.', bonus: { infSpeed: 1.15 } },
+  india: { name: 'Indien', desc: 'Häuser geben +4 Bevölkerung, Belagerung +25 % Schaden. Weltwunder: Taj Mahal.', bonus: { housePop: 4, siegeDmg: 1.25 } },
+  france: { name: 'Frankreich', desc: 'Gebäude haben 20 % mehr Leben, Mauern, Türme und Außenposten kosten 25 % weniger. Weltwunder: Eiffelturm.', bonus: { bldHp: 1.2, fortCost: 0.75 } },
+  britain: { name: 'Großbritannien', desc: 'Fernkämpfer +1 Reichweite. Später: Schiffe 20 % billiger, Werften 25 % schneller. Weltwunder: Tower Bridge.', bonus: { rangedRange: 1, shipCost: 0.8, shipBuild: 1.25 } },
+  italy: { name: 'Italien', desc: 'Infanterie und Fernkämpfer machen auf Hügeln 20 % mehr Schaden. Weltwunder: Petersdom.', bonus: { hillDmg: 1.2 } },
+  japan: { name: 'Japan', desc: 'Spezialeinheiten (Kultur und Nation) kosten 20 % weniger. Weltwunder: Tōdai-ji.', bonus: { uniqueCost: 0.8 } },
+  ottoman: { name: 'Osmanisches Reich', desc: 'Infanterie kostet 15 % weniger. Weltwunder: Sultan-Ahmed-Moschee.', bonus: { infCost: 0.85 } },
 };
+
+// Eigene Einheiten je Nation und Epoche (3 = Frühes MA, 4 = Spätes MA, 5 = 1. IR). Eine Einheit ist nur in ihrer Epoche ausbildbar.
+// mods: hpMul, atkMul, speedMul, cdMul (Schussfolge), range (fest) bzw. rangeAdd, splash, dmgVs {Klasse: Faktor}, plunder, costMul, timeMul; at = anderes Gebäude
+export const NATION_UNITS = {
+  germany: [
+    { era: 3, id: 'germany_otto', line: 'cav', name: 'Ottonischer Panzerreiter', icon: '🏇', hist: 'Lechfeld, 955', mods: { hpMul: 1.3 }, costMul: 1.05 },
+    { era: 4, id: 'germany_landsknecht', line: 'inf', name: 'Landsknecht', icon: '⚔', hist: 'ab 1490, Zweihänder', mods: { atkMul: 1.1, splash: 0.8, dmgVs: { spr: 1.5 } }, costMul: 1.15 },
+    { era: 5, id: 'germany_grenadier', line: 'inf', name: 'Preußischer Grenadier', icon: '🪖', hist: 'Zündnadelgewehr, 1841', mods: { cdMul: 0.75 }, costMul: 1.15 },
+  ],
+  austria: [
+    { era: 3, id: 'austria_magyar', line: 'cav', name: 'Magyarischer Bogenreiter', icon: '🏹', hist: 'Ungarnzüge, 10. Jh.', mods: { range: 4, atkMul: 0.95, speedMul: 1.1 }, costMul: 1.05 },
+    { era: 4, id: 'austria_hussar', line: 'cav', name: 'Ungarischer Husar', icon: '🐎', hist: 'Schwarze Armee, 15. Jh.', mods: { speedMul: 1.2, atkMul: 1.1 }, costMul: 0.95 },
+    { era: 5, id: 'austria_cuirassier', line: 'cav', name: 'Kaiserlicher Kürassier', icon: '🛡', hist: '18. Jh.', mods: { hpMul: 1.25, atkMul: 1.05 }, costMul: 1.15 },
+  ],
+  russia: [
+    { era: 3, id: 'russia_druzhina', line: 'inf', name: 'Druschina', icon: '🛡', hist: 'Kiewer Rus', mods: { hpMul: 1.25 }, costMul: 1.1 },
+    { era: 4, id: 'russia_strelets', line: 'rng', name: 'Strelize', icon: '🔫', hist: 'ab 1550, Arkebuse und Berdysch', mods: { hpMul: 1.3, atkMul: 1.05, dmgVs: { inf: 1.15 } }, costMul: 1.1 },
+    { era: 5, id: 'russia_cossack', line: 'cav', name: 'Kosak', icon: '🐎', hist: 'Höhepunkt 18./19. Jh., plündert', mods: { hpMul: 0.9, speedMul: 1.1, plunder: true }, costMul: 0.8 },
+  ],
+  china: [
+    { era: 3, id: 'china_zhugenu', line: 'rng', name: 'Repetierarmbrust (Zhuge Nu)', icon: '🏹', hist: 'seit der Han-Zeit', mods: { cdMul: 0.5, atkMul: 0.8, range: 4.5 }, costMul: 1.05 },
+    { era: 4, id: 'china_beehive', line: 'sie', name: 'Raketenwerfer „Bienenstock“', icon: '🎆', hist: 'Ming, um 1400', mods: { splash: 2.4, dmgVs: { inf: 2.5, spr: 2.5, rng: 2.5, wrk: 2 }, atkMul: 0.8 }, costMul: 1.1 },
+    { era: 5, id: 'china_banner', line: 'cav', name: 'Banner-Reiter', icon: '🏹', hist: 'Acht Banner der Qing', mods: { range: 5, hpMul: 1.15 }, costMul: 1.1 },
+  ],
+  india: [
+    { era: 3, id: 'india_elephant', line: 'cav', name: 'Kriegselefant', icon: '🐘', hist: 'Standard indischer Reiche', mods: { hpMul: 1.8, speedMul: 0.75, dmgVs: { bld: 2 }, atkMul: 1.1 }, costMul: 1.3 },
+    { era: 4, id: 'india_rajput', line: 'cav', name: 'Rajputen-Reiter', icon: '🏇', hist: 'Rajputen-Reiche, 8.–16. Jh.', mods: { atkMul: 1.25 }, costMul: 1.1 },
+    { era: 5, id: 'india_mysore', line: 'rng', name: 'Mysore-Raketenträger', icon: '🎆', hist: 'Tipu Sultan, 1780–1799', mods: { rangeAdd: 2, splash: 1.2, cdMul: 1.3 }, costMul: 1.15 },
+  ],
+  yugoslavia: [
+    { era: 3, id: 'yugoslavia_narentine', line: 'inf', name: 'Narentaner', icon: '⛵', hist: 'Adria-Seeräuber, 9. Jh., plündert', mods: { speedMul: 1.25, plunder: true }, costMul: 1.0 },
+    { era: 4, id: 'yugoslavia_serbknight', line: 'cav', name: 'Serbischer Panzerreiter', icon: '🏇', hist: 'Heer Stefan Dušans, 1340er', mods: { hpMul: 1.15, atkMul: 1.1 }, costMul: 1.1 },
+    { era: 5, id: 'yugoslavia_pandur', line: 'inf', name: 'Pandur', icon: '🌲', hist: 'Militärgrenze, 1740er', mods: { speedMul: 1.15, atkMul: 1.1, sightAdd: 2 }, costMul: 1.05 },
+  ],
+  usa: [
+    { era: 5, id: 'usa_minuteman', line: 'inf', at: 'town', name: 'Minuteman', icon: '🪖', hist: '1775, Miliz aus dem Haupthaus', mods: { hpMul: 0.85 }, costMul: 0.7, timeMul: 0.5 },
+    { era: 5, id: 'usa_kentucky', line: 'rng', name: 'Kentucky-Büchsenschütze', icon: '🎯', hist: '18. Jh., gezogene Büchse', mods: { rangeAdd: 2, cdMul: 1.2, atkMul: 1.45 }, costMul: 1.1 },
+  ],
+  france: [
+    { era: 3, id: 'france_scara', line: 'cav', name: 'Fränkische Scara', icon: '🏇', hist: 'Panzerreiter der Karolinger', mods: { hpMul: 1.3, atkMul: 1.05 }, costMul: 1.1 },
+    { era: 4, id: 'france_gendarme', line: 'cav', name: 'Gendarme', icon: '🛡', hist: 'Ordonnanzkompanien, 1445', mods: { hpMul: 1.3, atkMul: 1.1 }, costMul: 1.15 },
+    { era: 5, id: 'france_oldguard', line: 'inf', name: 'Alte Garde', icon: '🎖', hist: 'Grande Armée, 1804', mods: { hpMul: 1.3, atkMul: 1.2 }, costMul: 1.15 },
+  ],
+  britain: [
+    { era: 3, id: 'britain_huscarl', line: 'inf', name: 'Huskarl', icon: '🪓', hist: 'angelsächsische Leibgarde, um 1000', mods: { atkMul: 1.25, dmgVs: { inf: 1.15 } }, costMul: 1.15 },
+    { era: 4, id: 'britain_longbow', line: 'rng', name: 'Englischer Langbogenschütze', icon: '🏹', hist: 'Crécy, 1346', mods: { rangeAdd: 2 }, costMul: 1.1 },
+    { era: 5, id: 'britain_redcoat', line: 'inf', name: 'Rotrock', icon: '🪖', hist: 'Brown Bess', mods: { cdMul: 0.85, hpMul: 1.1 }, costMul: 1.0 },
+    { era: 5, id: 'britain_congreve', line: 'sie', name: 'Congreve-Raketen', icon: '🎆', hist: 'ab 1805', mods: { splash: 2, dmgVs: { inf: 2.2, spr: 2.2, rng: 2.2 }, rangeAdd: 2 }, costMul: 1.1 },
+  ],
+  italy: [
+    { era: 3, id: 'italy_lombard', line: 'cav', name: 'Langobardischer Reiter', icon: '🏇', hist: 'ab 568, Lanze', mods: { atkMul: 1.3, hpMul: 1.1 }, costMul: 1.1 },
+    { era: 4, id: 'italy_genoese', line: 'rng', name: 'Genuesischer Armbrustschütze', icon: '🏹', hist: '14. Jh., mit Setzschild', mods: { hpMul: 1.4, atkMul: 1.1 }, costMul: 1.15 },
+    { era: 5, id: 'italy_bersaglieri', line: 'inf', name: 'Bersagliere', icon: '🪶', hist: '1836', mods: { speedMul: 1.3, atkMul: 1.1 }, costMul: 1.0 },
+  ],
+  japan: [
+    { era: 3, id: 'japan_bushi', line: 'cav', name: 'Berittener Bogenkrieger (Bushi)', icon: '🏹', hist: 'Heian-Zeit, 10. Jh.', mods: { range: 4.5, atkMul: 0.85 }, costMul: 1.1 },
+    { era: 4, id: 'japan_ashigaru', line: 'rng', name: 'Ashigaru mit Teppō', icon: '🔫', hist: 'Nagashino, 1575', mods: { atkMul: 1.0 }, costMul: 0.9, timeMul: 0.7 },
+    { era: 5, id: 'japan_samurai', line: 'inf', name: 'Samurai der Edo-Zeit', icon: '🗡', hist: 'bis 1868', mods: { range: 0.5, atkMul: 1.6, hpMul: 1.3, speedMul: 1.1 }, costMul: 1.2 },
+  ],
+  ottoman: [
+    { era: 3, id: 'ottoman_turkmen', line: 'cav', name: 'Turkmenischer Bogenreiter', icon: '🏹', hist: '10. Jh.', mods: { range: 4, speedMul: 1.15 }, costMul: 1.05 },
+    { era: 4, id: 'ottoman_janissary', line: 'rng', name: 'Janitschar', icon: '🔫', hist: 'ab 1360er', mods: { hpMul: 1.3, atkMul: 1.2 }, costMul: 1.15 },
+    { era: 5, id: 'ottoman_nizam', line: 'inf', name: 'Nizam-ı Cedid', icon: '🪖', hist: '„Neue Ordnung“, 1792', mods: { atkMul: 1.1 }, costMul: 0.95 },
+  ],
+};
+export const NATION_UNIT = {};
+for (const [n, list] of Object.entries(NATION_UNITS)) for (const u of list) NATION_UNIT['nu_' + u.id] = { ...u, nation: n };
+export const isNationUnit = uq => !!uq && uq.startsWith('nu_');
 
 // ---------------- Einheiten ----------------
 // Klassen: wrk (Arbeiter), inf (Infanterie), spr (Spieß/Panzerabwehr), rng (Fernkampf/MG), cav (Reiterei/Panzer),
@@ -308,11 +381,15 @@ for (const [uq, d] of Object.entries(UNIQUE)) {
     TYPES.push({ kind: 'u', key, line: d.line, unique: uq, era, cls: LINES[d.line].cls, name: d.name });
   }
 }
+for (const [key, u] of Object.entries(NATION_UNIT)) {
+  TYPE_INDEX[key] = TYPES.length;
+  TYPES.push({ kind: 'u', key, line: u.line, unique: key, era: u.era, cls: LINES[u.line].cls, name: u.name, icon: u.icon, hist: u.hist });
+}
 for (const b of Object.keys(BUILDINGS)) {
   TYPE_INDEX[b] = TYPES.length;
   TYPES.push({ kind: 'b', key: b, name: BUILDINGS[b].name });
 }
-export function unitKey(line, era, unique) { return unique ? unique + '_' + era : line + era; }
+export function unitKey(line, era, unique) { return unique ? (isNationUnit(unique) ? unique : unique + '_' + era) : line + era; }
 
 export function scaleCost(cost, f) {
   const o = {};
@@ -338,7 +415,21 @@ export function unitBase(line, era, unique) {
     time: d.time * (1 + steps * 0.05), splash: d.splash || 0, heal: d.heal ? d.heal * Math.pow(1 + g, steps) : 0,
     cost: scaleCost(d.cost, Math.pow(cg, steps)),
   };
-  if (unique) {
+  if (isNationUnit(unique)) {
+    const u = NATION_UNIT[unique], m = u.mods;
+    s.name = u.name; s.national = true;
+    s.cost = scaleCost(s.cost, u.costMul || 1); s.time *= u.timeMul || 1;
+    if (m.hpMul) s.hp *= m.hpMul;
+    if (m.atkMul) s.atk *= m.atkMul;
+    if (m.speedMul) s.speed *= m.speedMul;
+    if (m.cdMul) s.cd *= m.cdMul;
+    if (m.range != null) s.range = m.range;
+    if (m.rangeAdd) s.range += m.rangeAdd;
+    if (m.sightAdd) s.sight += m.sightAdd;
+    if (m.splash != null) s.splash = m.splash;
+    if (m.dmgVs) s.dmgVs = m.dmgVs;
+    if (m.plunder) s.plunder = true;
+  } else if (unique) {
     const u = UNIQUE[unique], m = u.mods;
     s.name = u.name;
     s.cost = scaleCost(u.cost, Math.pow(1.18, steps));
@@ -357,7 +448,7 @@ export function playerMods(culture, nation, late = false) {
   const m = {
     gather: { food: 1, wood: 1, stone: 1, gold: 1 }, armyCost: 1, cavCost: 1, cavSpeed: 1, cavHp: 1, infAtk: 1, infHp: 1, infSpeed: 1,
     bldHp: 1, buildSpeed: 1, towerAtk: 1, towerRange: 0, housePop: 0, trainSpeed: 1, rangedRange: 0, siegeDmg: 1, regen: 0,
-    armyHp: 1, armyDmg: 1, late: !!late,
+    armyHp: 1, armyDmg: 1, late: !!late, fortCost: 1, uniqueCost: 1, infCost: 1, hillDmg: 1, shipCost: 1, shipBuild: 1,
   };
   if (culture === 'steppe') { m.cavSpeed = 1.15; m.cavCost = 0.85; }
   if (culture === 'traders') { m.gather.gold = 1.25; m.gather.stone = 1.25; }
@@ -367,7 +458,7 @@ export function playerMods(culture, nation, late = false) {
   if (n) {
     const b = n.bonus;
     if (b.gather) for (const k in m.gather) m.gather[k] *= b.gather;
-    for (const k of ['armyCost', 'cavHp', 'trainSpeed', 'siegeDmg', 'infSpeed', 'armyHp', 'armyDmg']) if (b[k]) m[k] *= b[k];
+    for (const k of ['armyCost', 'cavHp', 'trainSpeed', 'siegeDmg', 'infSpeed', 'armyHp', 'armyDmg', 'bldHp', 'fortCost', 'uniqueCost', 'infCost', 'hillDmg', 'shipCost', 'shipBuild']) if (b[k]) m[k] *= b[k];
     for (const k of ['housePop', 'rangedRange', 'towerRange', 'regen']) if (b[k]) m[k] += b[k];
     if (b.winter) m.winter = true;
   }
@@ -380,7 +471,8 @@ export function unitStats(line, era, unique, mods) {
   if (!mods) return s;
   const mil = s.cls !== 'wrk';
   if (s.cls === 'cav') { s.speed *= mods.cavSpeed; s.hp *= mods.cavHp; s.cost = scaleCost(s.cost, mods.cavCost); }
-  if (s.cls === 'inf') { s.atk *= mods.infAtk; s.hp *= mods.infHp; s.speed *= mods.infSpeed; }
+  if (s.cls === 'inf') { s.atk *= mods.infAtk; s.hp *= mods.infHp; s.speed *= mods.infSpeed; s.cost = scaleCost(s.cost, mods.infCost); }
+  if (unique) s.cost = scaleCost(s.cost, mods.uniqueCost);
   if (s.cls === 'rng' && s.range > 1) s.range += mods.rangedRange;
   if (s.cls === 'sie') s.atk *= mods.siegeDmg;
   if (mil) { s.hp *= mods.armyHp; s.atk *= mods.armyDmg; s.cost = scaleCost(s.cost, mods.armyCost); }
@@ -402,11 +494,12 @@ export function buildingStats(type, era, mods) {
     s.range = b.range + (mods && type === 'tower' ? mods.towerRange : 0);
   }
   if (type === 'house' && mods) s.pop = b.pop + mods.housePop;
+  if (mods && mods.fortCost !== 1 && (type === 'wall' || type === 'tower' || type === 'outpost')) s.cost = scaleCost(s.cost || b.cost, mods.fortCost);
   s.time = b.time / (mods ? mods.buildSpeed : 1);
   return s;
 }
 // Welche Einheiten kann ein Gebäude für einen Spieler ausbilden?
-export function trainable(bType, era, culture) {
+export function trainable(bType, era, culture, nation) {
   const out = [];
   for (const [line, d] of Object.entries(LINES)) {
     if (d.at === bType && era >= d.minEra) out.push({ line, unique: null });
@@ -414,6 +507,9 @@ export function trainable(bType, era, culture) {
   if (culture && era >= UNIQUE_MIN_ERA) {
     const uq = CULTURES[culture].unique;
     if (LINES[UNIQUE[uq].line].at === bType) out.push({ line: UNIQUE[uq].line, unique: uq });
+  }
+  if (nation && NATION_UNITS[nation]) for (const u of NATION_UNITS[nation]) {
+    if (u.era === era && (u.at || LINES[u.line].at) === bType) out.push({ line: u.line, unique: 'nu_' + u.id });
   }
   return out;
 }

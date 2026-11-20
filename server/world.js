@@ -412,7 +412,7 @@ export class World {
         for (let k = 0; k < n; k++) {
           // auf Gebäude mit kürzester Warteschlange verteilen
           bs.sort((a, b) => a.queue.length - b.queue.length);
-          const b = bs.find(x => trainable(x.type, pl.era, pl.culture).some(t => t.line === c.line && (t.unique || null) === (c.unique || null)));
+          const b = bs.find(x => trainable(x.type, pl.era, pl.culture, pl.nation).some(t => t.line === c.line && (t.unique || null) === (c.unique || null)));
           if (!b || b.queue.length >= 15) break;
           const st = unitStats(c.line, Math.max(pl.era, LINES[c.line].minEra), c.unique || null, pl.mods);
           if (!this.canAfford(pl, st.cost)) { this.notice(pid, 'Nicht genug Rohstoffe.'); break; }
@@ -819,6 +819,7 @@ export class World {
   dealMul(u, range) {
     let m = (1 + u.rank * VET_BONUS) * this.buffMul(this.P[u.owner], 'dmg');
     if (u.morale < 50) m *= 0.8;
+    const hd = this.P[u.owner].mods.hillDmg; if (hd && hd !== 1 && (u.cls === 'inf' || u.cls === 'spr' || u.cls === 'rng') && this.onHill(u)) m *= hd;
     const f = FORMATIONS[u.form];
     if (f) {
       if (f.dealRanged && range > 1.2) m *= f.dealRanged;
@@ -839,7 +840,7 @@ export class World {
   hit(src, t, atk, cls, splash) {
     if (t.owner !== src.owner && !this.enemy(src.owner, t.owner)) this.checkBreach(src.owner, t.owner);
     const dcls = t.kind === 'u' ? t.cls : 'bld';
-    let dmg = atk * (DMG[cls][dcls] || 1) * this.takeMul(t, cls, false);
+    let dmg = atk * (DMG[cls][dcls] || 1) * this.takeMul(t, cls, false) * ((src.st && src.st.dmgVs && src.st.dmgVs[dcls]) || 1);
     if (t.kind === 'b' && !t.built) dmg *= 1.5;
     this.damage(t, dmg, src.owner, src);
     if (splash) {
@@ -898,6 +899,12 @@ export class World {
       if (by >= 0) this.P[by].stats.kills++;
       this.event({ k: 'death', id: e.id, x: e.x, y: e.y, c: e.cls, o: e.owner });
     } else if (e.kind === 'b') {
+      // Plündern (Kosaken, Narentaner): ein Teil der Baukosten geht an den Angreifer
+      if (src && src.st && src.st.plunder && by >= 0) {
+        const loot = {}; for (const k in e.st.cost || {}) { loot[k] = Math.round(e.st.cost[k] * 0.3); this.P[by].res[k] += loot[k]; }
+        const txt = Object.entries(loot).filter(([, v]) => v > 0).map(([k, v]) => v + ' ' + ({ food: 'Nahrung', wood: 'Holz', stone: 'Stein', gold: 'Gold' })[k]).join(', ');
+        if (txt) this.notice(by, `💰 Geplündert: ${txt}.`);
+      }
       this.removeBuilding(e);
       if (by >= 0) this.P[by].stats.razed++;
       if (pl.advancing === e.id) pl.advancing = null;

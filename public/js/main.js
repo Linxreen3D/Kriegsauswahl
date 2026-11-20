@@ -3,7 +3,7 @@ import { sfx } from './sound.js';
 import { createDiplomacy } from './diplomacy.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -16,6 +16,8 @@ const UNIT_ICONS = {
   spear: ['', '🔱', '🔱', '🔱', '🔱', '🔱', '🧨', '🚀'],
   art: ['', '', '', '', '', '💣', '💥', '💥'],
   med: ['', '🌿', '🌿', '✚', '✚', '✚', '✚', '✚'],
+  envoy: ['🕊', '🕊', '🕊', '🕊', '🕊', '🕊', '🕊', '🕊'],
+  spy: ['', '', '', '', '🕵', '🕵', '🕵', '🕵'],
   rng: ['🪨', '🏹', '🏹', '🏹', '🔫', '🔫', '🔫', '🔫'],
   cav: ['', '🛞', '🐎', '🏇', '🏇', '🏇', '🚜', '🚜'],
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
@@ -24,8 +26,8 @@ const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏
 const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 function iconOf(def) {
   if (def.kind === 'b') return BLD_ICONS[def.key];
-  if (def.unique) return UNIQUE_ICONS[def.unique];
-  return UNIT_ICONS[def.line][def.era] || '•';
+  if (def.unique) return def.icon || UNIQUE_ICONS[def.unique];
+  return (UNIT_ICONS[def.line] || [])[def.era] || '•';
 }
 function keyIcon(key) { return iconOf(TYPES[TYPE_INDEX[key]]); }
 
@@ -623,13 +625,13 @@ function updateCmdCard(force) {
       const type = blds[0].def.key;
       const same = blds.filter(b => b.def.key === type && b.prog >= 100);
       if (same.length) {
-        const opts = trainable(type, era, G.me.culture);
+        const opts = trainable(type, era, G.me.culture, G.me.nation);
         opts.forEach((o, i) => {
           const st = unitStats(o.line, Math.max(era, LINES[o.line].minEra), o.unique, mods);
-          const key = o.unique ? 'E' : LINES[o.line].key;
+          const national = o.unique && o.unique.startsWith('nu_'), key = national ? 'R' : o.unique ? 'E' : LINES[o.line].key;
           put(key, {
-            icon: o.unique ? UNIQUE_ICONS[o.unique] : UNIT_ICONS[o.line][Math.max(era, LINES[o.line].minEra)], title: `${st.name} ausbilden`, cost: st.cost,
-            desc: `Leben ${st.hp} · Angriff ${st.atk.toFixed(0)} · Reichweite ${st.range < 1 ? 'Nahkampf' : st.range.toFixed(0)} · Bevölkerung ${st.pop}` + (o.unique ? ' · Spezialeinheit deiner Kultur' : ''),
+            icon: national ? TYPES[TYPE_INDEX[o.unique]].icon : o.unique ? UNIQUE_ICONS[o.unique] : (UNIT_ICONS[o.line] || [])[Math.max(era, LINES[o.line].minEra)] || '•', title: `${st.name} ausbilden`, cost: st.cost,
+            desc: `Leben ${st.hp} · Angriff ${st.atk.toFixed(0)} · Reichweite ${st.range < 1 ? 'Nahkampf' : st.range.toFixed(0)} · Bevölkerung ${st.pop}` + (national ? ` · Nationaleinheit (${TYPES[TYPE_INDEX[o.unique]].hist || ''})` : o.unique ? ' · Spezialeinheit deiner Kultur' : ''),
             off: !affordable(st.cost), fn: ev => cmd({ c: 'train', ids: same.map(b => b.id), line: o.line, unique: o.unique, n: ev && ev.shiftKey ? 5 : 1 }),
             cnt: queueCount(same, unitKey(o.line, Math.max(era, LINES[o.line].minEra), o.unique)),
           });
@@ -777,7 +779,7 @@ function showChoice() {
   const isCulture = m.choice === 'culture';
   $('choiceTitle').textContent = isCulture ? 'Wähle deine Kultur' : 'Wähle deine Nation';
   $('choiceSub').textContent = isCulture ? 'Deine Kultur bestimmt Boni und eine Spezialeinheit (ab dem Frühen Mittelalter).' : 'Deine Nation bestimmt einen Bonus, den Baustil deiner Stadt und dein Weltwunder.';
-  const opts = isCulture ? Object.entries(CULTURES).map(([k, c]) => ({ k, icon: c.icon, name: c.name, desc: c.desc })) : CULTURES[m.culture].nations.map(k => ({ k, icon: '🏳', name: NATIONS[k].name, desc: NATIONS[k].desc }));
+  const opts = isCulture ? Object.entries(CULTURES).map(([k, c]) => ({ k, icon: c.icon, name: c.name, desc: c.desc })) : CULTURES[m.culture].nations.map(k => ({ k, icon: '🏳', name: NATIONS[k].name, desc: NATIONS[k].desc + ' Eigene Einheiten: ' + (NATION_UNITS[k] || []).map(u => `${u.name} (${ERAS[u.era].short})`).join(', ') + '.' }));
   $('choiceOptions').innerHTML = opts.map(o => `<button class="choice-opt" data-choice="${o.k}"><span class="ic">${o.icon}</span><b>${esc(o.name)}</b><p>${esc(o.desc)}</p></button>`).join('');
   $('choice').classList.remove('hidden');
 }
