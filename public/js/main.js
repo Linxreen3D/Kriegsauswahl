@@ -5,6 +5,7 @@ import { createDiplomacy } from './diplomacy.js';
 import { createConference } from './conference.js';
 import { icon, iconize, EMOJI } from './icons.js';
 import { createTutorial } from './tutorial.js';
+import { createCodex } from './codex.js';
 import { tr, LANG, setLang, loadLang } from './i18n.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
@@ -118,7 +119,7 @@ try { const o = JSON.parse(localStorage.getItem('fl_options') || '{}'); Object.a
 const saveOpt = () => { try { localStorage.setItem('fl_options', JSON.stringify(OPT)); } catch { /* egal */ } };
 const DESKTOP = typeof window !== 'undefined' && window.desktop ? window.desktop : null;
 if (DESKTOP) document.body.classList.add('desktop');
-let singleStart = false, tutorialStart = false, TUT = null;
+let singleStart = false, tutorialStart = false, TUT = null, CODEX = null;
 // Steam (nur im Desktop-Programm, wenn Steam läuft)
 let STEAM = null;
 if (DESKTOP && DESKTOP.steam) DESKTOP.steam.status().then(s => {
@@ -738,9 +739,9 @@ function affordable(cost) { for (const k in cost) if ((G.me.res[k] || 0) < cost[
 // ---------------- Befehlsleiste ----------------
 const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'T', 'A', 'S', 'D', 'F', 'G', 'Y', 'X', 'C', 'V', 'B'];
 // Tastenbelegung (änderbar im Optionsmenü). Befehlsplätze behalten intern ihre Buchstaben, die echte Taste steht in KEYS.slots.
-const KEY_DEFAULTS = { diplomacy: 'P', leader: 'L', town: 'H', attackMove: 'A', idle: '.', alert: ' ', score: 'Tab', menu: 'F10', delete: 'Delete', chat: 'Enter',
+const KEY_DEFAULTS = { codex: 'F1', diplomacy: 'P', leader: 'L', town: 'H', attackMove: 'A', idle: '.', alert: ' ', score: 'Tab', menu: 'F10', delete: 'Delete', chat: 'Enter',
   camLeft: 'ArrowLeft', camRight: 'ArrowRight', camUp: 'ArrowUp', camDown: 'ArrowDown', slots: SLOT_KEYS.slice() };
-const KEY_LABELS = { diplomacy: 'Diplomatie', leader: 'Führer-Fähigkeit', town: 'Haupthaus', attackMove: 'Angriffsbewegung', idle: 'Untätiger Arbeiter', alert: 'Zur letzten Warnung',
+const KEY_LABELS = { codex: 'Kodex', diplomacy: 'Diplomatie', leader: 'Führer-Fähigkeit', town: 'Haupthaus', attackMove: 'Angriffsbewegung', idle: 'Untätiger Arbeiter', alert: 'Zur letzten Warnung',
   score: 'Nationen-Übersicht', menu: 'Menü', delete: 'Löschen', chat: 'Chat', camLeft: 'Kamera links', camRight: 'Kamera rechts', camUp: 'Kamera hoch', camDown: 'Kamera runter' };
 const KEYS = (() => { try { const k = JSON.parse(localStorage.getItem('fl_keys') || 'null'); if (k && Array.isArray(k.slots) && k.slots.length === 15) return { ...KEY_DEFAULTS, ...k }; } catch { /* egal */ } return { ...KEY_DEFAULTS, slots: SLOT_KEYS.slice() }; })();
 const saveKeys = () => { try { localStorage.setItem('fl_keys', JSON.stringify(KEYS)); } catch { /* egal */ } };
@@ -1174,6 +1175,7 @@ function setupInput() {
     if (k === KEYS.chat) { $('chatInput').classList.remove('hidden'); $('chatInput').focus(); e.preventDefault(); return; }
     if (k === 'Escape') { if (UI.mode) cancelMode(); else if (!$('menu').classList.contains('hidden')) $('menu').classList.add('hidden'); else setSelection([]); return; }
     if (k === KEYS.score) { e.preventDefault(); $('scorePanel').classList.toggle('hidden'); updateScore(); return; }
+    if (k === KEYS.codex) { e.preventDefault(); CODEX && CODEX.toggle(); return; }
     if (k === KEYS.menu) { e.preventDefault(); $('menu').classList.toggle('hidden'); return; }
     if (k === KEYS.delete) { deleteSelection(); return; }
     if (k === KEYS.alert) { e.preventDefault(); const a = UI.lastAlert || G.home; if (a) { renderer.cam.x = a.x; renderer.cam.y = a.y; renderer.clampCam(); } return; }
@@ -1269,6 +1271,7 @@ function setupOptions() {
     $('optionsDlg').classList.remove('hidden');
   };
   $('optionsBtn').onclick = open; $('menuOptions').onclick = () => { $('menu').classList.add('hidden'); open(); };
+  $('menuCodex').onclick = () => { $('menu').classList.add('hidden'); CODEX && CODEX.open(); };
   $('optionsClose').onclick = () => $('optionsDlg').classList.add('hidden');
   $('o_lang').value = LANG();
   $('o_lang').onchange = e => setLang(e.target.value);
@@ -1439,6 +1442,7 @@ async function init() {
   DIP = createDiplomacy({ G, send, notice, selectedOwn, conference: id => CONF && CONF.request(id) });
   CONF = createConference({ G, send, notice, portrait: l => leaderPortrait(l) });
   TUT = createTutorial({ G, renderer, $ });
+  CODEX = createCodex({ $, iconFor: (line, era) => icon(lineIcon(line, era)), bldIcon: k => icon(BLD_ICON[k] || 'build') });
   window.__renderer = renderer; window.__send = send; window.__G = G; window.__KEYS = KEYS; // für automatisierte Tests
   await renderer.init();
   window.__G = G; window.__R = renderer; // Debug-Zugriff
