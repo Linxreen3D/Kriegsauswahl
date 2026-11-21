@@ -45,7 +45,7 @@ export class AI {
     this.base = towns[0] || blds[0] || units[0];
     if (!this.base) return;
     this.bx = this.base.cx || this.base.x; this.by = this.base.cy || this.base.y;
-    const workers = units.filter(u => u.cls === 'wrk');
+    const workers = units.filter(u => u.cls === 'wrk' && !u.naval);
     const army = units.filter(u => u.cls !== 'wrk');
     const count = t => blds.filter(b => b.type === t).length;
     const building = blds.filter(b => !b.built);
@@ -78,6 +78,36 @@ export class AI {
     }
     if (pl.era >= 3 && workers.length > 35 && count('range') < 2 && pl.res.wood > 400) this.build('range', workers, 1);
     if (this.prof.towers && pl.era >= 1 && count('tower') < this.prof.towers * (1 + Math.floor(pl.era / 2)) && pl.res.stone > 250) this.build('tower', workers, 1, 6, 10);
+    // Werft, Flugplatz, Flugabwehr, Raketenabwehr und Atomwaffen
+    const enemies = w.P.filter(q => q.alive && q.id !== this.pid && w.enemy(this.pid, q.id));
+    if (pl.era >= (w.settings.mapType === 'islands' ? 2 : 4) && workers.length > (w.settings.mapType === 'islands' ? 14 : 28) && count('dock') === 0 && !building.some(b => b.type === 'dock') && (this.noDockUntil || 0) < w.time) {
+      if (!this.build('dock', workers, 2, 4, 26)) {
+        const cost = buildingStats('dock', pl.era, pl.mods).cost;
+        if (w.settings.mapType === 'islands' && !w.canAfford(pl, cost)) this.saveFor(cost, 90); // auf Inseln unverzichtbar
+        else this.noDockUntil = w.time + 300; // keine Küste in der Nähe
+      }
+    }
+    if (pl.era >= 6 && workers.length > 20 && count('airfield') < (pl.era >= 7 ? 2 : 1) && !building.some(b => b.type === 'airfield')) {
+      if (!this.build('airfield', workers, 2, 6, 20)) this.saveFor(buildingStats('airfield', pl.era, pl.mods).cost, 120);
+    }
+    const enemyAir = w.units.some(u => !u.dead && u.air && enemies.some(q => q.id === u.owner) && Math.hypot(u.x - this.bx, u.y - this.by) < 40);
+    if (pl.era >= 6 && (enemyAir || pl.era >= 7) && count('flakpos') < (enemyAir ? 3 : 1) && pl.res.stone > 200) this.build('flakpos', workers, 1, 3, 10);
+    if (pl.era >= 7) {
+      const nuclearFoe = enemies.some(q => w.nuclearPower(q));
+      if (nuclearFoe && count('abm') < 1 && pl.res.gold > 1200) this.build('abm', workers, 2, 2, 8);
+      if (w.nuclearPower(pl) && this.prof.aggression >= 0.8 && (pl.nukesUsed || 0) < 3) {
+        if (count('nukelab') === 0 && !building.some(b => b.type === 'nukelab') && pl.res.gold > 3500) this.build('nukelab', workers, 3, 6, 14);
+        else if (blds.some(b => b.type === 'nukelab' && b.built) && count('silo') === 0 && pl.res.gold > 1500) this.build('silo', workers, 2, 6, 14);
+        const silo = blds.find(b => b.type === 'silo' && b.built);
+        if (silo && !pl.nukeReady && !silo.queue.length && !(pl.nukePauseUntil > w.time) && w.canAfford(pl, w.nukeCost(pl))) this.cmd({ c: 'nukeBuild', id: silo.id });
+        // Einsatz gegen das Haupthaus des stärksten Gegners
+        if (pl.nukeReady) {
+          const foe = enemies.sort((x, y) => w.score(y) - w.score(x))[0];
+          const ft = foe && w.buildings.find(b => !b.dead && b.owner === foe.id && (b.wonder || b.type === 'town') && w.visibleTo(this.pid, b));
+          if (ft) this.cmd({ c: 'nuke', x: ft.cx, y: ft.cy });
+        }
+      }
+    }
     // Weltwunder in der letzten Epoche
     if (pl.era === ERAS.length - 1 && !pl.wonderBuilding && towns.length && !blds.some(b => b.wonder) && this.prof.aggression >= 0.8) {
       const wc = WONDER.cost; if (w.canAfford(pl, wc)) this.cmd({ c: 'wonder', id: towns[towns.length - 1].id });
@@ -103,11 +133,19 @@ export class AI {
       if (army.length >= capArmy) break;
       const opts = trainable(b.type, pl.era, pl.culture, pl.nation, pl.late);
       if (!opts.length) continue;
-      const o = opts[opts.length - 1 - Math.floor(Math.random() * Math.min(2, opts.length))];
+      // Kampfeinheiten bevorzugen; Spezialisten nur gezielt
+      const skip = ['scout', 'fishboat', 'transport', 'para', 'worker', 'envoy', 'spy', 'med'];
+      if (!enemyAir) skip.push('flak');
+      const pool = opts.filter(x => !skip.includes(x.line));
+      if (!pool.length) continue;
+      const nat = pool.filter(x => x.unique);
+      const o = nat.length && Math.random() < 0.4 ? nat[Math.floor(Math.random() * nat.length)] : pool[Math.floor(Math.random() * pool.length)];
       const st = unitStats(o.line, Math.max(pl.era, LINES[o.line].minEra), o.unique, pl.mods);
       const nextEra = ERAS[pl.era + 1];
       // für den Epochenaufstieg sparen, wenn knapp
       let ok = true;
+      // für ein Schlüsselgebäude sparen
+      if (this.saving && this.saving.until > w.time) for (const k in st.cost) if (pl.res[k] - st.cost[k] < (this.saving.cost[k] || 0)) ok = false;
       // nur sparen, wenn der Aufstieg in Reichweite ist
       if (nextEra && !pl.advancing && workers.length >= targetWorkers * 0.6) {
         let have = 0, need = 0;
@@ -138,7 +176,7 @@ export class AI {
     if (w.time > this.prof.firstAttack && (idle.length >= threshold || army.length >= Math.min(120, threshold * 2.5))) {
       const tgt = this.pickTarget();
       if (tgt) {
-        const ids = army.filter(u => u.order.t === 'idle' || u.order.t === 'move').map(u => u.id);
+        const ids = army.filter(u => (u.order.t === 'idle' || u.order.t === 'move') && !u.naval && u.line !== 'fishboat' && u.st.atk > 0).map(u => u.id);
         if (ids.length >= threshold * this.prof.aggression) this.cmd({ c: 'move', ids, x: tgt.x, y: tgt.y, amove: true });
       }
     }
@@ -273,6 +311,7 @@ export class AI {
     }
   }
 
+  saveFor(cost, s) { if (!this.saving || this.saving.until < this.w.time) this.saving = { cost, until: this.w.time + s }; }
   build(type, workers, nWorkers = 1, dMin = 4, dMax = 14) {
     const pl = this.pl;
     const st = buildingStats(type, pl.era, pl.mods);
@@ -297,7 +336,7 @@ export class AI {
         if (!w.inBounds(xx, yy)) { ok = false; break; }
         const i = w.idx(xx, yy);
         if (w.occ[i] && w.ents.get(w.occ[i]) && w.ents.get(w.occ[i]).kind === 'b') { ok = false; break; }
-        if (!w.pass[i] && type !== 'storage') { ok = false; break; }
+        if (!w.pass[i] && type !== 'storage' && !BUILDINGS[type].coastal) { ok = false; break; }
       }
       if (ok) return [x, y];
     }

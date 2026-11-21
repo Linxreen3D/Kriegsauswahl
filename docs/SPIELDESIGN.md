@@ -777,6 +777,8 @@ Formationen werden per Taste gewählt. Die Einheiten halten sie beim Marschieren
    - *Konferenz, noch offen:* Vermitteln, Sanktionen androhen, Beitreten, entmilitarisierte Zone und Abrüstung. Umgesetzt: Antrag, Annehmen/Ablehnen, Pause für alle mit Pausenbudget (15 min je Spielstunde), „Ohne Pause“ mit Waffenruhe, Zeitlimit 3/5/8 min, Frieden, Waffenstillstand, Gebietsabtretung, Reparationen, Rohstoffe, Rüstungsbeschränkung, Galerie mit Unterstützung und Garantien, Friedensbruch mit Garantiemächten, Bots.
    - *Atomwaffen, noch offen:* Bots bauen noch keine Atomwaffen oder Raketenabwehr; Aufdecken des Forschungszentrums durch Botschafter.
 10. **Feinschliff:** Simulationen und Balancing.
+   - *Erledigt:* Bots bauen Werften (auf Inseln mit Vorrang), Flugplätze, Flak bei feindlichen Flugzeugen, Raketenabwehr gegen Atommächte und als Atommacht auch Atomwaffen; Bots nutzen Führer und Konferenzen; Einheitenwahl der Bots bevorzugt Kampfeinheiten; Spätphase-Nationaleinheiten per geländeneutralem Duell nachbalanciert; Kostenfehler der späten Epochen behoben.
+   - *Offen:* Bots legen noch keine Gleise und landen nicht mit Transportern an (Inselkarte für Bots schwach), Feinabstimmung von Luft- und Seekampf, lange Partien mit Menschen testen.
 
 Modelle bleiben bis dahin Platzhalter. Die richtigen Modelle kommen später aus Blender als `.glb`.
 
