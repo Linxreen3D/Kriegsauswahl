@@ -91,7 +91,7 @@ export class AI {
     for (const b of blds) {
       if (!b.built || b.queue.length >= 2 || b.type === 'town') continue;
       if (army.length >= capArmy) break;
-      const opts = trainable(b.type, pl.era, pl.culture, pl.nation);
+      const opts = trainable(b.type, pl.era, pl.culture, pl.nation, pl.late);
       if (!opts.length) continue;
       const o = opts[opts.length - 1 - Math.floor(Math.random() * Math.min(2, opts.length))];
       const st = unitStats(o.line, Math.max(pl.era, LINES[o.line].minEra), o.unique, pl.mods);

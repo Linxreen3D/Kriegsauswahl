@@ -24,12 +24,18 @@ const UNIT_ICONS = {
   warship: ['', '⛵', '⛵', '⛵', '⛵', '⛵', '🚢', '🚢'],
   battleship: ['', '', '', '', '', '⛵', '🚢', '🚢'],
   sub: ['', '', '', '', '', '', '🐋', '🐋'],
+  scout: ['', '', '', '', '', '', '🛩', '🛩'],
+  fighter: ['', '', '', '', '', '', '✈', '✈'],
+  bomber: ['', '', '', '', '', '', '🛬', '🛬'],
+  heli: ['', '', '', '', '', '', '', '🚁'],
+  para: ['', '', '', '', '', '', '🪂', '🪂'],
+  flak: ['', '', '', '', '', '', '🎯', '🎯'],
   rng: ['🪨', '🏹', '🏹', '🏹', '🔫', '🔫', '🔫', '🔫'],
   cav: ['', '🛞', '🐎', '🏇', '🏇', '🏇', '🚜', '🚜'],
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
-const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
+const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', airfield: '🛫', flakpos: '💥', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 function iconOf(def) {
   if (def.kind === 'b') return BLD_ICONS[def.key];
   if (def.unique) return def.icon || UNIQUE_ICONS[def.unique];
@@ -285,7 +291,7 @@ function applyTuple(t, now) {
     const x = t[3] / 20, y = t[4] / 20;
     if (isNew) { e.px = x; e.py = y; e.rx = x; e.ry = y; } else { e.px = e.rx ?? x; e.py = e.ry ?? y; }
     e.t0 = now; e.x = x; e.y = y; e.state = t[7]; e.carry = t[8]; e.dir = t[9] / 10 - Math.PI;
-    e.rank = t[10] || 0; e.morale = t[11]; e.sup = t[12]; e.form = FORMATION_KEYS[t[13]] || 'none';
+    e.rank = t[10] || 0; e.morale = t[11]; e.sup = t[12]; e.form = FORMATION_KEYS[t[13]] || 'none'; e.fuel = t[14]; e.ammo = t[15];
   } else {
     e.x = t[3]; e.y = t[4]; e.prog = t[7]; e.q = t[8]; e.era = t[9]; e.ghost = false;
     setBld(e);
@@ -358,6 +364,7 @@ function onEvent(e, now) {
       if (e.what === 'cancel' && !mine) chatLine(`${pname(e.p)} hat den Bau des Weltwunders abgebrochen.`, true);
       break;
     }
+    case 'paradrop': renderer.addEffect && renderer.addEffect('dust', e.x, e.y, { s: 1 }); break;
     case 'late':
       if (e.p === G.you) { notice(`🔬 ${LATE_STAGE.name} erforscht – deine Armee rüstet auf!`, 'good'); sfx.win(); updateCmdCard(true); }
       else chatLine(`${pname(e.p)} hat „${LATE_STAGE.name}“ erforscht.`, true);
@@ -628,6 +635,9 @@ function updateCmdCard(force) {
           });
         }
       } else {
+        const paras = units.filter(u => u.def.line === 'para');
+        if (paras.length) put('Q', { icon: '🪂', title: 'Absprung (Q)', desc: 'Fallschirmjäger an einem eigenen Flugplatz springen über einem sichtbaren Ort ab. Danach Ziel anklicken.', on: UI.mode && UI.mode.para,
+          fn: () => { UI.mode = { para: true }; renderer.canvas.style.cursor = 'crosshair'; updateCmdCard(true); } });
         // Spione
         const spies = units.filter(u => u.def.cls === 'spy');
         if (spies.length) for (const [mk, M] of Object.entries(SPY_MISSIONS)) {
@@ -653,7 +663,7 @@ function updateCmdCard(force) {
       const type = blds[0].def.key;
       const same = blds.filter(b => b.def.key === type && b.prog >= 100);
       if (same.length) {
-        const opts = trainable(type, era, G.me.culture, G.me.nation);
+        const opts = trainable(type, era, G.me.culture, G.me.nation, G.me.late);
         opts.forEach((o, i) => {
           const st = unitStats(o.line, Math.max(era, LINES[o.line].minEra), o.unique, mods);
           const national = o.unique && o.unique.startsWith('nu_'), key = national ? 'R' : o.unique ? 'E' : LINES[o.line].key;
@@ -736,6 +746,7 @@ function updateSelInfo() {
     if (e.def.kind === 'u') {
       stats = `<span>⚔ ${st.atk.toFixed(0)}</span><span>🎯 ${st.range < 1 ? 'Nahkampf' : st.range.toFixed(1)}</span><span>👟 ${st.speed.toFixed(1)}</span><span>👁 ${st.sight}</span>`;
       if (st.heal) stats += `<span>✚ heilt ${st.heal.toFixed(1)}/s</span>`;
+      if (e.fuel >= 0 && e.fuel != null) stats += `<span title="Treibstoff – am Flugplatz wird nachgetankt">⛽ ${e.fuel * 10} %</span>${e.ammo >= 0 && st.ammo ? `<span title="Munition">🎯 ${e.ammo}/${st.ammo}</span>` : ''}`;
       if (e.rank) stats += `<span title="Veteran: +${e.rank * 10} % Schaden und Leben">${'★'.repeat(e.rank)}</span>`;
       if (e.owner === G.you && e.def.cls !== 'wrk') {
         stats += `<span title="Moral: unter 50 % −20 % Schaden">💪 ${(e.morale ?? 10) * 10} %</span>`;
@@ -843,6 +854,11 @@ function setupInput() {
     if (UI.mode && UI.mode.build) {
       if (BUILDINGS[UI.mode.build].line) { UI.wallStart = [Math.floor(wx), Math.floor(wy)]; return; }
       placeBuilding(e.shiftKey);
+      return;
+    }
+    if (UI.mode && UI.mode.para) {
+      cmd({ c: 'paradrop', ids: selectedOwn().filter(x => x.def.line === 'para').map(x => x.id), x: wx, y: wy });
+      cancelMode();
       return;
     }
     if (UI.mode && UI.mode.spy) {

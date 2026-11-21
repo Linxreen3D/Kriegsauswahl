@@ -9,13 +9,15 @@ import {
 import { installDiplomacy } from './diplomacy.js';
 import { installRail } from './rail.js';
 import { installNaval } from './naval.js';
+import { installAir } from './air.js';
 import { generateMap, blockedTerrain, waterTerrain, T_HILL, T_SNOW, T_DESERT, T_SWAMP, T_FORD, T_GRASS, T_DIRT } from './mapgen.js';
 
 const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
 const isVehicle = u => (u.cls === 'cav' && u.era >= 6) || u.cls === 'art' || u.cls === 'sie';
 
-const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3, env: 0.3, spy: 0.3, trn: 0.5, shp: 0.7, sub: 0.6 };
-const MILITARY = cls => cls !== 'wrk' && cls !== 'sup' && cls !== 'env' && cls !== 'spy' && cls !== 'trn'; // kämpft selbstständig
+const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3, env: 0.3, spy: 0.3, trn: 0.5, shp: 0.7, sub: 0.6, air: 0.5, bmb: 0.6, hel: 0.6, aa: 0.45 };
+const MILITARY = cls => cls !== 'wrk' && cls !== 'sup' && cls !== 'env' && cls !== 'spy' && cls !== 'trn';
+const AIRCLS = { air: 1, bmb: 1, hel: 1 }; // kämpft selbstständig
 const START_RES = { low: { food: 150, wood: 150, stone: 50, gold: 50 }, normal: { food: 250, wood: 250, stone: 150, gold: 100 }, high: { food: 600, wood: 600, stone: 400, gold: 400 } };
 const ST = { idle: 0, move: 1, attack: 2, gather: 3, build: 4, carry: 5 };
 const DIRS = [[1, 0, 10], [-1, 0, 10], [0, 1, 10], [0, -1, 10], [1, 1, 14], [1, -1, 14], [-1, 1, 14], [-1, -1, 14]];
@@ -210,8 +212,9 @@ export class World {
       id: this.nextId++, kind: 'u', owner, line, unique, era, cls: st.cls, typeIdx: TYPE_INDEX[unitKey(line, era, unique)], st,
       x, y, hp: st.hp, maxHp: st.hp, r: RADIUS[st.cls], order: { t: 'idle' }, state: ST.idle, cd: 0, carry: null,
       scan: Math.random() * 0.5, stuck: 0, lastProg: 0, buildQ: [],
-      xp: 0, rank: 0, morale: 100, unsup: 0, form: 'none', naval: !!st.naval,
+      xp: 0, rank: 0, morale: 100, unsup: 0, form: 'none', naval: !!st.naval, air: !!st.air,
     };
+    if (u.air) { u.fuel = st.fuel; u.ammo = st.ammo; }
     this.units.push(u); this.ents.set(u.id, u);
     return u;
   }
@@ -366,8 +369,9 @@ export class World {
     switch (c.c) {
       case 'move': {
         const us = own(c.ids).filter(e => e.kind === 'u');
-        const sea = us.filter(u => u.naval);
-        this.groupMove(us.filter(u => !u.naval), +c.x, +c.y, !!c.amove);
+        const sea = us.filter(u => u.naval), air = us.filter(u => u.air);
+        this.groupMove(us.filter(u => !u.naval && !u.air), +c.x, +c.y, !!c.amove);
+        air.forEach((u, k) => { u.order = { t: c.amove ? 'amove' : 'move', x: +c.x + (k % 4) * 0.8, y: +c.y + Math.floor(k / 4) * 0.8 }; });
         if (sea.length) this.withWater(() => this.groupMove(sea, +c.x, +c.y, !!c.amove));
         break;
       }
@@ -423,7 +427,7 @@ export class World {
         for (let k = 0; k < n; k++) {
           // auf Gebäude mit kürzester Warteschlange verteilen
           bs.sort((a, b) => a.queue.length - b.queue.length);
-          const b = bs.find(x => trainable(x.type, pl.era, pl.culture, pl.nation).some(t => t.line === c.line && (t.unique || null) === (c.unique || null)));
+          const b = bs.find(x => trainable(x.type, pl.era, pl.culture, pl.nation, pl.late).some(t => t.line === c.line && (t.unique || null) === (c.unique || null)));
           if (!b || b.queue.length >= 15) break;
           const st = unitStats(c.line, Math.max(pl.era, LINES[c.line].minEra), c.unique || null, pl.mods);
           if (!this.canAfford(pl, st.cost)) { this.notice(pid, 'Nicht genug Rohstoffe.'); break; }
@@ -495,6 +499,10 @@ export class World {
       }
       case 'unload': {
         for (const s of own(c.ids)) if (s.kind === 'u' && s.st.capacity) this.unloadCommand(s, +c.x, +c.y);
+        break;
+      }
+      case 'paradrop': {
+        this.paradropCommand(pid, own(c.ids).filter(e => e.kind === 'u'), +c.x, +c.y);
         break;
       }
       case 'rail': {
@@ -636,7 +644,7 @@ export class World {
     for (const c of this.cells) c.length = 0;
     for (const u of this.units) if (!u.aboard) this.cells[this.cellOf(u.x, u.y)].push(u);
 
-    for (const u of this.units) if (!u.dead && !u.aboard) { if (u.naval) this.withWater(() => this.updateUnit(u, dt)); else this.updateUnit(u, dt); }
+    for (const u of this.units) if (!u.dead && !u.aboard) { if (u.air) this.updateAir(u, dt); else if (u.naval) this.withWater(() => this.updateUnit(u, dt)); else this.updateUnit(u, dt); }
     for (const b of this.buildings) if (!b.dead) this.updateBuilding(b, dt);
     this.separate(dt);
     this.updateMeteors(dt);
@@ -644,7 +652,7 @@ export class World {
     if (this.units.some(u => u.dead)) this.units = this.units.filter(u => !u.dead);
     if (this.buildings.some(b => b.dead)) this.buildings = this.buildings.filter(b => !b.dead);
 
-    if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); this.updateRail(1 * this.settings.speed); }
+    if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); this.updateRail(1 * this.settings.speed); this.updateParadrops(); }
     if (this.tickNo % 50 === 0) this.updateProvinces();
     if (this.tickNo % 5 === 0) this.recount();
     if (this.tickNo % 10 === 0) this.checkDefeat();
@@ -681,7 +689,7 @@ export class World {
     }
     const R2 = SUPPLY_RANGE * SUPPLY_RANGE;
     for (const u of this.units) {
-      if (u.dead || u.cls === 'wrk' || u.aboard || u.cls === 'trn' || u.naval) continue;
+      if (u.dead || u.cls === 'wrk' || u.aboard || u.cls === 'trn' || u.naval || u.air) continue;
       const list = src.get(this.P[u.owner].team) || [];
       let ok = false;
       for (const b of list) if ((b.cx - u.x) ** 2 + (b.cy - u.y) ** 2 <= R2) { ok = true; break; }
@@ -1144,10 +1152,10 @@ export class World {
     if (b.st.atk) {
       b.cd -= dt;
       if (b.cd <= 0) {
-        const t = this.findTarget(b.owner, b.cx, b.cy, b.st.range + b.size / 2, true, 'bld');
+        const t = this.findTarget(b.owner, b.cx, b.cy, b.st.range + b.size / 2, true, b.st.dmgRow || 'bld');
         if (t && t.kind === 'u') {
           b.cd = b.st.cd;
-          this.damage(t, b.st.atk * (DMG.bld[t.cls] ?? 1) * (b.st.vsShip && (t.cls === 'shp' || t.cls === 'sub') ? b.st.vsShip : 1), b.owner);
+          this.damage(t, this.bldDamage(b, t), b.owner);
           this.event({ k: 'shot', x: b.cx, y: b.cy - 0.5, tx: t.x, ty: t.y, c: pl.era >= 4 ? 2 : 0 });
         } else b.cd = 0.4;
       }
@@ -1234,7 +1242,7 @@ export class World {
   separate(dt) {
     for (const c of this.cells) {
       for (let i = 0; i < c.length; i++) {
-        const a = c[i]; if (a.dead || a.cls === 'trn') continue;
+        const a = c[i]; if (a.dead || a.cls === 'trn' || a.air) continue;
         // Nachbarzellen rechts/unten einbeziehen
         const cx = Math.floor(a.x / CELL), cy = Math.floor(a.y / CELL);
         for (let oy = 0; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
@@ -1244,7 +1252,7 @@ export class World {
           const arr = this.cells[ny * this.cellsW + nx];
           const start = arr === c ? i + 1 : 0;
           for (let j = start; j < arr.length; j++) {
-            const b = arr[j]; if (b.dead || b.cls === 'trn' || b.naval !== a.naval) continue;
+            const b = arr[j]; if (b.dead || b.cls === 'trn' || b.air || b.naval !== a.naval) continue;
             const dx = b.x - a.x, dy = b.y - a.y, min = a.r + b.r;
             const d2 = dx * dx + dy * dy;
             if (d2 >= min * min) continue;
@@ -1470,7 +1478,8 @@ export class World {
     if (e.kind === 'u') {
       const carry = e.owner === pid && e.carry && e.carry.amt > 0 ? RES.indexOf(e.carry.res) + 1 : 0;
       return [e.id, e.typeIdx, e.owner, Math.round(e.x * 20), Math.round(e.y * 20), Math.ceil(e.hp), e.maxHp, e.state, carry, Math.round(((e.dir || 0) + Math.PI) * 10),
-        e.rank || 0, e.owner === pid ? Math.round((e.morale ?? 100) / 10) : 0, e.owner === pid && e.supplied === false ? 0 : 1, FORMATION_KEYS.indexOf(e.form || 'none')];
+        e.rank || 0, e.owner === pid ? Math.round((e.morale ?? 100) / 10) : 0, e.owner === pid && e.supplied === false ? 0 : 1, FORMATION_KEYS.indexOf(e.form || 'none'),
+        e.air && e.owner === pid ? Math.round(e.fuel / e.st.fuel * 10) : -1, e.air && e.owner === pid ? Math.ceil(e.ammo) : -1];
     }
     return [e.id, e.typeIdx, e.owner, e.x, e.y, Math.ceil(e.hp), e.maxHp, e.built ? 100 : Math.floor(e.progress * 100), e.queue.length ? 1 : 0, e.era];
   }
@@ -1536,3 +1545,4 @@ export class World {
 installDiplomacy(World);
 installRail(World);
 installNaval(World);
+installAir(World);

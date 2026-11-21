@@ -544,12 +544,14 @@ export class Renderer3D {
     return this.attachment('sie' + e.id, () => {
       const era = e.def.era;
       let g;
-      if (NAVAL[e.def.line]) g = shipModel(e.def.line, era, color);
+      if (AIR[e.def.line]) g = aircraftModel(e.def.line, era, color);
+      else if (e.def.line === 'flak') g = flakModel(era, color);
+      else if (NAVAL[e.def.line]) g = shipModel(e.def.line, era, color);
       else if (e.def.line === 'train') g = trainModel(era, color);
       else if (e.def.cls === 'cav') g = tank(color);
       else if (era <= 3) g = Md.trebuchet(color);
       else g = cannon(era, color);
-      const box = new THREE.Box3().setFromObject(g), s = (NAVAL[e.def.line] ? NAVAL[e.def.line] : e.def.line === 'train' ? 7 : e.def.cls === 'cav' ? 3.6 : 3.4) / Math.max(1e-3, Math.max(box.max.x - box.min.x, box.max.z - box.min.z));
+      const box = new THREE.Box3().setFromObject(g), s = (AIR[e.def.line] ? AIR[e.def.line] : NAVAL[e.def.line] ? NAVAL[e.def.line] : e.def.line === 'train' ? 7 : e.def.cls === 'cav' ? 3.6 : 3.4) / Math.max(1e-3, Math.max(box.max.x - box.min.x, box.max.z - box.min.z));
       g.scale.setScalar(s);
       const o = new THREE.Group(); o.add(g); return o;
     });
@@ -604,7 +606,8 @@ export class Renderer3D {
         const bob = moving ? Math.abs(Math.sin(now / 90 + e.id)) * 0.05 : 0;
         pos.set(X, this.T.height(X, Z) + bob, Z);
         if (NAVAL[line]) pos.y = -0.55 + Math.sin(now / 700 + e.id) * 0.06;
-        if (NAVAL[line] || line === 'sie' || line === 'art' || line === 'train' || (line === 'cav' && era >= 6)) {
+        if (AIR[line]) pos.y += (line === 'heli' ? 3.5 : 7) + Math.sin(now / 500 + e.id) * 0.15;
+        if (AIR[line] || line === 'flak' || NAVAL[line] || line === 'sie' || line === 'art' || line === 'train' || (line === 'cav' && era >= 6)) {
           const o = this.siegeModel(e, color); o.position.copy(pos); o.quaternion.copy(q);
           if (e.state === 2 && line === 'sie') o.children[0].rotation.x = Math.sin(now / 120) * 0.02;
           continue;
@@ -827,6 +830,43 @@ function shipModel(line, era, color) {
   return g;
 }
 
+// Flugzeuge: Doppeldecker (2. IR früh), Propeller (2. IR spät), Düse (Kalter Krieg); Spannweite in Kacheln
+const AIR = { scout: 2.4, fighter: 2.6, bomber: 4.2, heli: 2.8 };
+function aircraftModel(line, era, color) {
+  const g = new THREE.Group(), jet = era >= 7, body = U.mat(jet ? '#7b828a' : line === 'bomber' ? '#5b6150' : '#6f7660', 0.6, 0.3), team = U.mat(color, 0.7), dark = U.mat('#2a2c2e', 0.6, 0.5), glass = U.mat('#9fc4d8', 0.2, 0.3);
+  const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+  if (line === 'heli') {
+    add(new THREE.CapsuleGeometry(0.45, 1.6, 4, 10), body, 0, 0, 0).rotation.x = Math.PI / 2;
+    add(new THREE.BoxGeometry(0.15, 0.15, 2.4), body, 0, 0.1, -1.8); add(new THREE.BoxGeometry(0.06, 0.6, 0.4), team, 0, 0.3, -2.9);
+    add(new THREE.BoxGeometry(4.2, 0.03, 0.2), dark, 0, 0.75, 0); add(new THREE.BoxGeometry(0.2, 0.03, 4.2), dark, 0, 0.75, 0);
+    add(new THREE.SphereGeometry(0.38, 10, 8), glass, 0, 0.2, 0.75);
+    for (const x of [-0.6, 0.6]) add(new THREE.BoxGeometry(0.4, 0.15, 0.6), dark, x, -0.15, 0.2);
+    return g;
+  }
+  const L = line === 'bomber' ? 3.2 : 2.4, span = line === 'bomber' ? 4.6 : 2.8;
+  add(new THREE.CylinderGeometry(jet ? 0.22 : 0.28, jet ? 0.3 : 0.18, L, 10), body, 0, 0, 0).rotation.x = Math.PI / 2;
+  const wing = add(new THREE.BoxGeometry(span, 0.08, jet ? 0.9 : 0.7), body, 0, 0, jet ? -0.2 : 0.3);
+  if (jet) { wing.scale.set(1, 1, 1); add(new THREE.ConeGeometry(0.22, 0.6, 10), body, 0, 0, L / 2 + 0.25).rotation.x = Math.PI / 2; }
+  if (!jet && era <= 6 && line === 'scout') add(new THREE.BoxGeometry(span, 0.06, 0.6), body, 0, 0.55, 0.3);
+  add(new THREE.BoxGeometry(span * 0.36, 0.06, 0.4), body, 0, 0.05, -L / 2 + 0.2);
+  add(new THREE.BoxGeometry(0.06, 0.5, 0.45), team, 0, 0.3, -L / 2 + 0.2);
+  for (const x of [-span * 0.3, span * 0.3]) add(new THREE.BoxGeometry(0.5, 0.09, 0.3), team, x, 0.06, jet ? -0.2 : 0.3);
+  if (!jet) add(new THREE.BoxGeometry(0.06, 0.9, 0.06), dark, 0, 0, L / 2 + 0.05);
+  if (line === 'bomber' && !jet) for (const x of [-1, 1]) add(new THREE.CylinderGeometry(0.16, 0.16, 0.6, 8), dark, x, -0.05, 0.6).rotation.x = Math.PI / 2;
+  add(new THREE.SphereGeometry(0.2, 8, 6), glass, 0, 0.2, L / 2 - 0.6);
+  return g;
+}
+function flakModel(era, color) {
+  const g = new THREE.Group(), olive = U.mat('#55603d', 0.75), dark = U.mat('#2b2d24', 0.8);
+  const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+  if (era >= 7) { add(new THREE.BoxGeometry(1.8, 0.6, 3), olive, 0, 0.5, 0); for (const x of [-1, 1]) add(new THREE.BoxGeometry(0.4, 0.55, 3.2), dark, x, 0.3, 0); }
+  else { add(new THREE.CylinderGeometry(1, 1.2, 0.3, 8), olive, 0, 0.2, 0); for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(0.15, 0.1, 1.6), dark, 0, 0.1, 0).rotation.y = k * Math.PI / 4; }
+  add(new THREE.BoxGeometry(1, 0.6, 1), olive, 0, era >= 7 ? 1.1 : 0.7, 0);
+  for (const x of era >= 7 ? [-0.3, 0.3] : [0]) { const b = add(new THREE.CylinderGeometry(0.07, 0.09, 2.2, 6), dark, x, era >= 7 ? 1.6 : 1.3, 0.6); b.rotation.x = Math.PI / 2 - 0.9; }
+  add(new THREE.BoxGeometry(0.6, 0.1, 0.4), U.mat(color, 0.8), 0, era >= 7 ? 1.45 : 1.05, -0.4);
+  return g;
+}
+
 function trainModel(era, color) {
   const g = new THREE.Group(), dark = U.mat('#2a2a2c', 0.6, 0.6), body = U.mat(era >= 7 ? '#5a6a4a' : '#3a3f45', 0.6, 0.4), cloth = U.mat(color, 0.8);
   const add = (geo, m, x, y, z, rx = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.x = rx; o.castShadow = o.receiveShadow = true; g.add(o); return o; };
@@ -840,6 +880,22 @@ function trainModel(era, color) {
 }
 
 const INFRA = {
+  airfield(era, color) {
+    const g = new THREE.Group(), tarmac = U.mat(era >= 7 ? '#5c5e60' : '#6f8a4a', 0.95, 0), hangar = U.mat('#7a7f84', 0.6, 0.4), white = U.mat('#e8e6df', 0.8, 0);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.BoxGeometry(6, 0.1, 6), tarmac, 0, 0.05, 0);
+    add(new THREE.BoxGeometry(1.4, 0.02, 5.6), U.mat(era >= 7 ? '#3d3f41' : '#8a7a5a', 0.95, 0), 1.6, 0.11, 0);
+    for (let k = -2; k <= 2; k++) add(new THREE.BoxGeometry(0.12, 0.02, 0.6), white, 1.6, 0.13, k * 1.1);
+    const h = add(new THREE.CylinderGeometry(1.4, 1.4, 2.8, 14, 1, false, 0, Math.PI), hangar, -1.4, 0.1, -0.6); h.rotation.z = Math.PI / 2; h.rotation.y = Math.PI / 2;
+    add(new THREE.BoxGeometry(0.8, 1.8, 0.8), white, -2.2, 0.9, 2.0); add(new THREE.BoxGeometry(1, 0.4, 1), U.mat('#9fc4d8', 0.3, 0.3), -2.2, 2.0, 2.0);
+    const flag = Md.banner(color, 3, 0.6, 0.9, 0.2); flag.position.set(-2.6, 0, -2.6); g.add(flag);
+    return g;
+  },
+  flakpos(era, color) {
+    const g = flakModel(era >= 7 ? 6 : era, color), sand = U.mat('#a8956a', 0.95, 0);
+    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; const o = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.5), sand); o.position.set(Math.cos(a) * 2.2, 0.3, Math.sin(a) * 2.2); o.rotation.y = -a + Math.PI / 2; o.castShadow = o.receiveShadow = true; g.add(o); }
+    return g;
+  },
   dock(era, color) {
     const g = new THREE.Group(), wood = U.wood(), stone = U.mat(era >= 5 ? '#8f8b84' : '#a08a6a', 0.9, 0), roof = U.mat(era >= 5 ? '#4d5257' : '#7a4a30', 0.8, era >= 5 ? 0.3 : 0);
     const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
