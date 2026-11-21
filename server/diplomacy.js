@@ -37,7 +37,7 @@ export function installDiplomacy(World) {
     return !!(r && r.alliance);
   };
   W.atPeace = function (a, b) { const r = this.rel && this.rel[pair(a, b)]; return !!(r && r.pactUntil > this.time); };
-  W.enemy = function (a, b) { return a >= 0 && b >= 0 && !this.allied(a, b) && !this.atPeace(a, b); };
+  W.enemy = function (a, b) { return a >= 0 && b >= 0 && !this.allied(a, b) && !this.atPeace(a, b) && !(this.conf && this.inTalks(a, b)); };
   W.hasContact = function (a, b) { return this.allied(a, b) || this.P[a].contacts.includes(b); };
   // gemeinsame Sicht nur bei echtem Bündnis und ausreichendem Ansehen
   W.sharesVision = function (a, b) { return this.sameTeam(a, b) || (this.allied(a, b) && this.P[a].rep >= REP_LOW && this.P[b].rep >= REP_LOW); };
@@ -100,6 +100,15 @@ export function installDiplomacy(World) {
     const what = r.alliance ? 'Bündnis' : 'Nichtangriffspakt';
     r.alliance = false; r.pactUntil = 0; r.cancelAt = 0;
     this.P[attacker].stats.breaches++;
+    if (r.peaceTreaty > this.time) {
+      r.peaceTreaty = 0;
+      this.repChange(attacker, Math.min(0, -60 - this.P[attacker].rep), `bricht den Friedensvertrag mit ${this.P[victim].name}`);
+      for (const g of r.guarantors || []) if (this.P[g] && this.P[g].alive && g !== attacker) {
+        const rv = this.relOf(g, victim); rv.alliance = true; rv.cancelAt = 0;
+        const ra = this.relOf(g, attacker); ra.alliance = false; ra.pactUntil = 0;
+        this.event({ k: 'notice', to: -1, text: `⚔ Garantiemacht ${this.P[g].name} tritt gegen ${this.P[attacker].name} in den Krieg ein.` });
+      }
+    }
     this.repChange(attacker, -REP_LOSS.breach, `bricht den ${what} mit ${this.P[victim].name}`);
     this.chronicle(`⚔ Verrat: ${this.P[attacker].name} bricht den ${what} mit ${this.P[victim].name}.`, 'breach');
   };
@@ -156,6 +165,9 @@ export function installDiplomacy(World) {
         return null;
       }
       case 'event': return this.chooseEvent(pl, m.choice | 0), null;
+      case 'confRequest': return this.confRequest(pl, other), null;
+      case 'confRespond': return this.confRespond(pl, !!m.accept), null;
+      case 'confOffer': case 'confSign': case 'confLeave': case 'confChat': case 'confSupport': case 'confGuarantee': return this.confOp(pl, m), null;
       default: return null;
     }
   };

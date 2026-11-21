@@ -5,7 +5,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmtT = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-export function createDiplomacy({ G, send, notice, selectedOwn }) {
+export function createDiplomacy({ G, send, notice, selectedOwn, conference }) {
   const D = { sel: null, chats: {}, unread: {}, proposals: [], chron: [], evKey: null, draft: null };
 
   // ---------- Hilfen ----------
@@ -83,7 +83,7 @@ export function createDiplomacy({ G, send, notice, selectedOwn }) {
     const chat = (D.chats[id] || []).map(c => `<div class="dc ${c.from === G.you ? 'me' : ''}"><span class="muted">${fmtT(c.t || c.time || 0)}</span> <b>${esc(pl(c.from).name)}:</b> ${esc(c.text)}</div>`).join('');
     box.innerHTML = `
       <div class="dip-pane-head"><h3><span class="sw" style="background:${q.color}"></span>${esc(q.name)}</h3><span>${relText(id)} · Ansehen ${repLabel(q.rep)} (${q.rep})${q.rep < REP_LOW ? ' – unzuverlässig' : ''}</span>
-        ${allied ? '<button class="btn small" id="dipCancel">Bündnis kündigen</button>' : ''}</div>
+        ${allied ? '<button class="btn small" id="dipCancel">Bündnis kündigen</button>' : ''}${!allied && !D.isPact(id) && G.settings.conferences !== 'off' ? '<button class="btn small" id="dipConf" title="Beide Seiten verhandeln am Tisch, die anderen schauen zu und können unterstützen. Höchstens alle 20 min.">🕊 Friedenskonferenz beantragen</button>' : ''}</div>
       <div class="dip-chat" id="dipChat">${chat || '<p class="muted">Noch keine Nachrichten.</p>'}</div>
       <div class="row"><input id="dipChatIn" class="chat-input" maxlength="300" placeholder="Private Nachricht an ${esc(q.name)}…"><button class="btn small" id="dipChatSend">Senden</button></div>
       ${inc ? `<div class="dip-offer in"><h4>Angebot von ${esc(q.name)}</h4>${describe(inc)}<div class="row"><button class="btn primary small" data-acc="${inc.id}">Unterzeichnen</button><button class="btn small" data-rej="${inc.id}">Ablehnen</button><button class="btn small" data-counter="${inc.id}">Gegenangebot</button></div></div>` : ''}
@@ -180,6 +180,7 @@ export function createDiplomacy({ G, send, notice, selectedOwn }) {
   $('dipPane').addEventListener('click', e => {
     const t = e.target;
     if (t.id === 'dipChatSend') sendChat();
+    else if (t.id === 'dipConf') { if (conference) conference(D.sel); }
     else if (t.id === 'dipCancel') { if (confirm('Bündnis kündigen? Es endet nach 2 Minuten – das ist kein Vertragsbruch.')) send({ t: 'dip', op: 'cancel', to: D.sel }); }
     else if (t.id === 'dipPropose') {
       readDraft();

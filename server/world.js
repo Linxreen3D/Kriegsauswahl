@@ -13,6 +13,7 @@ import { installAir } from './air.js';
 import { installCelo } from './celo.js';
 import { installLeaders } from './leaders.js';
 import { installNukes } from './nukes.js';
+import { installConference } from './conference.js';
 import { generateMap, blockedTerrain, waterTerrain, T_HILL, T_SNOW, T_DESERT, T_SWAMP, T_FORD, T_GRASS, T_DIRT } from './mapgen.js';
 
 const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
@@ -369,6 +370,7 @@ export class World {
   command(pid, c) {
     const pl = this.P[pid];
     if (!pl || !pl.alive) return;
+    if (this.conf && this.conf.paused) return; // Konferenzpause
     const own = ids => (Array.isArray(ids) ? ids : []).slice(0, 300).map(id => this.ents.get(id)).filter(e => e && e.owner === pid && !e.dead && !e.aboard && e.line !== 'train');
     switch (c.c) {
       case 'move': {
@@ -437,6 +439,7 @@ export class World {
           if (!b || b.queue.length >= 15) break;
           const st = unitStats(c.line, Math.max(pl.era, LINES[c.line].minEra), c.unique || null, pl.mods);
           if (!this.canAfford(pl, st.cost)) { this.notice(pid, 'Nicht genug Rohstoffe.'); break; }
+          if (st.sig && pl.armsLimitUntil > this.time) { this.notice(pid, 'Rüstungsbeschränkung: vorerst keine Signatur-Einheiten.'); break; }
           if (st.sig && this.countUnique(pid, c.unique) >= st.max) { this.notice(pid, `${st.name}: höchstens ${st.max} gleichzeitig.`); break; }
           this.pay(pl, st.cost);
           b.queue.push({ line: c.line, unique: c.unique || null, cost: st.cost, time: st.time });
@@ -690,7 +693,7 @@ export class World {
     if (this.units.some(u => u.dead)) this.units = this.units.filter(u => !u.dead);
     if (this.buildings.some(b => b.dead)) this.buildings = this.buildings.filter(b => !b.dead);
 
-    if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); this.updateRail(1 * this.settings.speed); this.updateParadrops(); this.updateCelo(1 * this.settings.speed); }
+    if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); this.updateRail(1 * this.settings.speed); this.updateParadrops(); this.updateCelo(1 * this.settings.speed); this.updateConference(1 * this.settings.speed); }
     this.updateNukes();
     if (this.tickNo % 50 === 0) this.updateProvinces();
     if (this.tickNo % 5 === 0) this.recount();
@@ -1613,3 +1616,4 @@ installAir(World);
 installCelo(World);
 installLeaders(World);
 installNukes(World);
+installConference(World);

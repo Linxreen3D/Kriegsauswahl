@@ -1,6 +1,7 @@
 import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
 import { createDiplomacy } from './diplomacy.js';
+import { createConference } from './conference.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
   RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, NUKE, NUCLEAR_NATIONS, LEADER, LEADER_CD, leaderOptions, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
@@ -53,7 +54,7 @@ const G = {
   allied(o) { const a = this.players[this.you], b = this.players[o]; return o === this.you || (a && b && (a.team === b.team || (a.allies || []).includes(o))); },
 };
 const UI = { box: null, ghost: null, rally: null, markers: [], pings: [], mode: null, lastAlert: null };
-let renderer = null, ws = null, reconnectDelay = 500, DIP = null;
+let renderer = null, ws = null, reconnectDelay = 500, DIP = null, CONF = null;
 let wantSession = null;
 try { wantSession = JSON.parse(sessionStorage.getItem('fl_session') || 'null'); } catch { /* egal */ }
 
@@ -160,6 +161,8 @@ const SETTINGS_DEF = [
   { key: 'startEra', label: 'Startepoche', type: 'select', options: ERAS.map((e, i) => [String(i), e.name]) },
   { key: 'speed', label: 'Spieltempo', type: 'range', min: 0.5, max: 3, step: 0.25, fmt: v => v + '×' },
   { key: 'armageddonMin', label: 'Meteore ab (Armageddon)', type: 'range', min: 1, max: 60, step: 1, fmt: v => v + ' min' },
+  { key: 'conferences', label: 'Friedenskonferenzen', type: 'select', options: [['pause', 'Pause für alle'], ['nopause', 'Ohne Pause'], ['off', 'Aus']] },
+  { key: 'confMin', label: 'Konferenz-Zeitlimit', type: 'select', options: [['3', '3 min'], ['5', '5 min'], ['8', '8 min']] },
   { key: 'nukes', label: 'Atomwaffen', type: 'select', options: [['true', 'An (nur Atommächte)'], ['false', 'Aus']] },
   { key: 'botDifficulty', label: 'Bot-Schwierigkeit', type: 'select', options: [['easy', 'Leicht'], ['normal', 'Normal'], ['hard', 'Schwer']] },
 ];
@@ -241,6 +244,7 @@ function onStart(m) {
   renderer.setMap(G);
   renderer.setProvinces(G);
   if (DIP) DIP.onStart(m);
+  if (CONF) CONF.onStart(m);
   renderer.resize();
   renderer.cam.z = 1.7;
   renderer.cam.x = m.start.x + 0.5; renderer.cam.y = m.start.y + 2;
@@ -341,6 +345,7 @@ function onMe(m) {
 
 function pname(id) { const p = G.players[id]; return p ? `<b style="color:${p.color}">${esc(p.name)}</b>` : '?'; }
 function onEvent(e, now) {
+  if (CONF && (e.k === 'conf' || e.k === 'confInvite')) { CONF.onEvent(e); return; }
   if (DIP && (e.k === 'proposal' || e.k === 'proposalEnd' || e.k === 'chron' || e.k === 'contact')) { DIP.onEvent(e); return; }
   switch (e.k) {
     case 'shot': renderer.addShot(e, now); if (Math.random() < 0.15) sfx.shot(e.c); break;
@@ -1249,7 +1254,8 @@ function drawMenuBackground() {
 async function init() {
   setupUi();
   renderer = new Renderer3D($('game'), $('overlay'));
-  DIP = createDiplomacy({ G, send, notice, selectedOwn });
+  DIP = createDiplomacy({ G, send, notice, selectedOwn, conference: id => CONF && CONF.request(id) });
+  CONF = createConference({ G, send, notice, portrait: l => leaderPortrait(l) });
   window.__renderer = renderer; window.__send = send; window.__G = G; // für automatisierte Tests
   await renderer.init();
   window.__G = G; window.__R = renderer; // Debug-Zugriff

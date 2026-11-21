@@ -329,3 +329,16 @@ body:not(.is-host) .settings input, body:not(.is-host) .settings select { pointe
 
 body.nuke-flash::after { content: ''; position: fixed; inset: 0; background: #fff8e0; opacity: .85; pointer-events: none; animation: nukeflash .9s ease-out forwards; z-index: 50; }
 @keyframes nukeflash { from { opacity: .9; } to { opacity: 0; } }
+#confRoom { z-index: 40; }
+.conf-card { width: min(1080px, 96vw); max-height: 92vh; overflow: auto; }
+.conf-timer { color: #f3d58a; margin-bottom: 8px; }
+.conf-table { display: flex; align-items: center; gap: 14px; justify-content: center; margin: 6px 0 12px; flex-wrap: wrap; }
+.conf-party { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 2px solid; border-radius: 12px; background: rgba(20,16,10,.6); }
+.conf-vs { opacity: .7; font-style: italic; }
+.conf-body { display: grid; grid-template-columns: 1fr 300px; gap: 14px; }
+@media (max-width: 800px) { .conf-body { grid-template-columns: 1fr; } }
+.conf-offer { background: #131d31; border: 1px solid #2b3b5a; border-radius: 10px; padding: 10px; margin-bottom: 8px; line-height: 1.5; }
+.conf-pledges { font-size: 13px; margin: 6px 0; }
+.conf-chat { height: 220px; overflow: auto; background: rgba(0,0,0,.25); border-radius: 8px; padding: 6px; font-size: 13px; }
+.conf-chat .gal { opacity: .8; font-style: italic; }
+.modal .card.conf-card { width: min(1080px, 96vw); max-width: 96vw; }

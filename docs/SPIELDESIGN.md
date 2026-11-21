@@ -772,7 +772,10 @@ Formationen werden per Taste gewählt. Die Einheiten halten sie beim Marschieren
 6. ✅ **Eisenbahn:** Gleise, Bahnhöfe, Truppen- und Güterzüge, Sabotage.
 7. ✅ **Wasser:** Werft, Fischerboote, Transporter, Kriegsschiffe, U-Boote, Kartentyp „Inseln“ mit Meerengen, **Brückenbau**.
 8. ✅ **Luft:** Flugplatz mit Tanken/Aufmunitionieren, Jäger, Bomber, Hubschrauber, Fallschirmjäger, Flugabwehr.
-9. **Spätphase:** Nationseinheiten VII–VIII, **Sondereinheit Celo**, Signatur-Einheiten, **Staatsführer mit Porträts**, **Friedenskonferenz**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
+9. ✅ **Spätphase:** Nationseinheiten VII–VIII, **Sondereinheit Celo**, Signatur-Einheiten, **Staatsführer mit Porträts**, **Friedenskonferenz**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
+   - *Stand der Umsetzung:* Porträts sind Monogramm-Platzhalter (Bilder unter `public/assets/leaders/<id>.png`), A.H. immer Schattenriss. Führer-Boni, die ein noch nicht vorhandenes System brauchen (Pfand bei Verträgen, Handel, Vermittler-Provision), wurden durch gleichwertige, umsetzbare Boni ersetzt; die Texte im Spiel zeigen immer die tatsächliche Wirkung.
+   - *Konferenz, noch offen:* Vermitteln, Sanktionen androhen, Beitreten, entmilitarisierte Zone und Abrüstung. Umgesetzt: Antrag, Annehmen/Ablehnen, Pause für alle mit Pausenbudget (15 min je Spielstunde), „Ohne Pause“ mit Waffenruhe, Zeitlimit 3/5/8 min, Frieden, Waffenstillstand, Gebietsabtretung, Reparationen, Rohstoffe, Rüstungsbeschränkung, Galerie mit Unterstützung und Garantien, Friedensbruch mit Garantiemächten, Bots.
+   - *Atomwaffen, noch offen:* Bots bauen noch keine Atomwaffen oder Raketenabwehr; Aufdecken des Forschungszentrums durch Botschafter.
 10. **Feinschliff:** Simulationen und Balancing.
 
 Modelle bleiben bis dahin Platzhalter. Die richtigen Modelle kommen später aus Blender als `.glb`.

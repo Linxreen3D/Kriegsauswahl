@@ -20,6 +20,7 @@ export function installNukes(World) {
   W.nukeBuildCommand = function (pl, silo) {
     if (!silo || silo.dead || !silo.built || silo.type !== 'silo' || silo.owner !== pl.id) return;
     if (!this.nuclearPower(pl)) return;
+    if (pl.armsLimitUntil > this.time) { this.notice(pl.id, 'Rüstungsbeschränkung: vorerst keine Atomraketen.'); return; }
     if ((pl.nukesUsed || 0) >= NUKE.maxPerGame) { this.notice(pl.id, `Höchstens ${NUKE.maxPerGame} Atomraketen pro Partie.`); return; }
     if (pl.nukeReady || this.buildings.some(b => !b.dead && b.owner === pl.id && b.queue.some(q => q.nuke))) { this.notice(pl.id, 'Es kann nur eine Atomrakete gleichzeitig geben.'); return; }
     if ((pl.nukePauseUntil || 0) > this.time) { this.notice(pl.id, `Nächste Rakete möglich in ${Math.ceil((pl.nukePauseUntil - this.time) / 60)} min.`); return; }

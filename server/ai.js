@@ -26,6 +26,7 @@ export class AI {
     this.next = w.time + this.prof.think;
 
     this.handleProposals(pl);
+    this.conference();
     if (pl.choice === 'culture') this.cmd({ c: 'choose', kind: 'culture', value: pick(Object.keys(CULTURES)) });
     else if (pl.choice === 'nation') this.cmd({ c: 'choose', kind: 'nation', value: pick(CULTURES[pl.culture].nations) });
     else if (pl.choice === 'leader') { const era = w.leaderEraDue(pl); const opts = leaderOptions(pl.nation, era); const calm = opts.filter(l => l.b.repSet == null); this.cmd({ c: 'choose', kind: 'leader', value: pick(calm.length ? calm : opts).id }); }
@@ -144,6 +145,33 @@ export class AI {
   }
 
   // Vertragsangebote bewerten: Rohstoffwert, Provinzen, Truppen; Pakte/Bündnisse je nach Stärke
+  // Friedenskonferenz: annehmen, wenn unterlegen; am Tisch Frieden anbieten oder Reparationen verlangen
+  conference() {
+    const w = this.w, pl = w.P[this.pid];
+    if (!pl || !pl.alive) return;
+    const strength = p => w.score(p);
+    const inv = w.confInvite;
+    if (inv && inv.to === this.pid) w.diplomacy(this.pid, { op: 'confRespond', accept: strength(pl) < strength(w.P[inv.from]) * 1.15 });
+    const c = w.conf;
+    if (!c || c.phase !== 'open' || (c.a !== this.pid && c.b !== this.pid)) return;
+    const foe = w.P[c.a === this.pid ? c.b : c.a], weaker = strength(pl) < strength(foe);
+    if (!c.offer && (this.confAt == null || w.time - this.confAt > 15 || c.paused)) {
+      this.confAt = w.time;
+      if (this.confTried) return;
+      this.confTried = c.id;
+      const off = weaker ? { peace: 'peace', give: { res: { gold: Math.min(300, Math.floor(pl.res.gold / 3)) } }, get: {} }
+        : { peace: 'peace', give: {}, get: { tribute: { res: 'gold', perMin: 60, min: 10 } } };
+      w.diplomacy(this.pid, { op: 'confOffer', offer: off });
+      return;
+    }
+    if (c.offer && !c.signed.includes(this.pid)) {
+      const o = c.offer, mine = c.a === this.pid ? o.a : o.b, theirs = c.a === this.pid ? o.b : o.a;
+      const val = s => Object.values(s.res).reduce((x, y) => x + y, 0) + s.prov.length * 600 + (s.tribute ? s.tribute.perMin * s.tribute.min : 0);
+      const ok = weaker ? val(mine) <= Math.max(1500, val(theirs) + 1500) : val(theirs) >= val(mine) + 300 || (o.by === this.pid);
+      const afford = Object.entries(mine.res).every(([k, v]) => (pl.res[k] || 0) >= v) && mine.prov.every(p => w.provOwner[p] === this.pid);
+      if (ok && afford) w.diplomacy(this.pid, { op: 'confSign', ver: c.ver });
+    }
+  }
   handleProposals(pl) {
     const w = this.w;
     for (const p of w.proposals.filter(x => x.to === this.pid)) {

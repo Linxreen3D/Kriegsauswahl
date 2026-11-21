@@ -24,6 +24,8 @@ export const DEFAULT_SETTINGS = {
   armageddonMin: 20, // ab wann Meteore fallen (Modus Armageddon)
   maxPlayers: 24,
   nukes: true, // Atomwaffen für historische Atommächte (Kalter Krieg)
+  conferences: 'pause', // Friedenskonferenzen: pause | nopause | off
+  confMin: 5, // Zeitlimit einer Konferenz in Minuten (3, 5, 8)
 };
 
 // ---------------- Epochen ----------------

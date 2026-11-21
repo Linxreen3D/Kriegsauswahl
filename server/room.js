@@ -182,6 +182,8 @@ export class Room {
         if (['low', 'normal', 'high'].includes(s.resources)) st.resources = s.resources;
         if ('startEra' in s) st.startEra = Math.round(num(s.startEra, 0, ERAS.length - 1, st.startEra));
         if ('speed' in s) st.speed = num(s.speed, 0.5, 3, st.speed);
+        if (['pause', 'nopause', 'off'].includes(s.conferences)) st.conferences = s.conferences;
+        if ('confMin' in s && [3, 5, 8].includes(+s.confMin)) st.confMin = +s.confMin;
         if ('nukes' in s) st.nukes = s.nukes === true || s.nukes === 'true' || s.nukes === 'on';
         if ('armageddonMin' in s) st.armageddonMin = Math.round(num(s.armageddonMin, 1, 90, st.armageddonMin));
         if (['easy', 'normal', 'hard'].includes(s.botDifficulty)) { st.botDifficulty = s.botDifficulty; for (const x of this.players) if (x.isBot) x.difficulty = s.botDifficulty; }
@@ -289,9 +291,15 @@ export class Room {
     const w = this.world;
     if (!w || this.phase !== 'play' || this.paused) return;
     const t0 = performance.now();
-    for (const ai of this.ais) ai.update();
-    for (const ai of this.subs.values()) ai.update();
-    w.tick();
+    const confPause = w.conf && w.conf.paused;
+    if (confPause) {
+      for (const ai of this.ais) ai.conference && ai.conference();
+      w.confStep(TICK_MS / 1000);
+    } else {
+      for (const ai of this.ais) ai.update();
+      for (const ai of this.subs.values()) ai.update();
+      w.tick();
+    }
     w.computeVision();
     const evs = w.events; w.events = [];
     const rd = w.resourceDelta();
