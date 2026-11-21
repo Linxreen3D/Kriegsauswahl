@@ -36,7 +36,7 @@ export function installConference(World) {
     if (this.conf) { this.notice(a.id, 'Es läuft bereits eine Konferenz.'); return false; }
     const limit = (this.settings.confMin || 5) * 60;
     this.conf = { id: this.nextId++, a: a.id, b: b.id, secret: !!opts.secret, forced: !!opts.forced, phase: 'countdown', startAt: this.time + COUNTDOWN, left: limit,
-      paused: false, offer: null, ver: 0, signed: [], support: [], guarantees: [], chat: [] };
+      paused: false, offer: null, ver: 0, signed: [], support: [], guarantees: [], chat: [], mediator: null, medVotes: {}, sanctions: [], joins: [] };
     const txt = opts.secret ? `Geheime Verhandlung mit ${b.name} beginnt in ${COUNTDOWN} Sekunden (ohne Pause, Waffenruhe zwischen euch).`
       : `🕊 Friedenskonferenz zwischen ${a.name} und ${b.name} in ${COUNTDOWN} Sekunden${opts.forced ? ' (erzwungen)' : ''}.`;
     if (opts.secret) { this.notice(a.id, txt); this.notice(b.id, txt.replace(b.name, a.name)); } else this.event({ k: 'notice', to: -1, text: txt });
@@ -48,6 +48,7 @@ export function installConference(World) {
 
   // Spielzeit-Schritt (läuft im normalen Tick: Countdown und Konferenzen ohne Pause)
   W.updateConference = function (dt) {
+    this.updateDmz();
     if (this.confInvite && this.confInvite.until < this.time) { this.notice(this.confInvite.from, 'Keine Antwort auf den Konferenzantrag.'); this.confInvite = null; }
     const c = this.conf; if (!c) return;
     if (!this.P[c.a].alive || !this.P[c.b].alive) return this.endConference(false, 'Eine Partei ist ausgeschieden.');
@@ -82,14 +83,18 @@ export function installConference(World) {
     if (c.secret && !party) return;
     switch (m.op) {
       case 'confOffer': {
-        if (!party || c.phase !== 'open') return;
+        const mediator = c.mediator === pl.id;
+        if ((!party && !mediator) || c.phase !== 'open') return;
         const o = this.cleanOffer(m.offer) || { give: { res: {}, prov: [], units: [], tribute: null }, get: { res: {}, prov: [], units: [], tribute: null }, alliance: false, pact: 0 };
         o.alliance = false; o.pact = 0; o.give.units = []; o.get.units = [];
         const peace = m.offer && m.offer.peace === 'peace' ? 'peace' : m.offer && m.offer.peace === 'ceasefire' ? 'ceasefire' : null;
         const arms = { give: !!(m.offer && m.offer.armsGive), get: !!(m.offer && m.offer.armsGet) };
+        const dis = { give: !!(m.offer && m.offer.disarmGive), get: !!(m.offer && m.offer.disarmGet) };
+        const dmz = m.offer && Array.isArray(m.offer.dmz) ? [...new Set(m.offer.dmz.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < this.provinces.length && [c.a, c.b].includes(this.provOwner[n])))].slice(0, 10) : [];
         // einheitlich aus Sicht von A speichern
         const swap = pl.id === c.b;
-        c.offer = { peace, a: swap ? o.get : o.give, b: swap ? o.give : o.get, armsA: swap ? arms.get : arms.give, armsB: swap ? arms.give : arms.get, by: pl.id };
+        c.offer = { peace, a: swap ? o.get : o.give, b: swap ? o.give : o.get, armsA: swap ? arms.get : arms.give, armsB: swap ? arms.give : arms.get,
+          disarmA: swap ? dis.get : dis.give, disarmB: swap ? dis.give : dis.get, dmz, by: pl.id };
         c.ver++; c.signed = [];
         this.confBroadcast();
         return;
@@ -118,6 +123,38 @@ export function installConference(World) {
         this.confBroadcast();
         return;
       }
+      case 'confMediator': { // beide Parteien müssen denselben Zuschauer wählen
+        if (!party || c.phase === 'done') return;
+        const id = +m.id;
+        if (id >= 0 && (!this.P[id] || !this.P[id].alive || id === c.a || id === c.b)) return;
+        c.medVotes[pl.id] = id;
+        if (id >= 0 && c.medVotes[c.a] === id && c.medVotes[c.b] === id) { c.mediator = id; this.notice(id, '⚖ Du wurdest als Vermittler an den Tisch gebeten. Du kannst Vorschläge auf den Tisch legen.'); }
+        else if (c.mediator != null && c.medVotes[pl.id] !== c.mediator) c.mediator = null;
+        this.confBroadcast();
+        return;
+      }
+      case 'confSanction': { // Drohung: wer am Ende nicht unterschrieben hat, bekommt 20 min keine Angebote von diesem Zuschauer
+        if (party || c.phase === 'done') return;
+        const side = +m.side; if (side !== c.a && side !== c.b) return;
+        if (c.sanctions.some(x => x.from === pl.id && x.side === side)) return;
+        c.sanctions.push({ from: pl.id, side });
+        this.confBroadcast();
+        return;
+      }
+      case 'confJoin': { // Zuschauer will Vertragspartei auf einer Seite werden
+        if (party || c.phase === 'done' || c.joins.some(j => j.id === pl.id)) return;
+        const side = +m.side; if (side !== c.a && side !== c.b) return;
+        c.joins.push({ id: pl.id, side, ok: [] });
+        this.confBroadcast();
+        return;
+      }
+      case 'confJoinOk': {
+        if (!party) return;
+        const j = c.joins.find(x => x.id === +m.id); if (!j || j.ok.includes(pl.id)) return;
+        j.ok.push(pl.id);
+        this.confBroadcast();
+        return;
+      }
       case 'confGuarantee': {
         if (party || c.phase === 'done') return;
         const side = +m.side; if (side !== c.a && side !== c.b) return;
@@ -135,6 +172,26 @@ export function installConference(World) {
     const before = A.stats.treaties;
     this.executeOffer({ id: 'conf' + c.id, from: c.a, to: c.b, offer });
     if (A.stats.treaties === before) return this.endConference(false, 'Der Vertrag konnte nicht erfüllt werden.');
+    if (o.disarmA) this.disarm(A);
+    if (o.disarmB) this.disarm(B);
+    if (o.dmz && o.dmz.length) {
+      const parties = [c.a, c.b, ...c.joins.filter(j => j.ok.length >= 2).map(j => j.id)];
+      (this.dmz || (this.dmz = [])).push({ prov: o.dmz, parties, until: this.time + 1200 });
+      this.event({ k: 'notice', to: -1, text: `🚫 Entmilitarisierte Zone für 20 min: ${o.dmz.map(p => this.provinces[p].name).join(', ')}.` });
+    }
+    if (offer.pact) for (const j of c.joins.filter(x => x.ok.length >= 2)) {
+      const other = j.side === c.a ? c.b : c.a, rj = this.relOf(j.id, other);
+      rj.pactUntil = Math.max(rj.pactUntil, this.time + offer.pact * 60);
+      if (o.peace === 'peace') rj.peaceTreaty = this.time + 1200;
+      this.notice(j.id, `Du trittst dem Vertrag bei: ${offer.pact} min Waffenruhe mit ${this.P[other].name}.`);
+    }
+    if (c.mediator != null && this.P[c.mediator]) {
+      const M = this.P[c.mediator], val = s => Object.values(s.res).reduce((x, y) => x + y, 0) + (s.tribute ? s.tribute.perMin * s.tribute.min : 0);
+      const fee = Math.round((val(o.a) + val(o.b)) * 0.05);
+      if (fee) M.res.gold += fee;
+      this.repChange(M.id, 10);
+      this.notice(M.id, `⚖ Vermittlung erfolgreich: +Ansehen${fee ? ` und ${fee} Gold Provision` : ''}.`);
+    }
     if (o.armsA) A.armsLimitUntil = this.time + 900;
     if (o.armsB) B.armsLimitUntil = this.time + 900;
     const r = this.relOf(c.a, c.b);
@@ -147,6 +204,12 @@ export function installConference(World) {
     const A = this.P[c.a], B = this.P[c.b];
     // Zusagen der Zuschauer werden in jedem Fall übergeben
     for (const s of c.support) for (const k in s.res) this.P[s.side].res[k] += s.res[k];
+    // Sanktionen treffen, wer den letzten Vorschlag nicht unterschrieben hat
+    if (!ok) for (const sn of c.sanctions) {
+      if (c.offer && c.signed.includes(sn.side)) continue;
+      const r = this.relOf(sn.from, sn.side); r.sanction = { by: sn.from, until: this.time + 1200 };
+      this.event({ k: 'notice', to: -1, text: `⛔ ${this.P[sn.from].name} verhängt 20 min Sanktionen gegen ${this.P[sn.side].name}.` });
+    }
     // Garantien greifen bei Scheitern: Bündnis mit der Seite, Bruch mit der Gegenseite
     if (!ok) for (const g of c.guarantees) {
       const other = g.side === c.a ? c.b : c.a;
@@ -161,11 +224,36 @@ export function installConference(World) {
     this.conf = null;
   };
 
+  // Abrüstung: ein Viertel der Truppen wird entlassen, die Hälfte ihrer Kosten kommt zurück
+  W.disarm = function (pl) {
+    const mil = this.units.filter(u => !u.dead && u.owner === pl.id && u.cls !== 'wrk' && !u.aboard && !u.st.sig && u.line !== 'train' && u.cls !== 'env' && u.cls !== 'spy');
+    const n = Math.floor(mil.length * 0.25); let back = {};
+    mil.sort((x, y) => x.era - y.era);
+    for (const u of mil.slice(0, n)) { for (const k in u.st.cost) back[k] = (back[k] || 0) + Math.round(u.st.cost[k] * 0.5); this.kill(u, -1); }
+    for (const k in back) pl.res[k] += back[k];
+    this.notice(pl.id, `Abrüstung: ${n} Einheiten entlassen, die Hälfte ihrer Kosten wurde erstattet.`);
+  };
+  W.inDmz = function (pid, x, y) {
+    if (!this.dmz || !this.dmz.length) return false;
+    const p = this.prov[this.idx(Math.floor(x), Math.floor(y))];
+    return this.dmz.some(z => z.until > this.time && z.parties.includes(pid) && z.prov.includes(p));
+  };
+  // jede Sekunde: Militär der Vertragsparteien in der Zone nimmt Schaden (Rückzug erzwingen)
+  W.updateDmz = function () {
+    if (!this.dmz || !this.dmz.length) return;
+    this.dmz = this.dmz.filter(z => z.until > this.time);
+    for (const u of this.units) {
+      if (u.dead || u.aboard || u.cls === 'wrk' || u.cls === 'env' || u.air || !this.inDmz(u.owner, u.x, u.y)) continue;
+      this.damage(u, u.maxHp * 0.03, -1);
+      if (!u.dmzWarn || u.dmzWarn < this.time) { u.dmzWarn = this.time + 30; this.notice(u.owner, '🚫 Deine Truppen stehen in einer entmilitarisierten Zone und verlieren Leben – zurückziehen!'); }
+    }
+  };
   // Zustand für die Clients
   W.confPublic = function () {
     const c = this.conf; if (!c) return null;
     return { id: c.id, a: c.a, b: c.b, secret: c.secret, phase: c.phase, left: Math.max(0, Math.ceil(c.left)), countdown: Math.max(0, Math.ceil(c.startAt - this.time)),
-      paused: c.paused, offer: c.offer, ver: c.ver, signed: c.signed, support: c.support, guarantees: c.guarantees, chat: c.chat.slice(-40) };
+      paused: c.paused, offer: c.offer, ver: c.ver, signed: c.signed, support: c.support, guarantees: c.guarantees, chat: c.chat.slice(-40),
+      mediator: c.mediator, medVotes: c.medVotes, sanctions: c.sanctions, joins: c.joins };
   };
   W.confBroadcast = function () {
     const s = this.confPublic() || { phase: 'done' };

@@ -1216,7 +1216,7 @@ export class World {
       b.cd -= dt;
       if (b.cd <= 0) {
         const t = this.findTarget(b.owner, b.cx, b.cy, b.st.range * this.buffMul(pl, 'towerRange') + b.size / 2, true, b.st.dmgRow || 'bld');
-        if (t && t.kind === 'u') {
+        if (t && t.kind === 'u' && !this.inDmz(b.owner, b.cx, b.cy)) {
           b.cd = b.st.cd;
           this.damage(t, this.bldDamage(b, t) * this.buffMul(pl, 'tower'), b.owner);
           this.event({ k: 'shot', x: b.cx, y: b.cy - 0.5, tx: t.x, ty: t.y, c: pl.era >= 4 ? 2 : 0 });
@@ -1458,7 +1458,7 @@ export class World {
   serialize() {
     return {
       v: 1, settings: this.settings, W: this.W, H: this.H, terrain: Buffer.from(this.terrain).toString('base64'),
-      time: this.time, tickNo: this.tickNo, nextId: this.nextId, mapInfo: this.mapInfo, meteors: this.meteors, nextMeteor: this.nextMeteor || 0, nukes: this.nukes || [], radiation: this.radiation || [],
+      time: this.time, tickNo: this.tickNo, nextId: this.nextId, mapInfo: this.mapInfo, meteors: this.meteors, nextMeteor: this.nextMeteor || 0, nukes: this.nukes || [], radiation: this.radiation || [], dmz: this.dmz || [],
       P: this.P.map(({ mods, ...rest }) => rest),
       units: this.units.filter(u => !u.dead),
       buildings: this.buildings.filter(b => !b.dead),
@@ -1481,7 +1481,7 @@ export class World {
     w.prov = d.prov ? new Uint16Array(new Uint8Array(Buffer.from(d.prov, 'base64')).buffer) : new Uint16Array(N).fill(65535);
     w.provinces = d.provinces || []; w.provOwner = Int16Array.from(d.provOwner || w.provinces.map(() => -1)); w.provDirty = true;
     w.events = []; w.resChanged = new Set(); w.resRemoved = [];
-    w.meteors = d.meteors || []; w.nextMeteor = d.nextMeteor || 0; w.nukes = d.nukes || []; w.radiation = d.radiation || [];
+    w.meteors = d.meteors || []; w.nextMeteor = d.nextMeteor || 0; w.nukes = d.nukes || []; w.radiation = d.radiation || []; w.dmz = d.dmz || [];
     w.cellsW = Math.ceil(w.W / CELL); w.cellsH = Math.ceil(w.H / CELL);
     w.cells = Array.from({ length: w.cellsW * w.cellsH }, () => []);
     w.bcells = Array.from({ length: w.cellsW * w.cellsH }, () => []);

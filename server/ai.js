@@ -204,6 +204,10 @@ export class AI {
     const c = w.conf;
     if (!c || c.phase !== 'open' || (c.a !== this.pid && c.b !== this.pid)) return;
     const foe = w.P[c.a === this.pid ? c.b : c.a], weaker = strength(pl) < strength(foe);
+    // Beitritte zulassen, Vermittler der Gegenseite akzeptieren
+    for (const j of c.joins || []) if (!j.ok.includes(this.pid)) w.diplomacy(this.pid, { op: 'confJoinOk', id: j.id });
+    const fv = c.medVotes && c.medVotes[foe.id];
+    if (fv != null && fv >= 0 && c.medVotes[this.pid] !== fv) w.diplomacy(this.pid, { op: 'confMediator', id: fv });
     if (!c.offer && (this.confAt == null || w.time - this.confAt > 15 || c.paused)) {
       this.confAt = w.time;
       if (this.confTried) return;

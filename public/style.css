@@ -342,3 +342,4 @@ body.nuke-flash::after { content: ''; position: fixed; inset: 0; background: #ff
 .conf-chat { height: 220px; overflow: auto; background: rgba(0,0,0,.25); border-radius: 8px; padding: 6px; font-size: 13px; }
 .conf-chat .gal { opacity: .8; font-style: italic; }
 .modal .card.conf-card { width: min(1080px, 96vw); max-width: 96vw; }
+.conf-card label.small { display: block; margin: 2px 0; }

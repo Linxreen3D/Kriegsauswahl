@@ -135,6 +135,8 @@ export function installDiplomacy(World) {
       }
       case 'propose': {
         if (!other || other.id === pid || !other.alive || !this.hasContact(pid, other.id)) return null;
+        const sr = this.relOf(pid, other.id);
+        if (sr.sanction && sr.sanction.by === pid && sr.sanction.until > this.time) { this.notice(pid, `Deine Sanktionen gegen ${other.name} laufen noch ${Math.ceil((sr.sanction.until - this.time) / 60)} min.`); return null; }
         const offer = this.cleanOffer(m.offer);
         if (!offer) return null;
         // ältere Angebote zwischen beiden ersetzen
@@ -167,7 +169,7 @@ export function installDiplomacy(World) {
       case 'event': return this.chooseEvent(pl, m.choice | 0), null;
       case 'confRequest': return this.confRequest(pl, other), null;
       case 'confRespond': return this.confRespond(pl, !!m.accept), null;
-      case 'confOffer': case 'confSign': case 'confLeave': case 'confChat': case 'confSupport': case 'confGuarantee': return this.confOp(pl, m), null;
+      case 'confOffer': case 'confSign': case 'confLeave': case 'confChat': case 'confSupport': case 'confGuarantee': case 'confMediator': case 'confSanction': case 'confJoin': case 'confJoinOk': return this.confOp(pl, m), null;
       default: return null;
     }
   };
