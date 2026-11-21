@@ -80,7 +80,11 @@ Unity wäre die einzige ernsthafte Alternative, aber erst, wenn die Web-Technik 
   - Windows: Stammverzeichnis `WinAppDataRoaming`, Unterordner `frontlinien/saves`, Muster `*.json`.
   - Linux: Stammverzeichnis `LinuxXdgConfigHome`, Unterordner `frontlinien/saves`.
 - **Startoption:** Windows `Frontlinien.exe`, Linux `frontlinien`, aus dem jeweiligen `*-unpacked`-Ordner, mit dem die Depots befüllt werden.
-- **Hochladen** mit SteamPipe (steamcmd), je ein Depot für Windows und Linux.
+- **Hochladen mit SteamPipe** (je ein Depot für Windows und Linux):
+  1. Ordner bauen: `npm run dist:steam-win` (unter Windows) und `npm run dist:steam-linux`. Alternativ liefert der GitHub-Workflow beide Ordner als Download.
+  2. Die Ordner nach `dist/win-unpacked` und `dist/linux-unpacked` legen.
+  3. `STEAM_USER=… APP_ID=… DEPOT_ID_WIN=… DEPOT_ID_LINUX=… ./steam/upload.sh` ausführen.
+  4. Im Backend den Build auf einen Zweig setzen, z. B. „beta“ für den Playtest.
 
 **Ursprünglicher Plan:**
 1. **Steamworks** über `steamworks.js` (Node-Anbindung für Electron).

@@ -12,8 +12,12 @@ jobs:
         include:
           - os: windows-latest
             target: dist:win
+            steam: dist:steam-win
+            dir: win-unpacked
           - os: ubuntu-latest
             target: dist:linux
+            steam: dist:steam-linux
+            dir: linux-unpacked
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +29,14 @@ jobs:
       - run: npm run ${{ matrix.target }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # Entpackter Ordner für den Steam-Upload (SteamPipe)
+      - run: npm run ${{ matrix.steam }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontlinien-steam-${{ matrix.dir }}
+          path: dist/${{ matrix.dir }}
       - uses: actions/upload-artifact@v4
         with:
           name: frontlinien-${{ matrix.os }}

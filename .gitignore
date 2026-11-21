@@ -4,3 +4,5 @@ node_modules/
 public/nantest.html
 saves/
 dist/
+steam/build/
+steam/output/

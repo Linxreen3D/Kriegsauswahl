@@ -9,7 +9,9 @@
     "ui-assets": "node tools/build-ui-assets.mjs",
     "dist:win": "electron-builder --win nsis",
     "dist:linux": "electron-builder --linux AppImage",
-    "dist:dir": "electron-builder --dir"
+    "dist:dir": "electron-builder --dir",
+    "dist:steam-win": "electron-builder --win dir",
+    "dist:steam-linux": "electron-builder --linux dir"
   },
   "repository": {
     "type": "git",
