@@ -117,6 +117,9 @@ let wantSession = null;
 const OPT = { camSpeed: 1, edge: true };
 try { const o = JSON.parse(localStorage.getItem('fl_options') || '{}'); Object.assign(OPT, o); } catch { /* egal */ }
 const saveOpt = () => { try { localStorage.setItem('fl_options', JSON.stringify(OPT)); } catch { /* egal */ } };
+// Oberflächengröße: Standard 1, auf kleinen Bildschirmen (Steam Deck) etwas größer
+if (!OPT.ui) OPT.ui = window.screen && window.screen.width <= 1280 && window.devicePixelRatio <= 1.5 ? 1.15 : 1;
+document.documentElement.style.setProperty('--ui', OPT.ui);
 const DESKTOP = typeof window !== 'undefined' && window.desktop ? window.desktop : null;
 if (DESKTOP) document.body.classList.add('desktop');
 let singleStart = false, tutorialStart = false, TUT = null, CODEX = null;
@@ -1282,6 +1285,8 @@ function setupOptions() {
   $('o_music').oninput = e => { const v = +e.target.value; $('o_musicOut').textContent = v + ' %'; music.setVolume(v / 100); music.setEnabled(v > 0); };
   $('o_camSpeed').oninput = e => { OPT.camSpeed = +e.target.value / 100; $('o_camSpeedOut').textContent = e.target.value + ' %'; saveOpt(); };
   $('o_edge').onchange = e => { OPT.edge = e.target.value === '1'; saveOpt(); };
+  $('o_ui').value = String(OPT.ui);
+  $('o_ui').onchange = e => { OPT.ui = +e.target.value; saveOpt(); document.documentElement.style.setProperty('--ui', OPT.ui); };
   $('o_fullscreen').onchange = e => DESKTOP && DESKTOP.setFullscreen(e.target.value === '1');
   $('optionsDlg').addEventListener('keydown', e => e.stopPropagation());
   // Neue Taste abfangen, solange eine Belegung wartet (vor allen anderen Tastenhandlern)
