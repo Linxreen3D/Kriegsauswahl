@@ -202,6 +202,11 @@ export class AI {
     const inv = w.confInvite;
     if (inv && inv.to === this.pid) w.diplomacy(this.pid, { op: 'confRespond', accept: strength(pl) < strength(w.P[inv.from]) * 1.15 });
     const c = w.conf;
+    // Klar unterlegen gegen einen Menschen: selbst eine Konferenz beantragen (höchstens alle 20 min)
+    if (!c && !w.confInvite && !this.defensive && w.time > 1200 && !(pl.confCd > w.time) && Math.random() < 0.05) {
+      const foe = w.P.find(q => q.alive && !q.isBot && q.id !== this.pid && w.enemy(this.pid, q.id) && w.hasContact(this.pid, q.id) && strength(pl) < strength(q) * 0.5);
+      if (foe) w.confRequest(pl, foe);
+    }
     if (!c || c.phase !== 'open' || (c.a !== this.pid && c.b !== this.pid)) return;
     const foe = w.P[c.a === this.pid ? c.b : c.a], weaker = strength(pl) < strength(foe);
     // Beitritte zulassen, Vermittler der Gegenseite akzeptieren

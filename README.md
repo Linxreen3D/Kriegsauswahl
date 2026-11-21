@@ -1,55 +1,25 @@
 # Frontlinien
 
-Ein Echtzeitstrategiespiel für den Browser, das du privat mit Freunden spielst. Alle starten in der Steinzeit
-auf einer zufällig erzeugten Karte. Ihr sammelt Rohstoffe, baut eure Basis aus, steuert eure Armeen selbst und
-führt euer Volk durch sieben Epochen bis in die Moderne.
+Echtzeitstrategie von der Steinzeit bis zum Kalten Krieg – mit Freunden oder gegen Bots.
+Alle starten in der Steinzeit auf einer zufällig erzeugten Karte und führen ihr Volk durch acht Epochen.
 
-## Spielprinzip
+**In Erinnerung an Celo. Für Ljilje, Antonija und Marija.**
 
-- **Zufallskarten** in vier Typen: Kontinent, Seenplatte, Hochland und Urwald. Die Größe richtet sich nach der Spielerzahl.
-- **Wirtschaft**: Arbeiter sammeln Nahrung (Beeren, Felder), Holz, Stein und Gold und bringen sie zum Haupthaus
-  oder Lager. Häuser erhöhen die Bevölkerungsgrenze (maximal 200).
-- **Sieben Epochen**: Steinzeit, Bronzezeit, Antike, Mittelalter, Renaissance, Industriezeit und Moderne. Jede Epoche
-  macht die Einheiten stärker und schaltet neue Gebäude und Einheiten frei. Auch die Gebäude werden robuster.
-- **Kultur und Nation**: In der Bronzezeit wählst du eine von 4 Kulturen, im Mittelalter eine von 3 Nationen
-  dieser Kultur.
-  - Jede Kultur bringt eigene Boni und eine Spezialeinheit mit.
-  - Jede Nation gibt einen zusätzlichen Bonus.
-- **Einheitenlinien**, die mit den Epochen aufsteigen:
-  - Nahkampf: vom Keulenträger bis zum Soldaten
-  - Fernkampf: vom Steinschleuderer bis zum MG-Schützen
-  - Reiterei: vom Streitwagen bis zum Panzer
-  - Belagerung: vom Katapult bis zur Artillerie
-  - Ein Stein-Schere-Papier-System bestimmt den Schaden. Speere schlagen Reiter, Reiter schlagen Schützen,
-    Belagerungswaffen zerstören Gebäude.
-- **Gebäude**: Haupthaus, Haus, Lager, Feld, Kaserne, Schießplatz, Stall, Werkstatt, Wachturm und Palisade
-  (ab dem Mittelalter Steinmauer).
-- **Spielmodi**:
-  - Jeder gegen jeden
-  - Teams
-  - Armageddon: Ab einer einstellbaren Minute schlagen Meteore bei den schwächsten Nationen ein.
-- **KI-Gegner** in drei Stufen (leicht, normal, schwer). Sie bauen eine Wirtschaft auf, steigen in die nächsten
-  Epochen auf, verteidigen sich und greifen an.
-- **Nebel des Krieges**: Erkundete Gebiete bleiben sichtbar, gegnerische Gebäude bleiben als Erinnerung stehen.
-- Lobby mit Raumcode und Einladungslink für bis zu 24 Teilnehmer, dazu Chat (mit `/t` nur ans Team),
-  Wiederverbinden nach einem Neuladen der Seite, Zuschauen nach dem Ausscheiden und eine Endstatistik.
+## Spielinhalt
 
-## Steuerung
+- **8 Epochen**: Steinzeit, Bronzezeit, Eisenzeit, Frühes und Spätes Mittelalter, 1. und 2. Industrielle Revolution (mit zweiter Stufe „Moderne Kriegsführung“), Kalter Krieg.
+- **4 Kulturen, 12 Nationen** mit Boni, eigenem Baustil, eigenem Weltwunder und rund 90 historischen Nationaleinheiten.
+- **52 Staatsführer** (Epochen VII und VIII) mit zwei Dauerboni und einer Fähigkeit.
+- **Diplomatie**: Botschafter, privater Chat, Verträge (Rohstoffe, Provinzen, Truppen, Tribute, Bündnisse, Pakte), Ansehen, Spionage, Ereignisse, Chronik.
+- **Friedenskonferenz** mit Pause, Galerie, Vermittler, Garantien, Sanktionen, entmilitarisierter Zone und Abrüstung.
+- **Eisenbahn** (Truppen-, Güter- und Panzerzüge, Eisenbahngeschütze), **Seekrieg** (Fischerei, Transporter, Kriegsschiffe, U-Boote, Landungen), **Luftkrieg** (Jäger, Bomber, Hubschrauber, Fallschirmjäger, Flak).
+- **Atomwaffen** nur für historische Atommächte, mit Raketenabwehr, Bunkern, Aufklärung und Zweitschlag.
+- **Gelände und Klima**: Hügel, Wald, Flüsse und Furten, Brücken, Straßen, Jahreszeiten, Provinzen, Nachschub und Moral, Veteranenränge, Formationen.
+- **Kartentypen**: Kontinent, Seenplatte, Hochland, Urwald, Inseln. **Spielmodi**: Jeder gegen jeden, Teams, Armageddon.
+- **Bots** in drei Stufen. Sie nutzen Wirtschaft, Eisenbahn, Flotten mit Landungen, Luftwaffe, Führer und Konferenzen.
+- **Tutorial**, **Speichern/Fortsetzen**, **Bot-Vertretung** bei Verbindungsabbruch, **Deutsch und Englisch**.
 
-| Aktion | Eingabe |
-|---|---|
-| Auswählen | Linksklick, Rahmen ziehen, Shift = hinzufügen, Doppelklick = alle gleichen auf dem Bildschirm |
-| Befehl (bewegen, angreifen, sammeln, bauen/reparieren, Sammelpunkt) | Rechtsklick |
-| Angriffsbewegung / Stopp / Löschen | A + Klick / S / Entf |
-| Gebäude bauen | Arbeiter wählen → Hotkey (Q Haus, W Lager, E Feld, R Kaserne, T Schießplatz, D Stall, G Turm, V Werkstatt, C Palisade, Y Haupthaus) → platzieren. Mit Shift mehrere platzieren, Mauern durch Ziehen |
-| Einheiten ausbilden | Gebäude wählen → Q (Shift+Q = 5×). Im Haupthaus ist W der Epochenaufstieg |
-| Kontrollgruppen | Strg+1–9 speichern, 1–9 auswählen, zweimal drücken = Kamera hinbewegen |
-| Untätiger Arbeiter / Haupthaus / letzte Warnung | . / H / Leertaste |
-| Kamera | Pfeiltasten, Bildschirmrand, mittlere Maustaste, Mausrad (Zoom), Minimap |
-| Nationen-Übersicht / Chat / Menü | Tab / Enter / F10 |
-
-Auf Touchgeräten: Tippen wählt aus, Tippen mit Auswahl gibt einen Befehl, Wischen verschiebt die Kamera,
-zwei Finger zoomen.
+Planung und Hintergrund: [`docs/SPIELDESIGN.md`](docs/SPIELDESIGN.md) · Steam-Release: [`docs/STEAM.md`](docs/STEAM.md) · Store-Texte: [`docs/STORE.md`](docs/STORE.md)
 
 ## Starten
 
@@ -57,66 +27,52 @@ Voraussetzung: [Node.js](https://nodejs.org) ab Version 18.
 
 ```bash
 npm install
-npm start
+npm run desktop     # als Desktop-Programm (Electron), mit eingebautem Server
+npm start           # oder als Webserver: http://localhost:3000 (Port mit PORT=8080 ändern)
 ```
 
-Danach http://localhost:3000 öffnen. Den Port änderst du mit `PORT=8080 npm start`.
+**Desktop-Pakete:**
+- `npm run dist:linux` erzeugt ein AppImage.
+- `npm run dist:win` erzeugt einen Windows-Installer; das geht nur unter Windows.
+- Alternativ: GitHub → Actions → „Desktop-Build“.
 
 ## Mit Freunden spielen
 
-1. **Im selben WLAN**: Die anderen öffnen `http://<deine-lokale-IP>:3000`.
-2. **Über das Internet ohne Router-Einstellungen**: Starte zusätzlich
-   ```bash
-   npx cloudflared tunnel --url http://localhost:3000
-   ```
-   und schicke den angezeigten `https://….trycloudflare.com`-Link herum.
-3. **Dauerhaft online**: Das Spiel läuft auf jedem Node-Hoster (Render, Railway, Fly.io usw.) oder per Docker:
-   ```bash
-   docker build -t frontlinien .
-   docker run -p 3000:3000 frontlinien
-   ```
+- **Steam** (Desktop-Programm mit laufendem Steam): Raum erstellen und „Steam-Freunde einladen“ wählen. Freunde nehmen die Einladung im Overlay an, die Verbindung läuft über Steam.
+- **LAN** (Desktop-Programm): Freunde geben deine IP-Adresse im Startbildschirm ein, dann den Raumcode.
+- **Browser**: Die anderen öffnen `http://<deine-IP>:3000`.
+  - Über das Internet ohne Router-Einstellungen: `npx cloudflared tunnel --url http://localhost:3000` starten und den Link weitergeben.
+  - Dauerhaft online geht es mit jedem Node-Hoster oder per Docker: `docker build -t frontlinien . && docker run -p 3000:3000 frontlinien`.
 
-Im Spiel: **Neuen Raum erstellen** → **Einladungslink kopieren** → Freunde treten bei → Bots und
-Einstellungen wählen → **Spiel starten**.
+## Steuerung
 
-## 3D-Grafik
+| Aktion | Eingabe |
+|---|---|
+| Auswählen | Linksklick, Rahmen ziehen, Shift = hinzufügen, Doppelklick = alle gleichen auf dem Bildschirm |
+| Befehl (bewegen, angreifen, sammeln, bauen, Sammelpunkt) | Rechtsklick |
+| Befehlsleiste | Q W E R T / A S D F G / Y X C V B (Plätze von links oben) |
+| Angriffsbewegung / Stopp / Löschen | A + Klick / S / Entf |
+| Kontrollgruppen | Strg+1–9 speichern, 1–9 wählen, zweimal = hinspringen |
+| Untätiger Arbeiter / Haupthaus / letzte Warnung | . / H / Leertaste |
+| Diplomatie / Führer-Fähigkeit / Nationen / Chat / Menü | P / L / Tab / Enter / F10 |
+| Kamera | Pfeiltasten, Bildschirmrand, mittlere Maustaste, Mausrad, Minimap |
 
-Der Client rendert das Spiel in 3D mit Three.js. Der Spielserver ist unverändert.
-
-- **Gelände** entsteht aus der Serverkarte, mit überblendeten Texturen für Gras, Erde, Fels und Sand, dazu Wasser,
-  Gras und Bäume.
-- **Einheiten** sind vorberechnete, detaillierte Figuren mit etwa 3.000 Dreiecken. Sie haben eine Lauf-, Angriffs- und
-  Zielhaltung und werden pro Typ in einem Durchgang gezeichnet (Instancing). Sie tragen Kleidung und Wappen in der
-  Teamfarbe.
-- **Gebäude** wachsen beim Bau aus dem Boden, ab halbem Schaden brennen sie.
-- **Nebel des Krieges** wird im Shader berechnet: Unerkundetes ist dunkel, Erkundetes entsättigt.
-- **Grafikqualität**: In der Browser-Konsole `localStorage.fl_quality = 'low' | 'medium' | 'high'` setzen und neu laden.
-
-Einheiten neu erzeugen (nach Änderungen an `prototype3d/v2/humans.js`):
-
-```bash
-cd prototype3d && npm install
-python3 -m http.server 8099 &
-node bake.cjs
-```
+Alle Tasten lassen sich unter **Optionen → Tastenbelegung** ändern.
 
 ## Technik
 
-- Der Server ist autoritativ und rechnet mit 10 Ticks pro Sekunde.
-  - Wegfindung über Flow-Fields mit Cache: Eine Gruppe teilt sich ein Wegefeld.
-  - Ein Raster beschleunigt die Abfragen, wer in der Nähe steht.
-  - Eine Partie mit 16 KI-Spielern und rund 450 Einheiten braucht etwa 5 ms pro Tick.
-- Jeder Spieler bekommt nur, was er sehen kann (Schutz vor Cheats durch den Nebel des Krieges), und davon nur
-  die Änderungen. Reine Positionsupdates werden kompakt gesendet, das sind etwa 1–5 KB/s pro Spieler.
-- Der Client zeichnet das Gelände in gecachten Chunks und interpoliert die Bewegungen weich. Der Nebel wird
-  weichgezeichnet. Grafik und Sounds werden prozedural erzeugt, es gibt keine externen Assets.
+- Der Server ist autoritativ (10 Ticks pro Sekunde) mit Flow-Field-Wegfindung. Jeder Spieler bekommt nur, was er sehen kann; so sind Karten-Hacks ausgeschlossen.
+- Der Client zeichnet in 3D mit Three.js (Instancing, Schatten, Nebel des Krieges im Shader). Blender-Modelle (`.glb`) in `public/assets/models/` ersetzen die Platzhalter automatisch.
+- Symbole kommen von game-icons.net und Lucide. Die Schriften liegen lokal, so läuft alles offline.
 
 ```
-server/index.js    HTTP- und WebSocket-Server
-server/room.js     Lobby, Spielablauf, Netzwerkversand
-server/world.js    Simulation: Bewegung, Wegfindung, Sammeln, Bauen, Kampf, Epochen, Sicht, Armageddon
-server/mapgen.js   Zufallskarten-Generator
-server/ai.js       KI-Gegner
-shared/rules.js    Alle Spielwerte (Einheiten, Gebäude, Epochen, Kulturen, Kosten) – hier wird balanciert
-public/            Client (index.html, style.css, js/main.js, js/render.js, js/sound.js)
+server/       Spielserver: world.js (Simulation), room.js (Lobby/Netzwerk), ai.js (Bots), mapgen.js,
+              diplomacy.js, conference.js, leaders.js, rail.js, naval.js, air.js, nukes.js, celo.js
+shared/       rules.js – alle Spielwerte (hier wird balanciert)
+public/       Client: index.html, style.css, js/ (main, render3d, diplomacy, conference, tutorial, i18n, music …)
+desktop/      Electron-Programm, Steam-Anbindung (steam.mjs) und Relais (relay.mjs)
+tools/        build-ui-assets.mjs (Symbole/Schriften), i18n-extract.mjs / i18n-merge.mjs (Übersetzung)
+docs/         Spieldesign, Steam-Plan, Store-Texte, Blender-Anleitung
 ```
+
+Lizenzen fremder Bestandteile: [`CREDITS.md`](CREDITS.md)
