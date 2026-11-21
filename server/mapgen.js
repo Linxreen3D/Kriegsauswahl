@@ -182,7 +182,8 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
     for (const s of starts) if (seen[s.y * W + s.x]) { const d = Math.hypot(s.x - starts[bad].x, s.y - starts[bad].y); if (!best || d < best[0]) best = [d, s]; }
     carve(starts[bad], best[1]);
   }
-  const reachable = reach();
+  // Auf der Inselkarte ist jede Insel per Schiff erreichbar – Rohstoffe überall erlauben
+  const reachable = T.islands ? null : reach();
 
   // Belegung für Rohstoffe
   const occ = new Uint8Array(W * H);
@@ -193,7 +194,7 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
     for (let yy = y; yy < y + sz; yy++) for (let xx = x; xx < x + sz; xx++) {
       if (xx < 1 || yy < 1 || xx >= W - 1 || yy >= H - 1) return false;
       const i = yy * W + xx;
-      if (occ[i] || blockedTerrain(terrain[i]) || terrain[i] === T_FORD || !reachable[i]) return false;
+      if (occ[i] || blockedTerrain(terrain[i]) || terrain[i] === T_FORD || (reachable && !reachable[i])) return false;
     }
     return true;
   };

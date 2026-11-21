@@ -27,6 +27,7 @@ export class AI {
 
     this.handleProposals(pl);
     this.conference();
+    this.invasionStep();
     if (pl.choice === 'culture') this.cmd({ c: 'choose', kind: 'culture', value: pick(Object.keys(CULTURES)) });
     else if (pl.choice === 'nation') this.cmd({ c: 'choose', kind: 'nation', value: pick(CULTURES[pl.culture].nations) });
     else if (pl.choice === 'leader') { const era = w.leaderEraDue(pl); const opts = leaderOptions(pl.nation, era); const calm = opts.filter(l => l.b.repSet == null); this.cmd({ c: 'choose', kind: 'leader', value: pick(calm.length ? calm : opts).id }); }
@@ -176,8 +177,14 @@ export class AI {
     if (w.time > this.prof.firstAttack && (idle.length >= threshold || army.length >= Math.min(120, threshold * 2.5))) {
       const tgt = this.pickTarget();
       if (tgt) {
-        const ids = army.filter(u => (u.order.t === 'idle' || u.order.t === 'move') && !u.naval && u.line !== 'fishboat' && u.st.atk > 0).map(u => u.id);
-        if (ids.length >= threshold * this.prof.aggression) this.cmd({ c: 'move', ids, x: tgt.x, y: tgt.y, amove: true });
+        const ids = army.filter(u => (u.order.t === 'idle' || u.order.t === 'move') && !u.naval && !u.air && u.line !== 'fishboat' && u.st.atk > 0 && !u.st.railOnly).map(u => u.id);
+        if (ids.length >= threshold * this.prof.aggression) {
+          if (this.reachable(tgt)) this.cmd({ c: 'move', ids, x: tgt.x, y: tgt.y, amove: true });
+          else this.invasion(tgt, ids, blds, pl);
+        }
+        // Flugzeuge greifen direkt an
+        const air = army.filter(u => u.air && u.order.t === 'idle' && u.st.atk > 0 && u.ammo > 0).map(u => u.id);
+        if (air.length >= 3) this.cmd({ c: 'move', ids: air, x: tgt.x, y: tgt.y, amove: true });
       }
     }
   }
@@ -225,6 +232,53 @@ export class AI {
     }
   }
   cmd2(m) { this.w.diplomacy(this.pid, m); }
+  // Ist das Ziel zu Fuß erreichbar? (Karte der Wegkosten vom eigenen Haupthaus, alle 2 min neu)
+  reachable(t) {
+    const w = this.w;
+    if (!this.reach || w.time - this.reach.t > 120 || this.reach.bx !== Math.floor(this.bx)) {
+      this.reach = { t: w.time, bx: Math.floor(this.bx), dist: w.dijkstra(w.pointSources(Math.floor(this.bx), Math.floor(this.by))) };
+    }
+    const d = this.reach.dist;
+    // irgendeine Kachel rund ums Ziel erreichbar?
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const x = Math.floor(t.x) + dx, y = Math.floor(t.y) + dy;
+      if (w.inBounds(x, y) && d[w.idx(x, y)] < 65535) return true;
+    }
+    return false;
+  }
+  // Landung mit Transportschiffen: Werft -> Transporter -> einsteigen -> übersetzen -> ausladen
+  invasion(tgt, ids, blds, pl) {
+    const w = this.w;
+    const dock = blds.find(b => b.type === 'dock' && b.built);
+    if (!dock) { this.saveFor(buildingStats('dock', pl.era, pl.mods).cost, 90); return; }
+    const ships = w.units.filter(u => u.owner === this.pid && !u.dead && u.line === 'transport');
+    if (ships.length < 2 && !dock.queue.some(q => q.line === 'transport')) {
+      const st = unitStats('transport', Math.max(pl.era, LINES.transport.minEra), null, pl.mods);
+      if (w.canAfford(pl, st.cost) && pl.pop + st.pop <= pl.popCap) this.cmd({ c: 'train', ids: [dock.id], line: 'transport', n: 1 });
+    }
+    const inv = this.inv;
+    if (inv && w.time - inv.at > 240) this.inv = null; // abgebrochen
+    if (this.inv) return;
+    const ship = ships.find(s => !(s.cargo && s.cargo.length) && s.order.t === 'idle');
+    if (!ship) return;
+    let pop = 0; const take = [];
+    for (const id of ids) { const u = w.ents.get(id); if (pop + u.st.pop > ship.st.capacity) break; pop += u.st.pop; take.push(id); }
+    if (take.length < 3) return;
+    this.cmd({ c: 'board', ids: take, ship: ship.id });
+    this.inv = { ship: ship.id, ids: take, tgt, at: w.time };
+  }
+  // laufende Landung weiterführen: sobald alle an Bord (oder nach 60 s), zum Ziel fahren und ausladen
+  invasionStep() {
+    const w = this.w, inv = this.inv; if (!inv) return;
+    const ship = w.ents.get(inv.ship);
+    if (!ship || ship.dead) { this.inv = null; return; }
+    if (inv.sailing) { if (!(ship.cargo && ship.cargo.length) && ship.order.t === 'idle') this.inv = null; return; }
+    const aboard = (ship.cargo || []).length, alive = inv.ids.filter(id => { const u = w.ents.get(id); return u && !u.dead; }).length;
+    if (aboard && (aboard >= alive || w.time - inv.at > 60)) {
+      this.cmd({ c: 'unload', ids: [ship.id], x: inv.tgt.x, y: inv.tgt.y });
+      inv.sailing = true;
+    }
+  }
   pickTarget() {
     const w = this.w;
     let best = null, bd = Infinity;
