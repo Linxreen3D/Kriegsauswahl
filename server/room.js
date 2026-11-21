@@ -24,6 +24,7 @@ export class Room {
     this.onEmpty = onEmpty;
     this.players = [];
     this.settings = { ...DEFAULT_SETTINGS };
+    if (process.env.FL_HIDE_AH) this.settings.ahLeader = false; // Build ohne A.H. (Plan B für Deutschland)
     this.phase = 'lobby';
     this.hostId = null;
     this.clients = new Set();
@@ -185,6 +186,7 @@ export class Room {
         if (['pause', 'nopause', 'off'].includes(s.conferences)) st.conferences = s.conferences;
         if ('confMin' in s && [3, 5, 8].includes(+s.confMin)) st.confMin = +s.confMin;
         if ('tutorial' in s) st.tutorial = !!s.tutorial;
+        if ('ahLeader' in s && !process.env.FL_HIDE_AH) st.ahLeader = s.ahLeader === true || s.ahLeader === 'true';
         if ('nukes' in s) st.nukes = s.nukes === true || s.nukes === 'true' || s.nukes === 'on';
         if ('armageddonMin' in s) st.armageddonMin = Math.round(num(s.armageddonMin, 1, 90, st.armageddonMin));
         if (['easy', 'normal', 'hard'].includes(s.botDifficulty)) { st.botDifficulty = s.botDifficulty; for (const x of this.players) if (x.isBot) x.difficulty = s.botDifficulty; }
@@ -435,6 +437,7 @@ export class Room {
     this.hostId = hostP ? hostP.id : null;
     for (const p of np) if (p.ws) { p.ws.player = p; this.send(p.ws, { t: 'welcome', token: p.token, id: p.id, code: this.code }); }
     this.settings = { ...this.settings, ...data.world.settings };
+    if (process.env.FL_HIDE_AH) this.settings.ahLeader = false;
     this.world = World.restore(this, data.world);
     this.phase = 'play';
     this.ais = np.filter(p => p.isBot).map(p => new AI(this.world, p.id, p.difficulty || this.settings.botDifficulty));

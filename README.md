@@ -17,7 +17,7 @@ Alle starten in der Steinzeit auf einer zufällig erzeugten Karte und führen ih
 - **Gelände und Klima**: Hügel, Wald, Flüsse und Furten, Brücken, Straßen, Jahreszeiten, Provinzen, Nachschub und Moral, Veteranenränge, Formationen.
 - **Kartentypen**: Kontinent, Seenplatte, Hochland, Urwald, Inseln. **Spielmodi**: Jeder gegen jeden, Teams, Armageddon.
 - **Bots** in drei Stufen. Sie nutzen Wirtschaft, Eisenbahn, Flotten mit Landungen, Luftwaffe, Führer und Konferenzen.
-- **Tutorial**, **Speichern/Fortsetzen**, **Bot-Vertretung** bei Verbindungsabbruch, **Deutsch und Englisch**.
+- **Tutorial**, **Spielhandbuch** (F1), **Speichern/Fortsetzen**, **Bot-Vertretung** bei Verbindungsabbruch, **Deutsch und Englisch**.
 
 Planung und Hintergrund: [`docs/SPIELDESIGN.md`](docs/SPIELDESIGN.md) · Steam-Release: [`docs/STEAM.md`](docs/STEAM.md) · Store-Texte: [`docs/STORE.md`](docs/STORE.md)
 
@@ -34,7 +34,8 @@ npm start           # oder als Webserver: http://localhost:3000 (Port mit PORT=8
 **Desktop-Pakete:**
 - `npm run dist:linux` erzeugt ein AppImage.
 - `npm run dist:win` erzeugt einen Windows-Installer; das geht nur unter Windows.
-- Alternativ: GitHub → Actions → „Desktop-Build“.
+- Alternativ: GitHub → Actions → „Desktop-Build“ (liefert auch die Ordner für den Steam-Upload).
+- Hochladen zu Steam: `steam/upload.sh`, siehe [`docs/STEAM.md`](docs/STEAM.md).
 
 ## Mit Freunden spielen
 
@@ -54,7 +55,7 @@ npm start           # oder als Webserver: http://localhost:3000 (Port mit PORT=8
 | Angriffsbewegung / Stopp / Löschen | A + Klick / S / Entf |
 | Kontrollgruppen | Strg+1–9 speichern, 1–9 wählen, zweimal = hinspringen |
 | Untätiger Arbeiter / Haupthaus / letzte Warnung | . / H / Leertaste |
-| Diplomatie / Führer-Fähigkeit / Nationen / Chat / Menü | P / L / Tab / Enter / F10 |
+| Diplomatie / Führer-Fähigkeit / Nationen / Chat / Menü / Handbuch | P / L / Tab / Enter / F10 / F1 |
 | Kamera | Pfeiltasten, Bildschirmrand, mittlere Maustaste, Mausrad, Minimap |
 
 Alle Tasten lassen sich unter **Optionen → Tastenbelegung** ändern.

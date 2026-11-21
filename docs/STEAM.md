@@ -105,13 +105,20 @@ Unity wäre die einzige ernsthafte Alternative, aber erst, wenn die Web-Technik 
   - Das Spiel übersetzt beim Anzeigen, auch Server-Meldungen. Eigennamen bleiben unverändert.
   - Weitere Sprachen: dieselbe Datei als `public/i18n/<code>.json` anlegen.
 - ✅ **Tutorial:** „Tutorial – die erste Partie“ im Startbildschirm, 10 Schritte, der Bot greift nicht an.
+- ✅ **Spielhandbuch** (F1): Epochen, Nationen, Einheiten, Gebäude, Führer und Regeln zum Nachschlagen.
+- ✅ **Optionen:** Sprache, Oberflächengröße (auf dem Steam Deck automatisch größer), Grafikqualität, Vollbild, Lautstärke, Musik, Kamera, Tastenbelegung, Protokolle.
+- ✅ **Musik:** erzeugte Hintergrundmusik ohne Audiodateien, bei Gefahr angespannter. Keine Lizenzfragen.
+- ✅ **Platzhalter-Modelle** für alle acht Epochen, auch den Kalten Krieg.
+- ✅ **Steam-Bilder** (Kapseln, Bibliothek, Errungenschaften) als Vorlage in `build/steam/`; neu erzeugen mit `node tools/steam-art.cjs`.
+- ✅ **SteamPipe-Upload** vorbereitet (`steam/`).
+- ✅ **Plan B für Deutschland:** Einstellung „A.H. als Staatsführer: Aus“. Mit der Umgebungsvariable `FL_HIDE_AH=1` ist A.H. fest ausgeblendet und die Einstellung gesperrt.
 
-- **Englisch** als zweite Sprache: Steam lebt vom englischsprachigen Markt. Dafür alle Texte in eine Sprachdatei auslagern.
-- **Tutorial:** eine geführte erste Partie (Steinzeit → Bronzezeit).
-- **Echte Modelle** aus Blender statt Platzhalter, mindestens für Haupthaus, Häuser, Kasernen, Infanterie je Epoche.
-- **Musik und Ton:** lizenzfrei oder in Auftrag; Lizenzen in `CREDITS.md` sammeln.
+**Offen (braucht dich):**
+- **Echte Modelle** aus Blender statt Platzhalter, mindestens für Haupthaus, Häuser, Kasernen und Infanterie je Epoche (Anleitung in `docs/`).
 - **Führer-Porträts:** einheitlich gemalt, selbst erstellt oder beauftragt. A.H. bleibt Schattenriss.
+- **Toneffekte und Musik** auf Wunsch durch echte Aufnahmen ersetzen; Lizenzen in `CREDITS.md` sammeln.
 - **Lange Testpartien** mit Menschen, danach Balancing.
+- **Steam-Test auf zwei PCs** mit echter App-ID (Einladung, Beitritt, Errungenschaften, Cloud).
 
 ## 3. Steam-Formalitäten
 
@@ -126,7 +133,7 @@ Unity wäre die einzige ernsthafte Alternative, aber erst, wenn die Web-Technik 
 
 ### Rechtliches (vor dem Release klären)
 - **Inhaltsfragebogen** bei Steam ehrlich ausfüllen: Kriegsgewalt, historische Diktatoren.
-- **Deutschland:** Eine Figur wie A.H. ist in Spielen nur im Rahmen der Sozialadäquanz (§ 86a StGB) zulässig. Unser Konzept hilft dabei: keine verbotenen Symbole, nur Schattenriss, militärisch-sachliche Boni. Trotzdem vor dem Release **anwaltlich oder bei der USK prüfen lassen**. Notfalls gibt es einen Plan B für die deutsche Version (Führer ausgeblendet).
+- **Deutschland:** Eine Figur wie A.H. ist in Spielen nur im Rahmen der Sozialadäquanz (§ 86a StGB) zulässig. Unser Konzept hilft dabei: keine verbotenen Symbole, nur Schattenriss, militärisch-sachliche Boni. Trotzdem vor dem Release **anwaltlich oder bei der USK prüfen lassen**. Plan B ist eingebaut: `FL_HIDE_AH=1` blendet A.H. fest aus (siehe oben).
 - **Lizenzen:** Alle Fremdbestandteile stehen in `CREDITS.md` und müssen im Spiel sichtbar sein (CC BY bei den Symbolen).
 - **Widmung** an Celo und die Familie bleibt im Haupt- und Endbildschirm.
 

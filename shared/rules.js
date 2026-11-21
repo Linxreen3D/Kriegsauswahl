@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS = {
   nukes: true, // Atomwaffen für historische Atommächte (Kalter Krieg)
   conferences: 'pause', // Friedenskonferenzen: pause | nopause | off
   confMin: 5, // Zeitlimit einer Konferenz in Minuten (3, 5, 8)
+  ahLeader: true, // A.H. als wählbarer Staatsführer (Schattenriss); Aus = ausgeblendet
 };
 
 // ---------------- Epochen ----------------
@@ -833,7 +834,8 @@ export const LEADERS = [
 ];
 export const LEADER = Object.fromEntries(LEADERS.map(l => [l.id, l]));
 export const LEADER_CD = 600;
-export function leaderOptions(nation, era) { return LEADERS.filter(l => l.nation === nation && l.era === era); }
+// hideSil: Schattenriss-Führer (A.H.) ausblenden – Einstellung „A.H. als Staatsführer: Aus“ (z. B. für die deutsche Version)
+export function leaderOptions(nation, era, hideSil = false) { return LEADERS.filter(l => l.nation === nation && l.era === era && !(hideSil && l.silhouette)); }
 
 // ---------------- Atomwaffen (Kalter Krieg) ----------------
 export const NUCLEAR_NATIONS = ['usa', 'russia', 'britain', 'france', 'china'];

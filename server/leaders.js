@@ -9,7 +9,7 @@ export function installLeaders(World) {
   W.leaderEraDue = function (pl) {
     if (!pl.nation) return null;
     const era = pl.era >= 7 ? 7 : pl.era >= 6 ? 6 : null;
-    if (era == null || (pl.leaderEra ?? -1) >= era || !leaderOptions(pl.nation, era).length) return null;
+    if (era == null || (pl.leaderEra ?? -1) >= era || !leaderOptions(pl.nation, era, this.settings.ahLeader === false).length) return null;
     return era;
   };
   W.checkLeaderChoice = function (pl) {
@@ -17,7 +17,7 @@ export function installLeaders(World) {
   };
   W.chooseLeader = function (pl, id) {
     const era = this.leaderEraDue(pl), L = LEADER[id];
-    if (era == null || !L || L.nation !== pl.nation || L.era !== era) return;
+    if (era == null || !L || L.nation !== pl.nation || L.era !== era || (L.silhouette && this.settings.ahLeader === false)) return;
     pl.leader = id; pl.leaderEra = era; pl.choice = null; pl.leaderCd = 0; pl.leaderUsed = {};
     this.updateMods(pl);
     this.achieve(pl.id, 'LEADER');

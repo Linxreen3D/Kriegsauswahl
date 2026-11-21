@@ -260,6 +260,7 @@ const SETTINGS_DEF = [
   { key: 'conferences', label: 'Friedenskonferenzen', type: 'select', options: [['pause', 'Pause für alle'], ['nopause', 'Ohne Pause'], ['off', 'Aus']] },
   { key: 'confMin', label: 'Konferenz-Zeitlimit', type: 'select', options: [['3', '3 min'], ['5', '5 min'], ['8', '8 min']] },
   { key: 'nukes', label: 'Atomwaffen', type: 'select', options: [['true', 'An (nur Atommächte)'], ['false', 'Aus']] },
+  { key: 'ahLeader', label: 'A.H. als Staatsführer', type: 'select', options: [['true', 'An (Schattenriss)'], ['false', 'Aus']] },
   { key: 'botDifficulty', label: 'Bot-Schwierigkeit', type: 'select', options: [['easy', 'Leicht'], ['normal', 'Normal'], ['hard', 'Schwer']] },
 ];
 function buildSettingsForm() {
@@ -1008,7 +1009,7 @@ function showChoice() {
     const era = m.era >= 7 ? 7 : 6;
     $('choiceTitle').textContent = `Wähle deinen Staatsführer (${ERAS[era].name})`;
     $('choiceSub').textContent = 'Jeder Führer bringt zwei Dauerboni und eine Fähigkeit (Abklingzeit 10 min, sofern nicht anders angegeben). In der nächsten Epoche wählst du neu.';
-    $('choiceOptions').innerHTML = leaderOptions(m.nation, era).map(l => `<button class="choice-opt leader-opt" data-choice="${l.id}">${leaderPortrait(l)}<b>${esc(l.name)}</b><span class="years">${esc(l.years)}</span><p>${esc(l.p)}</p><p class="ability">★ <b>${esc(l.a.name)}:</b> ${esc(l.a.desc)}</p></button>`).join('');
+    $('choiceOptions').innerHTML = leaderOptions(m.nation, era, G.settings.ahLeader === false).map(l => `<button class="choice-opt leader-opt" data-choice="${l.id}">${leaderPortrait(l)}<b>${esc(l.name)}</b><span class="years">${esc(l.years)}</span><p>${esc(l.p)}</p><p class="ability">★ <b>${esc(l.a.name)}:</b> ${esc(l.a.desc)}</p></button>`).join('');
     $('choice').classList.remove('hidden');
     return;
   }

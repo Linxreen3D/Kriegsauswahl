@@ -30,7 +30,7 @@ export class AI {
     this.invasionStep();
     if (pl.choice === 'culture') this.cmd({ c: 'choose', kind: 'culture', value: pick(Object.keys(CULTURES)) });
     else if (pl.choice === 'nation') this.cmd({ c: 'choose', kind: 'nation', value: pick(CULTURES[pl.culture].nations) });
-    else if (pl.choice === 'leader') { const era = w.leaderEraDue(pl); const opts = leaderOptions(pl.nation, era); const calm = opts.filter(l => l.b.repSet == null); this.cmd({ c: 'choose', kind: 'leader', value: pick(calm.length ? calm : opts).id }); }
+    else if (pl.choice === 'leader') { const era = w.leaderEraDue(pl); const opts = leaderOptions(pl.nation, era, w.settings.ahLeader === false); const calm = opts.filter(l => l.b.repSet == null); this.cmd({ c: 'choose', kind: 'leader', value: pick(calm.length ? calm : opts).id }); }
     // Führer-Fähigkeit: Kampf-Effekte, wenn eigene Truppen kämpfen; Wirtschaft sonst jederzeit
     if (pl.leader && !(pl.leaderCd > w.time)) {
       const L = LEADER[pl.leader], a = L.a;
