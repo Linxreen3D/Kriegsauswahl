@@ -126,7 +126,7 @@ export class AI {
       if (!sw || sw.p !== b.progress) watch.set(b.id, { p: b.progress, t: w.time });
       else if (w.time - sw.t > (b.wonder ? 240 : 75)) {
         watch.delete(b.id);
-        if (!b.wonder) { this.cmd({ c: 'delete', ids: [b.id] }); (this.badSpots || (this.badSpots = [])).push([b.cx, b.cy, w.time + 900]); this.reach = null; continue; }
+        if (!b.wonder) { this.cmd({ c: 'delete', ids: [b.id] }); (this.badSpots || (this.badSpots = [])).push([b.cx, b.cy, w.time + 900]); this.reachTiles = null; continue; }
       }
       const has = workers.some(u => u.order.t === 'build' && u.order.target === b.id);
       if (has) continue;
@@ -494,7 +494,7 @@ export class AI {
   // Felder, die Arbeiter vom Haupthaus aus zu Fuß erreichen (alle 20 s neu berechnet)
   reachMap() {
     const w = this.w;
-    if (this.reach && this.reach.until > w.time && this.reach.bx === this.bx && this.reach.by === this.by) return this.reach.vis;
+    if (this.reachTiles && this.reachTiles.until > w.time && this.reachTiles.bx === this.bx && this.reachTiles.by === this.by) return this.reachTiles.vis;
     const W = w.W, H = w.H, vis = new Uint8Array(W * H), q = [];
     const b = this.base, x0 = Math.floor(b.x ?? this.bx), y0 = Math.floor(b.y ?? this.by), sz = b.size || 1;
     for (let y = y0 - 1; y <= y0 + sz; y++) for (let x = x0 - 1; x <= x0 + sz; x++) {
@@ -513,7 +513,7 @@ export class AI {
       if (y > 0) { const n = c - W; if (!vis[n] && w.pass[n]) { vis[n] = 1; q.push(n); } }
       if (y < H - 1) { const n = c + W; if (!vis[n] && w.pass[n]) { vis[n] = 1; q.push(n); } }
     }
-    this.reach = { vis, until: w.time + 20, bx: this.bx, by: this.by };
+    this.reachTiles = { vis, until: w.time + 20, bx: this.bx, by: this.by };
     return vis;
   }
   findSpot(type, cx, cy, dMin, dMax) {

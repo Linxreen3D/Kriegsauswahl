@@ -104,7 +104,9 @@ wss.on('connection', ws => {
       return;
     }
     if (msg.t === 'leave') { if (ws.room) ws.room.leave(ws); return; }
-    if (ws.room) ws.room.handle(ws, msg);
+    if (ws.room) {
+      try { ws.room.handle(ws, msg); } catch (e) { console.error(`[${ws.room.code}] Fehler bei Nachricht "${msg.t}":`, e && e.stack || e); }
+    }
   });
   ws.on('close', () => { clearInterval(refill); if (ws.room) ws.room.disconnect(ws); });
   ws.on('error', () => {});

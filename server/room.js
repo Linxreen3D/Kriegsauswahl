@@ -281,7 +281,7 @@ export class Room {
     for (const ws of this.clients) { ws.sent = null; this.sendStart(ws); }
     this.sysChat(`Karte: ${this.world.mapInfo.name}. Viel Erfolg!`);
     clearInterval(this.timer);
-    this.timer = setInterval(() => this.tick(), TICK_MS);
+    this.timer = setInterval(() => this.safeTick(), TICK_MS);
   }
   sendStart(ws) {
     if (!this.world) return;
@@ -291,17 +291,30 @@ export class Room {
     if (this.paused) this.send(ws, { t: 'pause', on: true });
     if (this.phase === 'end' && this.result) this.send(ws, this.result);
   }
+  // Ein Fehler in einem Bot oder im Spieltakt darf die Partie nicht für alle beenden: protokollieren und weiterspielen.
+  safeAI(ai, fn) {
+    try { fn(); } catch (e) {
+      ai.errors = (ai.errors || 0) + 1;
+      if (ai.errors <= 3 || ai.errors % 600 === 0) console.error(`[${this.code}] Bot ${ai.pid} Fehler (${ai.errors}):`, e && e.stack || e);
+    }
+  }
+  safeTick() {
+    try { this.tick(); this.tickErrors = 0; } catch (e) {
+      this.tickErrors = (this.tickErrors || 0) + 1;
+      if (this.tickErrors <= 3 || this.tickErrors % 100 === 0) console.error(`[${this.code}] Fehler im Spieltakt (${this.tickErrors}):`, e && e.stack || e);
+    }
+  }
   tick() {
     const w = this.world;
     if (!w || this.phase !== 'play' || this.paused) return;
     const t0 = performance.now();
     const confPause = w.conf && w.conf.paused;
     if (confPause) {
-      for (const ai of this.ais) ai.conference && ai.conference();
+      for (const ai of this.ais) if (ai.conference) this.safeAI(ai, () => ai.conference());
       w.confStep(TICK_MS / 1000);
     } else {
-      for (const ai of this.ais) ai.update();
-      for (const ai of this.subs.values()) ai.update();
+      for (const ai of this.ais) this.safeAI(ai, () => ai.update());
+      for (const ai of this.subs.values()) this.safeAI(ai, () => ai.update());
       w.tick();
     }
     w.computeVision();
@@ -447,7 +460,7 @@ export class Room {
     for (const ws of this.clients) { ws.sent = null; this.sendStart(ws); }
     this.sysChat(`Spielstand geladen: ${data.meta.label}. Weiter geht's!`);
     clearInterval(this.timer);
-    this.timer = setInterval(() => this.tick(), TICK_MS);
+    this.timer = setInterval(() => this.safeTick(), TICK_MS);
   }
 
   // ---------- Netzwerk ----------
