@@ -52,6 +52,7 @@ export class AI {
     const building = blds.filter(b => !b.built);
 
     // ---- Wirtschaft ----
+    if (this.eraSeen !== pl.era) { this.eraSeen = pl.era; this.eraT = w.time; }
     const targetWorkers = Math.round((18 + pl.era * 9) * this.prof.workers);
     for (const tc of towns) {
       if (!tc.queue.length && workers.length < Math.min(70, targetWorkers) && pl.pop < pl.popCap) this.cmd({ c: 'train', ids: [tc.id], line: 'worker', n: 1 });
@@ -115,6 +116,8 @@ export class AI {
     if (pl.era === ERAS.length - 1 && !pl.wonderBuilding && towns.length && !blds.some(b => b.wonder) && this.prof.aggression >= 0.8) {
       const wc = WONDER.cost; if (w.canAfford(pl, wc)) this.cmd({ c: 'wonder', id: towns[towns.length - 1].id });
     }
+    // Holz wird in späten Epochen knapp: Forstgüter vorausschauend anlegen (Stein und Gold sind dann meist übrig)
+    if (pl.era >= 5 && !building.some(b => b.type === 'forestry') && count('forestry') < Math.min(12, 2 + (pl.era - 5) * 3) && pl.res.wood < 2500 && pl.res.stone > 300 && pl.res.gold > 600) this.buildForestry(blds, workers.filter(u => u.order.t !== 'build').slice(0, 1));
     if (pl.era >= 3 && towns.length < 2 && workers.length > 40 && pl.res.wood > 500 && pl.res.stone > 300) this.build('town', workers, 3, 14, 22);
 
     // Baustellen ohne Bauarbeiter besetzen; hängende Baustellen (kein Fortschritt) abbrechen und den Platz meiden
@@ -164,7 +167,9 @@ export class AI {
         let have = 0, need = 0;
         for (const k in nextEra.cost) { need += nextEra.cost[k]; have += Math.min(pl.res[k], nextEra.cost[k]); }
         const desiredArmy = (6 + pl.era * 5) * (this.prof.workers + 0.3);
-        if (have >= need * 0.6 || army.length >= desiredArmy) for (const k in st.cost) if (pl.res[k] - st.cost[k] < (nextEra.cost[k] || 0) * reserve) ok = false;
+        // zu lange in dieser Epoche (z. B. Dauerkrieg): Aufstieg hat Vorrang
+        const stuck = w.time - (this.eraT || 0) > 600 && army.length >= Math.min(8, desiredArmy * 0.4);
+        if (have >= need * 0.6 || army.length >= desiredArmy || stuck) for (const k in st.cost) if (pl.res[k] - st.cost[k] < (nextEra.cost[k] || 0) * reserve) ok = false;
       }
       if (ok && pl.pop + st.pop <= pl.popCap && w.canAfford(pl, st.cost)) this.cmd({ c: 'train', ids: [b.id], line: o.line, unique: o.unique, n: 1 });
     }
@@ -339,6 +344,10 @@ export class AI {
       let tot = 0; const need = {};
       for (const k in ratio) { need[k] = Math.max(0, (next.cost[k] || 0) - pl.res[k]); tot += need[k]; }
       if (tot > 0) for (const k in ratio) ratio[k] = ratio[k] * 0.6 + 0.4 * need[k] / tot;
+      // großer Überschuss ohne Bedarf: weniger Sammler dorthin, die übrigen zu knappen Rohstoffen
+      let sum = 0;
+      for (const k in ratio) { if (!need[k] && pl.res[k] > 1500 + pl.era * 300) ratio[k] *= 0.35; sum += ratio[k]; }
+      if (sum > 0) for (const k in ratio) ratio[k] /= sum;
     }
     // Überschuss abbauen: alle 10 s einige Sammler umverteilen
     if (w.time - (this.lastRebalance || 0) > 10) {
@@ -375,6 +384,8 @@ export class AI {
           }
         } else {
           const rt = best === 'wood' ? 'tree' : best;
+          // freies Forstgut zuerst (nah am Ort, unerschöpflich)
+          if (best === 'wood') { const fo = w.findResourceNear('forestry', this.bx, this.by, 40, this.pid); if (fo) { this.cmd({ c: 'gather', ids: [u.id], target: fo.id }); counts.wood++; done = true; break; } }
           for (const r of [16, 30]) { target = w.findResourceNear(rt, u.x, u.y, r, this.pid); if (target) break; }
           // Wälder in der Nähe abgeholzt: Forstgut nutzen oder anlegen, bevor die Arbeiter weit laufen
           if (!target && best === 'wood' && pl.era >= BUILDINGS.forestry.minEra) {
@@ -382,8 +393,7 @@ export class AI {
             if (fo) { this.cmd({ c: 'gather', ids: [u.id], target: fo.id }); counts.wood++; done = true; break; }
             const unbuilt = blds.find(b => b.type === 'forestry' && !b.built);
             if (unbuilt) { this.cmd({ c: 'repair', ids: [u.id], target: unbuilt.id }); counts.wood++; done = true; break; }
-            const nF = blds.filter(b => b.type === 'forestry').length;
-            if (this.build('forestry', [u], 1, 4, 10 + nF * 0.6)) { counts.wood++; done = true; break; }
+            if (this.buildForestry(blds, [u])) { counts.wood++; done = true; break; }
           }
           if (!target) for (const r of [50, 80]) { target = w.findResourceNear(rt, u.x, u.y, r, this.pid); if (target) break; }
           if (!target) continue;
@@ -477,6 +487,17 @@ export class AI {
     const ws = workers.filter(u => u.order.t !== 'build').sort((a, b) => Math.hypot(a.x - home.cx, a.y - home.cy) - Math.hypot(b.x - home.cx, b.y - home.cy)).slice(0, 4);
     if (!ws.length) return;
     for (let k = 0; k < pos.length; k += 60) this.cmd({ c: 'build', ids: ws.map(u => u.id), type: 'rail', pos: pos.slice(k, k + 60), queue: k > 0 });
+  }
+  // Forstgut am Ort anlegen, sonst beim Arbeiter
+  buildForestry(blds, ws) {
+    const nF = blds.filter(b => b.type === 'forestry').length;
+    if (this.build('forestry', ws, 1, 4, 12 + nF * 0.6)) return true;
+    const u = ws[0], pl = this.pl, w = this.w;
+    if (!u || !w.canAfford(pl, buildingStats('forestry', pl.era, pl.mods).cost)) return false;
+    const spot = this.findSpot('forestry', u.x, u.y, 2, 10);
+    if (!spot) return false;
+    this.cmd({ c: 'build', ids: [u.id], type: 'forestry', pos: [spot] });
+    return true;
   }
   saveFor(cost, s) { if (!this.saving || this.saving.until < this.w.time) this.saving = { cost, until: this.w.time + s }; }
   build(type, workers, nWorkers = 1, dMin = 4, dMax = 14) {
