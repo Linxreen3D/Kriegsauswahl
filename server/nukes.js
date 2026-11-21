@@ -97,6 +97,7 @@ export function installNukes(World) {
         for (const b of abms) b.reloadAt = this.time + NUKE.abmReload * (this.nuclearPower(this.P[b.owner]) ? 1 : 0.5);
         if (Math.random() < chance) {
           this.event({ k: 'nukeIntercept', x: n.x, y: n.y });
+          for (const b of abms) this.achieve(b.owner, 'INTERCEPT');
           this.event({ k: 'notice', to: -1, text: `🛡 Raketenabwehr von ${owner.name} hat die Atomrakete abgefangen (Chance ${Math.round(chance * 100)} %).` });
           this.chronicle(`🛡 ${owner.name} fängt eine Atomrakete von ${this.P[n.by].name} ab.`, 'war');
           continue;

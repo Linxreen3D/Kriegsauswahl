@@ -341,6 +341,13 @@ export class Room {
       chron: w.chron, awards: this.awards(w),
     };
     this.broadcast(this.result);
+    // Steam-Errungenschaften für die Sieger
+    const hard = this.players.some(p => p.isBot && p.difficulty === 'hard');
+    for (const p of winners) {
+      const q = this.players[p.id]; if (!q || q.isBot || !q.ws) continue;
+      this.send(q.ws, { t: 'ach', id: 'FIRST_WIN' });
+      if (hard) this.send(q.ws, { t: 'ach', id: 'WIN_HARD' });
+    }
   }
   // Auszeichnungen am Spielende (nur vergeben, wenn der Wert > 0 ist)
   awards(w) {

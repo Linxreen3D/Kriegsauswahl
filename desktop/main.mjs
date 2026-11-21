@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { networkInterfaces } from 'node:os';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { initSteam, setupSteam, loadSteamConfig } from './steam.mjs';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const PREFERRED_PORT = 3456; // fester Port, damit Freunde im LAN die Adresse kennen
@@ -20,6 +21,11 @@ const prefs = (() => { try { return JSON.parse(readFileSync(PREFS_FILE, 'utf8'))
 const savePrefs = () => { try { writeFileSync(PREFS_FILE, JSON.stringify(prefs)); } catch { /* egal */ } };
 
 let server = null, win = null;
+const log = msg => console.log('[Frontlinien] ' + msg);
+// Steam vor dem Start der Fenster einrichten (Overlay). App-ID in desktop/steam.json; 480 = Valves Test-App „Spacewar“.
+const STEAM_CFG = loadSteamConfig(join(HERE, 'steam.json'));
+const steam = initSteam({ app, appId: STEAM_CFG.appId, log });
+let steamApi = null;
 
 function lanAddresses() {
   const out = [];
@@ -45,7 +51,9 @@ async function boot() {
   win.on('leave-full-screen', () => { prefs.fullscreen = false; savePrefs(); });
   win.on('closed', () => { win = null; });
   await win.loadURL(`http://127.0.0.1:${server.port}/`);
+  steamApi.joinFromArgs(process.argv);
 }
+steamApi = setupSteam({ steam, ipcMain, getWin: () => win, gamePort: () => (server ? server.port : 0), version: app.getVersion(), log });
 
 ipcMain.handle('desktop:info', () => ({ port: server ? server.port : 0, lan: lanAddresses(), fullscreen: win ? win.isFullScreen() : false, version: app.getVersion() }));
 ipcMain.handle('desktop:fullscreen', (e, on) => { if (win) win.setFullScreen(!!on); return !!on; });
@@ -60,6 +68,6 @@ ipcMain.handle('desktop:connect', (e, addr) => {
   return true;
 });
 
-app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
+app.on('second-instance', (e, argv) => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } steamApi.joinFromArgs(argv); });
 app.whenReady().then(boot);
-app.on('window-all-closed', async () => { if (server) await server.close(); app.quit(); });
+app.on('window-all-closed', async () => { if (steamApi.shutdown) steamApi.shutdown(); if (server) await server.close(); app.quit(); });

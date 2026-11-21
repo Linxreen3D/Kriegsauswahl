@@ -20,6 +20,7 @@ export function installLeaders(World) {
     if (era == null || !L || L.nation !== pl.nation || L.era !== era) return;
     pl.leader = id; pl.leaderEra = era; pl.choice = null; pl.leaderCd = 0; pl.leaderUsed = {};
     this.updateMods(pl);
+    this.achieve(pl.id, 'LEADER');
     if (L.b.repSet != null) this.repChange(pl.id, Math.min(0, L.b.repSet - pl.rep), `${L.name} übernimmt die Führung`);
     if (L.b.repAdd) this.repChange(pl.id, L.b.repAdd);
     this.event({ k: 'choice', p: pl.id, what: 'leader', v: id });

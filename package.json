@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/Linxreen3D/Kriegsauswahl#readme",
   "dependencies": {
+    "steamworks.js": "^0.4.0",
     "three": "^0.170.0",
     "ws": "^8.23.0"
   },
@@ -72,7 +73,10 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     },
-    "icon": "build/icon.png"
+    "icon": "build/icon.png",
+    "asarUnpack": [
+      "node_modules/steamworks.js/dist/**"
+    ]
   },
   "author": "Frontlinien"
 }

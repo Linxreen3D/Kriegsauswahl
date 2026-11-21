@@ -5,7 +5,7 @@ import { createConference } from './conference.js';
 import { icon, iconize, EMOJI } from './icons.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, NUKE, NUCLEAR_NATIONS, LEADER, LEADER_CD, leaderOptions, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, NUKE, NUCLEAR_NATIONS, ACHIEVEMENTS, LEADER, LEADER_CD, leaderOptions, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -106,11 +106,39 @@ const saveOpt = () => { try { localStorage.setItem('fl_options', JSON.stringify(
 const DESKTOP = typeof window !== 'undefined' && window.desktop ? window.desktop : null;
 if (DESKTOP) document.body.classList.add('desktop');
 let singleStart = false;
+// Steam (nur im Desktop-Programm, wenn Steam läuft)
+let STEAM = null;
+if (DESKTOP && DESKTOP.steam) DESKTOP.steam.status().then(s => {
+  if (!s.available) return;
+  STEAM = DESKTOP.steam; document.body.classList.add('steam');
+  if (!$('nameInput').value && s.name) $('nameInput').value = s.name.slice(0, 20);
+  // Einladung angenommen: über das Relais dem Raum des Gastgebers beitreten
+  STEAM.onJoin(({ port, code }) => {
+    G.wsUrl = `ws://127.0.0.1:${port}`; wantSession = { code, token: null };
+    notice('Verbinde über Steam mit dem Spiel deines Freundes …');
+    try { ws.close(); } catch { /* egal */ }
+  });
+  STEAM.onError(t => notice(t, 'bad'));
+  if (G.phase === 'lobby' && G.hostId === G.you) steamHostLobby();
+});
+function unlockAchievement(id) {
+  const a = ACHIEVEMENTS[id]; if (!a) return;
+  if (STEAM) STEAM.achievement(id);
+  let seen = {}; try { seen = JSON.parse(localStorage.getItem('fl_ach') || '{}'); } catch { /* egal */ }
+  if (!seen[id]) { notice(`🎖 Errungenschaft: ${a.name} – ${a.desc}`, 'good'); seen[id] = Date.now(); try { localStorage.setItem('fl_ach', JSON.stringify(seen)); } catch { /* egal */ } }
+}
+function steamHostLobby() {
+  if (!STEAM || G.wsUrl || G.steamHosted === G.code) return G.steamHostP;
+  G.steamHosted = G.code;
+  G.steamHostP = STEAM.host(G.code).catch(() => { G.steamHosted = null; });
+  return G.steamHostP;
+}
 try { wantSession = JSON.parse(sessionStorage.getItem('fl_session') || 'null'); } catch { /* egal */ }
 
 // ---------------- Netzwerk ----------------
 function connect() {
-  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+  // Über Steam verbunden: das Relais des Desktop-Programms ersetzt den direkten Weg zum Server
+  ws = new WebSocket(G.wsUrl || ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host));
   ws.onopen = () => {
     reconnectDelay = 500;
     $('connLost').classList.add('hidden');
@@ -151,6 +179,7 @@ function handle(m) {
     case 'start': onStart(m); break;
     case 'd': onDelta(m); break;
     case 'me': onMe(m); break;
+    case 'ach': unlockAchievement(m.id); break;
     case 'end': onEnd(m); break;
     case 'chat': addChat(m); break;
     case 'dchat': if (DIP) DIP.onChat(m); break;
@@ -234,6 +263,7 @@ function buildSettingsForm() {
 }
 function onLobby(m) {
   G.phase = 'lobby'; G.hostId = m.hostId; G.code = m.code; G.settings = m.settings; G.lobbyPlayers = m.players;
+  if (m.hostId === G.you && !singleStart) steamHostLobby();
   if (singleStart && m.hostId === G.you) { singleStart = false; for (let i = 0; i < 2; i++) send({ t: 'addBot', difficulty: $('botDiff').value }); }
   showScreen('lobby');
   const host = m.hostId === G.you;
@@ -423,6 +453,7 @@ function onEvent(e, now) {
       if (e.what === 'cancel' && !mine) chatLine(`${pname(e.p)} hat den Bau des Weltwunders abgebrochen.`, true);
       break;
     }
+    case 'ach': unlockAchievement(e.id); break;
     case 'nukeWarn':
       notice('☢ ATOMRAKETE IM ANFLUG! Einschlag in 10 Sekunden – Einheiten in Bunker oder aus dem Zielgebiet!', 'bad'); sfx.alert();
       UI.pings.push({ x: e.x, y: e.y, t0: now }); UI.lastAlert = { x: e.x, y: e.y };
@@ -1250,9 +1281,12 @@ function setupUi() {
       () => prompt('Einladungslink:', link));
   };
   $('copyLink').onclick = () => copy($('copyLink'));
+  $('steamInvite').onclick = () => { if (STEAM) Promise.resolve(steamHostLobby()).then(() => STEAM.invite()); };
   $('menuInvite').onclick = () => copy($('menuInvite'));
   const leave = () => {
     send({ t: 'leave' }); wantSession = null; sessionStorage.removeItem('fl_session');
+    if (STEAM) { STEAM.leave(); G.steamHosted = null; }
+    if (G.wsUrl) { G.wsUrl = null; try { ws.close(); } catch { /* egal */ } } // zurück zum eigenen Server
     history.replaceState(null, '', location.pathname);
     G.phase = 'home'; showScreen('home'); $('menu').classList.add('hidden');
   };

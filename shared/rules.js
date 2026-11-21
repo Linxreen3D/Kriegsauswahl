@@ -841,3 +841,22 @@ export const NUKE = {
   cost: { food: 3000, wood: 2000, gold: 5000 }, time: 360, flight: 10, radius: 9, inner: 4, pause: 720, maxPerGame: 3,
   abmRange: 16, abmBase: 0.3, abmStep: 0.1, abmCap: 0.5, abmReload: 300, radiation: 240, bunkerCap: 12, wonderSetback: 600,
 };
+
+// ---------------- Steam-Errungenschaften ----------------
+// API-Namen müssen im Steamworks-Backend genau so angelegt werden (siehe docs/STEAM.md).
+export const ACHIEVEMENTS = {
+  FIRST_WIN: { name: 'Sieger', desc: 'Gewinne eine Partie.' },
+  WIN_HARD: { name: 'Gegen alle Widerstände', desc: 'Gewinne gegen mindestens einen schweren Bot.' },
+  ERA_MEDIEVAL: { name: 'Burgherr', desc: 'Erreiche das Frühe Mittelalter.' },
+  ERA_INDUSTRY: { name: 'Dampf und Stahl', desc: 'Erreiche die 1. Industrielle Revolution.' },
+  ERA_COLD_WAR: { name: 'Eiserner Vorhang', desc: 'Erreiche den Kalten Krieg.' },
+  LEADER: { name: 'Staatsmann', desc: 'Wähle einen Staatsführer.' },
+  FREIGHT: { name: 'Fahrplanmäßig', desc: 'Ein Güterzug liefert Rohstoffe an dein Haupthaus.' },
+  LANDING: { name: 'Brückenkopf', desc: 'Lande Truppen von einem Transporter an.' },
+  VETERAN: { name: 'Altgedient', desc: 'Eine Einheit erreicht drei Sterne.' },
+  PEACE: { name: 'Frieden am Konferenztisch', desc: 'Schließe Frieden auf einer Friedenskonferenz.' },
+  MEDIATOR: { name: 'Ehrlicher Makler', desc: 'Vermittle erfolgreich einen Frieden zwischen zwei anderen.' },
+  WONDER: { name: 'Weltwunder', desc: 'Errichte ein Weltwunder.' },
+  INTERCEPT: { name: 'Schutzschirm', desc: 'Deine Raketenabwehr fängt eine Atomrakete ab.' },
+  CELO: { name: 'Für die Familie', desc: 'Bilde Celo aus.' },
+};

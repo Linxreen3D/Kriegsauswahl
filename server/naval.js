@@ -93,6 +93,7 @@ export function installNaval(World) {
     }
     s.cargo = (s.cargo || []).filter(id => !out.some(u => u.id === id));
     if (out.length && dest) this.groupMove(out, dest[0], dest[1], true);
+    if (out.length) this.achieve(s.owner, 'LANDING');
   };
   W.nearestFreeOn = function (grid, x, y, maxR) { const lp = this.pass; this.pass = grid; try { return this.nearestFree(x, y, maxR); } finally { this.pass = lp; } };
   // Schiff versenkt: Ladung geht mit unter

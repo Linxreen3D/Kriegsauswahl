@@ -362,3 +362,4 @@ body:not(.desktop) .desktop-only { display: none !important; }
 .options-card { max-width: 460px !important; }
 .options-card .setting select { min-width: 140px; }
 .join-row.lan input { text-transform: none; letter-spacing: 0; font-family: var(--font); font-size: 14px; text-align: left; }
+body:not(.steam) .steam-only { display: none !important; }

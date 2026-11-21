@@ -47,7 +47,34 @@ Unity wäre die einzige ernsthafte Alternative, aber erst, wenn die Web-Technik 
 5. **Einzelspieler-Start ohne Raumcode:** direkt gegen Bots.
 6. **Builds** für Windows, Linux (Steam Deck) und optional macOS, z. B. mit electron-builder.
 
-### Phase B – Steam-Anbindung (ca. 2–4 Wochen)
+### Phase B – Steam-Anbindung ✅ (vorbereitet, Test mit echtem Steam ausstehend)
+**Stand:**
+- `desktop/steam.mjs` bindet Steam über `steamworks.js` an. Ohne laufendes Steam startet das Spiel ganz normal ohne Steam-Funktionen (getestet).
+- **Mehrspieler über Steam:**
+  - Der Gastgeber erstellt einen Raum. Dazu entsteht automatisch eine Steam-Lobby (nur Freunde).
+  - Mit „Steam-Freunde einladen“ öffnet sich das Overlay.
+  - Freunde nehmen die Einladung an, über das Overlay oder „Spiel beitreten“ in der Freundesliste. Ihr Programm verbindet sich über Steam-P2P (NAT-Durchdringung und Relay durch Steam) und tritt dem Raum bei.
+  - Eine Versionsprüfung warnt, wenn beide unterschiedliche Spielversionen haben.
+- **Relais (`desktop/relay.mjs`):** Es leitet die normalen Spielnachrichten durch den Steam-Kanal, große Nachrichten komprimiert. Es nimmt nur Verbindungen von Mitgliedern der eigenen Lobby an. Getestet mit einem simulierten Steam-Kanal: Beitritt, Lobby, Spielstart und Trennen.
+- **Errungenschaften:** 14 Stück, Liste in `shared/rules.js` (`ACHIEVEMENTS`). Sie werden im Spiel angezeigt und an Steam gemeldet.
+- **Steam-Overlay** ist für Electron eingeschaltet.
+- **App-ID** steht in `desktop/steam.json`. Bis zur eigenen App gilt 480 (Valves Test-App „Spacewar“). Mit der echten App-ID startet das Programm sich bei Bedarf über Steam neu.
+
+**Selbst testen (zwei Rechner, beide mit laufendem Steam, befreundet):**
+1. Auf beiden `npm run desktop` starten. Die Test-App 480 funktioniert ohne eigene App.
+2. Rechner A: „Mehrspieler-Raum erstellen“ und dann „Steam-Freunde einladen“.
+3. Rechner B: Einladung im Steam-Overlay oder in der Freundesliste annehmen.
+
+**Im Steamworks-Backend einrichten, sobald die App-ID da ist:**
+- Die App-ID in `desktop/steam.json` eintragen.
+- **Errungenschaften** mit genau diesen API-Namen anlegen: FIRST_WIN, WIN_HARD, ERA_MEDIEVAL, ERA_INDUSTRY, ERA_COLD_WAR, LEADER, FREIGHT, LANDING, VETERAN, PEACE, MEDIATOR, WONDER, INTERCEPT, CELO. Namen und Beschreibungen stehen in `ACHIEVEMENTS`.
+- **Steam Cloud über Auto-Cloud**, ohne Code:
+  - Windows: Stammverzeichnis `WinAppDataRoaming`, Unterordner `frontlinien/saves`, Muster `*.json`.
+  - Linux: Stammverzeichnis `LinuxXdgConfigHome`, Unterordner `frontlinien/saves`.
+- **Startoption:** Windows `Frontlinien.exe`, Linux `frontlinien`, aus dem jeweiligen `*-unpacked`-Ordner, mit dem die Depots befüllt werden.
+- **Hochladen** mit SteamPipe (steamcmd), je ein Depot für Windows und Linux.
+
+**Ursprünglicher Plan:**
 1. **Steamworks** über `steamworks.js` (Node-Anbindung für Electron).
 2. **Mehrspieler über Steam:**
    - Steam-Lobbys und Freunde einladen statt Raumcode (der Raumcode bleibt für LAN).

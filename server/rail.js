@@ -177,7 +177,7 @@ export function installRail(World) {
     if (o.res && at) {
       const pl = this.P[at.owner]; const got = [];
       for (const k in o.res) { const v = Math.round(o.res[k] * RAIL.freightBonus); pl.res[k] += v; pl.stats.gathered += v; if (v) got.push(v + ' ' + ({ food: 'Nahrung', wood: 'Holz', stone: 'Stein', gold: 'Gold' })[k]); }
-      if (got.length) this.notice(at.owner, `🚂 Güterzug angekommen: ${got.join(', ')} (+10 %).`);
+      if (got.length) { this.notice(at.owner, `🚂 Güterzug angekommen: ${got.join(', ')} (+10 %).`); this.achieve(at.owner, 'FREIGHT'); }
     }
     this.removeTrain(tr);
   };

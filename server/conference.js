@@ -189,13 +189,13 @@ export function installConference(World) {
       const M = this.P[c.mediator], val = s => Object.values(s.res).reduce((x, y) => x + y, 0) + (s.tribute ? s.tribute.perMin * s.tribute.min : 0);
       const fee = Math.round((val(o.a) + val(o.b)) * 0.05);
       if (fee) M.res.gold += fee;
-      this.repChange(M.id, 10);
+      this.repChange(M.id, 10); this.achieve(M.id, 'MEDIATOR');
       this.notice(M.id, `⚖ Vermittlung erfolgreich: +Ansehen${fee ? ` und ${fee} Gold Provision` : ''}.`);
     }
     if (o.armsA) A.armsLimitUntil = this.time + 900;
     if (o.armsB) B.armsLimitUntil = this.time + 900;
     const r = this.relOf(c.a, c.b);
-    if (o.peace === 'peace') { r.peaceTreaty = this.time + 1200; r.guarantors = c.guarantees.map(g => g.from); }
+    if (o.peace === 'peace') { r.peaceTreaty = this.time + 1200; r.guarantors = c.guarantees.map(g => g.from); this.achieve(c.a, 'PEACE'); this.achieve(c.b, 'PEACE'); }
     this.endConference(true, o.peace === 'peace' ? 'Frieden geschlossen.' : o.peace === 'ceasefire' ? 'Waffenstillstand vereinbart.' : 'Vertrag unterschrieben.');
   };
   W.endConference = function (ok, why) {

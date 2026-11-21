@@ -587,6 +587,12 @@ export class World {
   }
   countUnique(pid, uq) { let n = 0; for (const u of this.units) if (!u.dead && u.owner === pid && u.unique === uq) n++; for (const b of this.buildings) if (b.owner === pid) for (const q of b.queue) if (q.unique === uq) n++; return n; }
   leaderEra() { let m = 0; for (const p of this.P) if (p.alive && p.era > m) m = p.era; return m; }
+  // Steam-Errungenschaft für menschliche Spieler (einmal je Partie und Spieler)
+  achieve(pid, id) {
+    const pl = this.P[pid]; if (!pl || pl.isBot) return;
+    const k = pid + ':' + id; this.achSent = this.achSent || {}; if (this.achSent[k]) return; this.achSent[k] = true;
+    this.events.push({ k: 'ach', to: pid, id });
+  }
   notice(pid, text) { this.events.push({ k: 'notice', to: pid, text }); }
   event(e) { this.events.push(e); }
 
@@ -998,7 +1004,7 @@ export class World {
       const rank = VET_RANKS.filter(t => src.xp >= t).length;
       if (rank > src.rank) {
         const ratio = src.hp / src.maxHp;
-        src.rank = rank;
+        src.rank = rank; if (rank >= 3) this.achieve(src.owner, 'VETERAN');
         src.maxHp = Math.round(src.st.hp * (1 + rank * VET_BONUS)); src.hp = src.maxHp * ratio;
         if (rank === VET_RANKS.length) this.notice(src.owner, `★★★ ${src.st.name} ist jetzt ein Elite-Veteran!`);
       }
@@ -1234,7 +1240,7 @@ export class World {
       b.qProg += dt;
       if (b.qProg >= q.time) {
         b.queue.shift(); b.qProg = 0; pl.wonderBuilding = null;
-        b.wonder = true; b.wonderAt = this.time; b.era = WONDER_ERA;
+        b.wonder = true; b.wonderAt = this.time; b.era = WONDER_ERA; this.achieve(b.owner, 'WONDER');
         const ratio = b.hp / b.maxHp; b.maxHp = Math.round(b.st.hp * WONDER.hpMul); b.hp = b.maxHp * ratio;
         this.event({ k: 'wonder', p: pl.id, what: 'done', hold: wonderHold(this.W) });
         this.chronicle(`🏛 ${pl.name} vollendet ein Weltwunder.`, 'wonder');
@@ -1257,6 +1263,7 @@ export class World {
       if (b.qProg >= q.time) {
         b.queue.shift(); b.qProg = 0;
         pl.era = q.era; pl.advancing = null;
+        if (pl.era >= 3) this.achieve(pl.id, 'ERA_MEDIEVAL'); if (pl.era >= 5) this.achieve(pl.id, 'ERA_INDUSTRY'); if (pl.era >= 7) this.achieve(pl.id, 'ERA_COLD_WAR');
         if (pl.era === 1 && !pl.culture) pl.choice = 'culture';
         else if (pl.era === 3 && !pl.nation) pl.choice = pl.culture ? 'nation' : 'culture';
         else this.checkLeaderChoice(pl);
@@ -1283,6 +1290,7 @@ export class World {
       b.queue.shift(); b.qProg = 0;
       const u = this.addUnit(b.owner, q.line, q.unique, spawn[0], spawn[1]);
       this.nameShip(u, pl);
+      if (u.st.celo) this.achieve(pl.id, 'CELO');
       pl.pop += st.pop;
       pl.stats.trained++;
       this.cells[this.cellOf(u.x, u.y)].push(u);
