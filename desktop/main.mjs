@@ -4,13 +4,16 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { networkInterfaces } from 'node:os';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, appendFileSync, statSync, renameSync, existsSync } from 'node:fs';
 import { initSteam, setupSteam, loadSteamConfig } from './steam.mjs';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const PREFERRED_PORT = 3456; // fester Port, damit Freunde im LAN die Adresse kennen
 
 if (!app.requestSingleInstanceLock()) app.quit();
+// Grafik: auch auf älteren oder gesperrten Grafikkarten starten (sonst Software-Rückfall statt schwarzem Bild)
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-unsafe-swiftshader');
 
 // Spielstände und Einstellungen in den Benutzerordner (nicht in den Programmordner)
 const USER = app.getPath('userData');
@@ -21,7 +24,14 @@ const prefs = (() => { try { return JSON.parse(readFileSync(PREFS_FILE, 'utf8'))
 const savePrefs = () => { try { writeFileSync(PREFS_FILE, JSON.stringify(prefs)); } catch { /* egal */ } };
 
 let server = null, win = null;
-const log = msg => console.log('[Frontlinien] ' + msg);
+// Protokoll im Benutzerordner (logs/frontlinien.log, ab 1 MB wird rotiert) – hilft bei Fehlermeldungen von Spielern
+const LOG_DIR = join(USER, 'logs'); mkdirSync(LOG_DIR, { recursive: true });
+const LOG_FILE = join(LOG_DIR, 'frontlinien.log');
+try { if (existsSync(LOG_FILE) && statSync(LOG_FILE).size > 1e6) renameSync(LOG_FILE, LOG_FILE + '.1'); } catch { /* egal */ }
+const log = msg => { const line = `${new Date().toISOString()} ${msg}`; console.log('[Frontlinien] ' + msg); try { appendFileSync(LOG_FILE, line + '\n'); } catch { /* egal */ } };
+log(`Start: Version ${app.getVersion()}, ${process.platform} ${process.arch}, Electron ${process.versions.electron}`);
+process.on('uncaughtException', e => log('FEHLER (Hauptprozess): ' + (e && e.stack || e)));
+process.on('unhandledRejection', e => log('FEHLER (Promise): ' + (e && e.stack || e)));
 // Steam vor dem Start der Fenster einrichten (Overlay). App-ID in desktop/steam.json; 480 = Valves Test-App „Spacewar“.
 const STEAM_CFG = loadSteamConfig(join(HERE, 'steam.json'));
 const steam = initSteam({ app, appId: STEAM_CFG.appId, log });
@@ -50,11 +60,15 @@ async function boot() {
   win.on('enter-full-screen', () => { prefs.fullscreen = true; savePrefs(); });
   win.on('leave-full-screen', () => { prefs.fullscreen = false; savePrefs(); });
   win.on('closed', () => { win = null; });
+  // Fehler im Spielfenster protokollieren; bei Absturz des Fensters neu laden
+  win.webContents.on('console-message', (e, level, message, line, source) => { if (level >= 3) log(`Fenster: ${message} (${source}:${line})`); });
+  win.webContents.on('render-process-gone', (e, d) => { log('Spielfenster abgestürzt: ' + d.reason); if (d.reason !== 'clean-exit' && win) win.reload(); });
   await win.loadURL(`http://127.0.0.1:${server.port}/`);
   steamApi.joinFromArgs(process.argv);
 }
 steamApi = setupSteam({ steam, ipcMain, getWin: () => win, gamePort: () => (server ? server.port : 0), version: app.getVersion(), log });
 
+ipcMain.handle('desktop:openLogs', () => shell.openPath(LOG_DIR));
 ipcMain.handle('desktop:info', () => ({ port: server ? server.port : 0, lan: lanAddresses(), fullscreen: win ? win.isFullScreen() : false, version: app.getVersion() }));
 ipcMain.handle('desktop:fullscreen', (e, on) => { if (win) win.setFullScreen(!!on); return !!on; });
 ipcMain.handle('desktop:quit', () => app.quit());

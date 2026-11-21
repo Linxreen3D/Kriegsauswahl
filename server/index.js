@@ -7,6 +7,7 @@ import { WebSocketServer } from 'ws';
 import { Room } from './room.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -37,6 +38,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   let path = decodeURIComponent(url.pathname);
   if (path === '/health') { res.writeHead(200); return res.end('ok'); }
+  if (path === '/version') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ version: VERSION })); }
   // Liste aller vorhandenen Blender-Modelle (public/assets/models/**/*.glb), damit der Client sie statt der Platzhalter lädt
   if (path === '/assets/models/index.json') {
     const base = join(ROOT, 'public', 'assets', 'models'), out = [];

@@ -1323,6 +1323,8 @@ function setupUi() {
   $('lanInput').addEventListener('keydown', e => { if (e.key === 'Enter' && DESKTOP) lan(); });
   $('quitBtn').onclick = () => DESKTOP && DESKTOP.quit();
   setupOptions();
+  fetch('/version').then(r => r.json()).then(v => { $('versionLabel').textContent = 'Version ' + v.version; }).catch(() => {});
+  $('openLogs').onclick = () => DESKTOP && DESKTOP.openLogs();
   const join = () => {
     sfx.unlock();
     const code = $('codeInput').value.trim().toUpperCase();
@@ -1438,7 +1440,15 @@ function drawMenuBackground() {
 
 async function init() {
   setupUi();
-  renderer = new Renderer3D($('game'), $('overlay'));
+  try { renderer = new Renderer3D($('game'), $('overlay')); }
+  catch (err) {
+    // Ohne WebGL kein Spiel: verständliche Meldung statt schwarzem Bild
+    console.error(err);
+    const d = document.createElement('div'); d.className = 'modal';
+    d.innerHTML = '<div class="card"><h2>3D-Grafik nicht verfügbar</h2><p>Frontlinien braucht WebGL. Bitte aktualisiere deinen Grafiktreiber oder aktiviere die Hardwarebeschleunigung und starte das Spiel neu.</p></div>';
+    document.body.appendChild(d);
+    return;
+  }
   DIP = createDiplomacy({ G, send, notice, selectedOwn, conference: id => CONF && CONF.request(id) });
   CONF = createConference({ G, send, notice, portrait: l => leaderPortrait(l) });
   TUT = createTutorial({ G, renderer, $ });

@@ -1254,5 +1254,9 @@
  "U-Boote": "Submarines",
  "Hubschrauber": "Helicopters",
  "Flugabwehr": "Anti-aircraft",
- "Infanterie": "Infantry"
+ "Infanterie": "Infantry",
+ "Version {0}": "Version {0}",
+ "Fehlerprotokoll öffnen": "Open error log",
+ "3D-Grafik nicht verfügbar": "3D graphics not available",
+ "Frontlinien braucht WebGL. Bitte aktualisiere deinen Grafiktreiber oder aktiviere die Hardwarebeschleunigung und starte das Spiel neu.": "Frontlinien needs WebGL. Please update your graphics driver or enable hardware acceleration and restart the game."
 }

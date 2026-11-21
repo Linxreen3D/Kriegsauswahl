@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('desktop', {
   setFullscreen: on => ipcRenderer.invoke('desktop:fullscreen', on),
   connect: addr => ipcRenderer.invoke('desktop:connect', addr),
   quit: () => ipcRenderer.invoke('desktop:quit'),
+  openLogs: () => ipcRenderer.invoke('desktop:openLogs'),
   steam: {
     status: () => ipcRenderer.invoke('steam:status'),
     host: code => ipcRenderer.invoke('steam:host', code),

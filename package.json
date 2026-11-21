@@ -1,6 +1,6 @@
 {
   "name": "frontlinien",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "description": "Echtzeitstrategie von der Steinzeit bis zum Kalten Krieg",
   "main": "desktop/main.mjs",
   "scripts": {
