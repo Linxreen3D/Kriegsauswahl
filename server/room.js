@@ -184,6 +184,7 @@ export class Room {
         if ('speed' in s) st.speed = num(s.speed, 0.5, 3, st.speed);
         if (['pause', 'nopause', 'off'].includes(s.conferences)) st.conferences = s.conferences;
         if ('confMin' in s && [3, 5, 8].includes(+s.confMin)) st.confMin = +s.confMin;
+        if ('tutorial' in s) st.tutorial = !!s.tutorial;
         if ('nukes' in s) st.nukes = s.nukes === true || s.nukes === 'true' || s.nukes === 'on';
         if ('armageddonMin' in s) st.armageddonMin = Math.round(num(s.armageddonMin, 1, 90, st.armageddonMin));
         if (['easy', 'normal', 'hard'].includes(s.botDifficulty)) { st.botDifficulty = s.botDifficulty; for (const x of this.players) if (x.isBot) x.difficulty = s.botDifficulty; }
@@ -272,7 +273,8 @@ export class Room {
     const P = new Array(this.players.length);
     for (const pl of this.world.P) P[pl.id] = pl;
     this.world.P = P;
-    this.ais = this.players.filter(p => p.isBot).map(p => new AI(this.world, p.id, p.difficulty || this.settings.botDifficulty));
+    // Tutorial: Bots bauen nur auf und verteidigen sich, greifen aber nicht an
+    this.ais = this.players.filter(p => p.isBot).map(p => new AI(this.world, p.id, p.difficulty || this.settings.botDifficulty, { defensive: !!this.settings.tutorial }));
     this.subs.clear(); this.paused = false; this.lastAutosave = 0;
     for (const ws of this.clients) { ws.sent = null; this.sendStart(ws); }
     this.sysChat(`Karte: ${this.world.mapInfo.name}. Viel Erfolg!`);

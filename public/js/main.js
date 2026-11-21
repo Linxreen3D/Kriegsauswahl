@@ -3,6 +3,7 @@ import { sfx } from './sound.js';
 import { createDiplomacy } from './diplomacy.js';
 import { createConference } from './conference.js';
 import { icon, iconize, EMOJI } from './icons.js';
+import { createTutorial } from './tutorial.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
   RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, NUKE, NUCLEAR_NATIONS, ACHIEVEMENTS, LEADER, LEADER_CD, leaderOptions, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
@@ -105,7 +106,7 @@ try { const o = JSON.parse(localStorage.getItem('fl_options') || '{}'); Object.a
 const saveOpt = () => { try { localStorage.setItem('fl_options', JSON.stringify(OPT)); } catch { /* egal */ } };
 const DESKTOP = typeof window !== 'undefined' && window.desktop ? window.desktop : null;
 if (DESKTOP) document.body.classList.add('desktop');
-let singleStart = false;
+let singleStart = false, tutorialStart = false, TUT = null;
 // Steam (nur im Desktop-Programm, wenn Steam läuft)
 let STEAM = null;
 if (DESKTOP && DESKTOP.steam) DESKTOP.steam.status().then(s => {
@@ -263,7 +264,13 @@ function buildSettingsForm() {
 }
 function onLobby(m) {
   G.phase = 'lobby'; G.hostId = m.hostId; G.code = m.code; G.settings = m.settings; G.lobbyPlayers = m.players;
-  if (m.hostId === G.you && !singleStart) steamHostLobby();
+  if (m.hostId === G.you && !singleStart && !tutorialStart && !m.settings.tutorial) steamHostLobby();
+  if (tutorialStart && m.hostId === G.you) {
+    tutorialStart = false;
+    send({ t: 'settings', settings: { tutorial: true, startEra: 0, mapType: 'continent', mapSize: 'small', resources: 'normal', speed: 1 } });
+    send({ t: 'addBot', difficulty: 'easy' });
+    setTimeout(() => send({ t: 'start' }), 400);
+  }
   if (singleStart && m.hostId === G.you) { singleStart = false; for (let i = 0; i < 2; i++) send({ t: 'addBot', difficulty: $('botDiff').value }); }
   showScreen('lobby');
   const host = m.hostId === G.you;
@@ -295,6 +302,7 @@ function onLobby(m) {
 
 // ---------------- Spielstart ----------------
 function onStart(m) {
+  if (TUT) { if (m.settings && m.settings.tutorial) TUT.start(); else TUT.stop(); }
   G.phase = 'play';
   if (m.hostId != null) { G.hostId = m.hostId; document.body.classList.toggle('is-host', m.hostId === m.you); }
   G.paused = false; $('pauseOverlay').classList.add('hidden'); $('pauseBtn').textContent = '⏸ Pause';
@@ -1287,6 +1295,7 @@ function setupUi() {
   try { $('nameInput').value = localStorage.getItem('fl_name') || ''; } catch { /* egal */ }
   $('createBtn').onclick = () => { sfx.unlock(); $('homeError').textContent = ''; singleStart = false; send({ t: 'create', name: getName() }); };
   // Einzelspieler: eigener Raum mit zwei Bots, direkt in der Lobby
+  $('tutorialBtn').onclick = () => { sfx.unlock(); $('homeError').textContent = ''; singleStart = false; tutorialStart = true; send({ t: 'create', name: getName() }); };
   $('singleBtn').onclick = () => { sfx.unlock(); $('homeError').textContent = ''; singleStart = true; send({ t: 'create', name: getName() }); };
   // LAN: zum Gastgeber wechseln (Desktop-Programm)
   const lan = () => { const a = $('lanInput').value.trim(); if (!a) { $('homeError').textContent = 'Bitte die IP-Adresse des Gastgebers eingeben.'; return; } DESKTOP.connect(a).then(ok => { if (!ok) $('homeError').textContent = 'Ungültige Adresse.'; }); };
@@ -1321,6 +1330,7 @@ function setupUi() {
   const leave = () => {
     send({ t: 'leave' }); wantSession = null; sessionStorage.removeItem('fl_session');
     if (STEAM) { STEAM.leave(); G.steamHosted = null; }
+    if (TUT) TUT.stop();
     if (G.wsUrl) { G.wsUrl = null; try { ws.close(); } catch { /* egal */ } } // zurück zum eigenen Server
     history.replaceState(null, '', location.pathname);
     G.phase = 'home'; showScreen('home'); $('menu').classList.add('hidden');
@@ -1411,6 +1421,7 @@ async function init() {
   renderer = new Renderer3D($('game'), $('overlay'));
   DIP = createDiplomacy({ G, send, notice, selectedOwn, conference: id => CONF && CONF.request(id) });
   CONF = createConference({ G, send, notice, portrait: l => leaderPortrait(l) });
+  TUT = createTutorial({ G, renderer, $ });
   window.__renderer = renderer; window.__send = send; window.__G = G; window.__KEYS = KEYS; // für automatisierte Tests
   await renderer.init();
   window.__G = G; window.__R = renderer; // Debug-Zugriff
