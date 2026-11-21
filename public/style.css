@@ -326,3 +326,6 @@ body:not(.is-host) .settings input, body:not(.is-host) .settings select { pointe
 .leader-btn .lb-text small { font-size: 11px; opacity: .75; }
 .leader-btn.ready { border-color: #f3c55a; box-shadow: 0 0 8px rgba(243,197,90,.45); }
 @media (max-width: 1250px) { .leader-btn .lb-text { display: none; } .leader-btn { padding: 2px; } }
+
+body.nuke-flash::after { content: ''; position: fixed; inset: 0; background: #fff8e0; opacity: .85; pointer-events: none; animation: nukeflash .9s ease-out forwards; z-index: 50; }
+@keyframes nukeflash { from { opacity: .9; } to { opacity: 0; } }

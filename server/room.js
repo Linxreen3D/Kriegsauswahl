@@ -178,10 +178,11 @@ export class Room {
         const num = (v, lo, hi, d) => { v = Number(v); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
         if (['ffa', 'teams', 'armageddon'].includes(s.mode)) st.mode = s.mode;
         if (['auto', 'small', 'medium', 'large', 'huge'].includes(s.mapSize)) st.mapSize = s.mapSize;
-        if (['random', 'continent', 'lakes', 'highlands', 'forest'].includes(s.mapType)) st.mapType = s.mapType;
+        if (['random', 'continent', 'lakes', 'highlands', 'forest', 'islands'].includes(s.mapType)) st.mapType = s.mapType;
         if (['low', 'normal', 'high'].includes(s.resources)) st.resources = s.resources;
         if ('startEra' in s) st.startEra = Math.round(num(s.startEra, 0, ERAS.length - 1, st.startEra));
         if ('speed' in s) st.speed = num(s.speed, 0.5, 3, st.speed);
+        if ('nukes' in s) st.nukes = s.nukes === true || s.nukes === 'true' || s.nukes === 'on';
         if ('armageddonMin' in s) st.armageddonMin = Math.round(num(s.armageddonMin, 1, 90, st.armageddonMin));
         if (['easy', 'normal', 'hard'].includes(s.botDifficulty)) { st.botDifficulty = s.botDifficulty; for (const x of this.players) if (x.isBot) x.difficulty = s.botDifficulty; }
         return this.broadcastLobby();

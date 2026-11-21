@@ -3,7 +3,7 @@ import { sfx } from './sound.js';
 import { createDiplomacy } from './diplomacy.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, LEADER, LEADER_CD, leaderOptions, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, NUKE, NUCLEAR_NATIONS, LEADER, LEADER_CD, leaderOptions, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -35,7 +35,7 @@ const UNIT_ICONS = {
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
-const BLD_ICONS = { celohouse: '🏡', memorial: '🪦', town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', airfield: '🛫', flakpos: '💥', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
+const BLD_ICONS = { nukelab: '☢', silo: '🚀', abm: '🛰', bunker: '🏚', celohouse: '🏡', memorial: '🪦', town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', airfield: '🛫', flakpos: '💥', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 function iconOf(def) {
   if (def.kind === 'b') return BLD_ICONS[def.key];
   if (def.unique) return def.icon || UNIQUE_ICONS[def.unique];
@@ -159,6 +159,7 @@ const SETTINGS_DEF = [
   { key: 'startEra', label: 'Startepoche', type: 'select', options: ERAS.map((e, i) => [String(i), e.name]) },
   { key: 'speed', label: 'Spieltempo', type: 'range', min: 0.5, max: 3, step: 0.25, fmt: v => v + '×' },
   { key: 'armageddonMin', label: 'Meteore ab (Armageddon)', type: 'range', min: 1, max: 60, step: 1, fmt: v => v + ' min' },
+  { key: 'nukes', label: 'Atomwaffen', type: 'select', options: [['true', 'An (nur Atommächte)'], ['false', 'Aus']] },
   { key: 'botDifficulty', label: 'Bot-Schwierigkeit', type: 'select', options: [['easy', 'Leicht'], ['normal', 'Normal'], ['hard', 'Schwer']] },
 ];
 function buildSettingsForm() {
@@ -364,6 +365,16 @@ function onEvent(e, now) {
       if (e.what === 'cancel' && !mine) chatLine(`${pname(e.p)} hat den Bau des Weltwunders abgebrochen.`, true);
       break;
     }
+    case 'nukeWarn':
+      notice('☢ ATOMRAKETE IM ANFLUG! Einschlag in 10 Sekunden – Einheiten in Bunker oder aus dem Zielgebiet!', 'bad'); sfx.alert();
+      UI.pings.push({ x: e.x, y: e.y, t0: now }); UI.lastAlert = { x: e.x, y: e.y };
+      renderer.addEffect('meteor', e.x, e.y, { dur: e.t * 1000 / (G.settings.speed || 1) });
+      break;
+    case 'nukeIntercept': renderer.addEffect('boom', e.x, e.y); notice('🛡 Atomrakete abgefangen.'); break;
+    case 'nukeImpact':
+      renderer.addEffect('nuke', e.x, e.y, { r: e.r }); sfx.strike();
+      document.body.classList.add('nuke-flash'); setTimeout(() => document.body.classList.remove('nuke-flash'), 900);
+      break;
     case 'leaderAbility': if (e.p !== G.you) chatLine(`★ ${pname(e.p)}: ${esc(e.by)} setzt „${esc(e.name)}“ ein.`, true); break;
     case 'paradrop': renderer.addEffect && renderer.addEffect('dust', e.x, e.y, { s: 1 }); break;
     case 'late':
@@ -639,9 +650,11 @@ function updateCmdCard(force) {
           const b = BUILDINGS[type];
           if ((b.page || 1) !== page) continue;
           const st = buildingStats(type, era, mods);
-          const ok = era >= b.minEra;
+          const nucOk = !b.nuclear || (G.settings.nukes !== false && NUCLEAR_NATIONS.includes(G.me.nation));
+          const needOk = !b.needs || [...G.ents.values()].some(x => x.owner === G.you && x.def.key === b.needs && x.prog >= 100);
+          const ok = era >= b.minEra && nucOk && needOk;
           put(b.key, {
-            icon: BLD_ICONS[type], title: st.name || b.name, desc: b.desc + (ok ? '' : ` (ab ${ERAS[b.minEra].name})`), cost: st.cost,
+            icon: BLD_ICONS[type], title: st.name || b.name, desc: b.desc + (era < b.minEra ? ` (ab ${ERAS[b.minEra].name})` : !nucOk ? ' (nicht für deine Nation)' : !needOk ? ` (benötigt ${BUILDINGS[b.needs].name})` : ''), cost: st.cost,
             off: !ok || !affordable(st.cost), fn: () => ok && enterBuildMode(type),
           });
         }
@@ -675,6 +688,14 @@ function updateCmdCard(force) {
     } else if (blds.length) {
       const type = blds[0].def.key;
       const same = blds.filter(b => b.def.key === type && b.prog >= 100);
+      const nk = G.me.nuke;
+      if (nk && same.length && (type === 'silo' || (type === 'town' && nk[0]))) {
+        if (type === 'silo' && !nk[0]) put('Q', { icon: '☢', title: 'Atomrakete bauen', cost: scaleCost(NUKE.cost, (playerMods(G.me.culture, G.me.nation, G.me.late, G.me.leader).nukeCost) || 1),
+          desc: `Bauzeit ${Math.round(NUKE.time / 60)} min (stoppt, solange das Silo beschädigt ist). Höchstens ${NUKE.maxPerGame} pro Partie (${nk[1]} eingesetzt), danach ${NUKE.pause / 60} min Pause${nk[2] ? ` – noch ${Math.ceil(nk[2] / 60)} min` : ''}.`,
+          off: nk[1] >= NUKE.maxPerGame || nk[2] > 0, fn: () => cmd({ c: 'nukeBuild', id: same[0].id }) });
+        if (nk[0]) put('W', { icon: '🚀', title: 'Atomschlag (W)', desc: 'Ziel anklicken. Der Getroffene sieht das Ziel 10 Sekunden vorher; Raketenabwehr kann abfangen. Radius 9 Felder.', on: UI.mode && UI.mode.nuke,
+          fn: () => { UI.mode = { nuke: true }; renderer.canvas.style.cursor = 'crosshair'; updateCmdCard(true); } });
+      }
       if (same.length) {
         const opts = trainable(type, era, G.me.culture, G.me.nation, G.me.late);
         const natKeys = ['D', 'G', 'X', 'V'];
@@ -781,7 +802,7 @@ function updateSelInfo() {
     if (e.def.kind === 'b' && e.owner === G.you) {
       const q = (G.me.q || []).find(x => x[0] === e.id);
       if (q) {
-        queue = '<div class="queue">' + q[1].map((k, i) => `<div class="qi ${i === 0 && q[4] ? 'blocked' : ''}" data-cancel="${e.id}:${i}" title="${i === 0 && q[4] ? 'Bevölkerungslimit erreicht – baue Häuser! ' : ''}Klicken zum Abbrechen">${k === 'era' ? '⬆' : k === 'wonder' ? '🏛' : k === 'late' ? '🔬' : keyIcon(k)}${i === 0 ? `<span class="bar" style="width:${Math.min(100, q[2] / q[3] * 100)}%"></span>` : ''}</div>`).join('') + '</div>';
+        queue = '<div class="queue">' + q[1].map((k, i) => `<div class="qi ${i === 0 && q[4] ? 'blocked' : ''}" data-cancel="${e.id}:${i}" title="${i === 0 && q[4] ? 'Bevölkerungslimit erreicht – baue Häuser! ' : ''}Klicken zum Abbrechen">${k === 'era' ? '⬆' : k === 'wonder' ? '🏛' : k === 'late' ? '🔬' : k === 'nuke' ? '☢' : keyIcon(k)}${i === 0 ? `<span class="bar" style="width:${Math.min(100, q[2] / q[3] * 100)}%"></span>` : ''}</div>`).join('') + '</div>';
       }
     }
     html = `<div class="sel-main"><div class="portrait" style="border-color:${p ? p.color : '#888'}">${iconOf(e.def)}</div>
@@ -915,6 +936,11 @@ function setupInput() {
     if (UI.mode && UI.mode.build) {
       if (BUILDINGS[UI.mode.build].line) { UI.wallStart = [Math.floor(wx), Math.floor(wy)]; return; }
       placeBuilding(e.shiftKey);
+      return;
+    }
+    if (UI.mode && UI.mode.nuke) {
+      if (confirm('Atomrakete auf dieses Ziel abfeuern?')) cmd({ c: 'nuke', x: wx, y: wy });
+      cancelMode();
       return;
     }
     if (UI.mode && UI.mode.para) {

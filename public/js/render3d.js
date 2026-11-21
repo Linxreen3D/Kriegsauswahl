@@ -571,6 +571,17 @@ export class Renderer3D {
     if (kind === 'dust') { obj = Md.smoke(1.6 * (extra.s || 2) / 2, (x * 7 + y) | 0, 8); dur = 2500; }
     else if (kind === 'boom') { obj = new THREE.Group(); obj.add(Md.fire(3, 3)); obj.add(Md.smoke(2.5, 5, 10)); dur = 1800; }
     else if (kind === 'meteor') { dur = (extra.dur || 3000) + 300; obj = new THREE.Group(); const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2, 1), new THREE.MeshStandardMaterial({ color: '#3a2a20', emissive: '#ff5a10', emissiveIntensity: 1.5 })); obj.add(rock); obj.add(Md.fire(2.2, 9)); obj.userData.meteor = { dur: extra.dur || 3000 }; }
+    else if (kind === 'nuke') {
+      // Atompilz: Feuerball, Stamm und Wolkenhut, die aufsteigen und sich ausbreiten
+      dur = 9000; obj = new THREE.Group(); const R = (extra.r || 9) * S;
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(R * 0.35, 20, 14), new THREE.MeshBasicMaterial({ color: '#ffd27a', transparent: true, opacity: 0.95 }));
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.12, R * 0.22, R * 1.1, 14), new THREE.MeshStandardMaterial({ color: '#8a7466', emissive: '#7a3010', emissiveIntensity: 0.6, transparent: true, opacity: 0.9 }));
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(R * 0.45, 20, 12), new THREE.MeshStandardMaterial({ color: '#9b8574', emissive: '#a84a18', emissiveIntensity: 0.8, transparent: true, opacity: 0.92 }));
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(R * 0.6, R * 0.06, 8, 32), new THREE.MeshBasicMaterial({ color: '#f2e2c8', transparent: true, opacity: 0.7 }));
+      ring.rotation.x = Math.PI / 2; cap.scale.y = 0.55;
+      obj.add(glow, stem, cap, ring); obj.add(Md.fire(R * 0.4, 7)); obj.add(Md.smoke(R * 0.5, 11, 14));
+      obj.userData.nuke = { glow, stem, cap, ring, R };
+    }
     else if (kind === 'death') { dur = 600; }
     if (obj) { obj.position.set(X, H0, Z); this.world.fx.add(obj); }
     this.effects.push({ kind, X, Z, H0, t0: now, dur, obj });
@@ -717,6 +728,14 @@ export class Renderer3D {
         if (kk >= 1) e.obj.visible = false;
       }
       if (e.obj && e.kind === 'dust') e.obj.position.y = e.H0 + k * 3;
+      if (e.obj && e.obj.userData.nuke) {
+        const n = e.obj.userData.nuke, R = n.R, rise = Math.min(1, k * 2.5);
+        n.glow.scale.setScalar(1 + k * 2); n.glow.material.opacity = Math.max(0, 0.95 - k * 3);
+        n.stem.position.y = R * 0.55 * rise; n.stem.scale.y = 0.2 + rise;
+        n.cap.position.y = R * 1.15 * rise + R * 0.1; n.cap.scale.set(1 + k, 0.55 + k * 0.3, 1 + k);
+        n.ring.scale.setScalar(1 + k * 3); n.ring.material.opacity = Math.max(0, 0.7 - k);
+        const fade = k > 0.7 ? (1 - k) / 0.3 : 1; n.stem.material.opacity = 0.9 * fade; n.cap.material.opacity = 0.92 * fade;
+      }
       return true;
     });
   }
@@ -880,6 +899,48 @@ function trainModel(era, color) {
 }
 
 const INFRA = {
+  nukelab(era, color) {
+    const g = new THREE.Group(), conc = U.mat('#b9b6ae', 0.9, 0), dark = U.mat('#4a4e52', 0.6, 0.4), warn = U.mat('#e8c21a', 0.7, 0);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.BoxGeometry(6, 0.3, 6), dark, 0, 0.15, 0);
+    add(new THREE.BoxGeometry(3.6, 2, 2.4), conc, -0.9, 1.3, 1.2);
+    add(new THREE.CylinderGeometry(1.5, 1.7, 2.2, 20), conc, 1.4, 1.4, -1.2);
+    add(new THREE.SphereGeometry(1.5, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), conc, 1.4, 2.5, -1.2);
+    add(new THREE.BoxGeometry(3.6, 0.2, 0.1), warn, -0.9, 2.2, 2.42);
+    const flag = Md.banner(color, 3, 0.6, 0.9, 0.15); flag.position.set(-2.6, 0, -2.4); g.add(flag);
+    return g;
+  },
+  silo(era, color) {
+    const g = new THREE.Group(), conc = U.mat('#9c9a94', 0.95, 0), steel = U.mat('#5a5f64', 0.5, 0.6), warn = U.mat('#e8c21a', 0.7, 0);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.BoxGeometry(4, 0.25, 4), conc, 0, 0.12, 0);
+    add(new THREE.CylinderGeometry(1.3, 1.3, 0.3, 24), steel, 0, 0.35, 0);
+    for (let k = 0; k < 4; k++) { const o = add(new THREE.BoxGeometry(0.5, 0.06, 0.12), warn, Math.cos(k * Math.PI / 2) * 1.6, 0.27, Math.sin(k * Math.PI / 2) * 1.6); o.rotation.y = -k * Math.PI / 2; }
+    add(new THREE.BoxGeometry(0.9, 0.8, 0.9), conc, 1.4, 0.5, -1.4);
+    add(new THREE.BoxGeometry(0.5, 0.1, 0.3), U.mat(color, 0.8), 1.4, 0.95, -1.4);
+    return g;
+  },
+  abm(era, color) {
+    const g = new THREE.Group(), conc = U.mat('#a3a097', 0.95, 0), steel = U.mat('#6b7176', 0.5, 0.5), white = U.mat('#eeeeea', 0.6, 0);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.BoxGeometry(4, 0.25, 4), conc, 0, 0.12, 0);
+    const base = add(new THREE.BoxGeometry(1.6, 0.6, 1.2), steel, -0.6, 0.55, 0.4);
+    for (const x of [-0.95, -0.25]) { const m = add(new THREE.CylinderGeometry(0.14, 0.14, 2.2, 10), white, x, 1.6, 0.4); m.rotation.x = -0.35; add(new THREE.ConeGeometry(0.14, 0.4, 10), U.mat('#c0392b', 0.6, 0), x, 2.8, 0.0).rotation.x = -0.35; }
+    add(new THREE.CylinderGeometry(0.08, 0.08, 1.6, 6), steel, 1.3, 0.9, -1.2);
+    const dish = add(new THREE.SphereGeometry(0.7, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.5), white, 1.3, 1.8, -1.2); dish.rotation.x = -1.0;
+    add(new THREE.BoxGeometry(0.4, 0.1, 0.3), U.mat(color, 0.8), -0.6, 0.9, 0.4);
+    return g;
+  },
+  bunker(era, color) {
+    const g = new THREE.Group(), conc = U.mat('#8e8b83', 0.95, 0), dark = U.mat('#1e1f20', 0.9, 0), earth = U.mat('#6b6a4a', 0.95, 0);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.CylinderGeometry(2, 2.2, 0.5, 20), earth, 0, 0.25, 0);
+    const dome = add(new THREE.SphereGeometry(1.7, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), conc, 0, 0.4, 0); dome.scale.y = 0.6;
+    add(new THREE.BoxGeometry(1.0, 0.18, 0.1), dark, 0, 0.9, 1.5);
+    add(new THREE.BoxGeometry(0.7, 0.7, 0.6), conc, 0, 0.55, -1.8);
+    add(new THREE.BoxGeometry(0.4, 0.1, 0.3), U.mat(color, 0.8), 0.9, 1.25, 0);
+    return g;
+  },
   // Celos Haus: kleines Familienhaus mit Garten und drei Blumen (Ljilje, Antonija, Marija)
   celohouse(era, color) {
     const g = new THREE.Group(), wall = U.mat('#e9e2d0', 0.9, 0), roof = U.mat('#a9472f', 0.8, 0), wood = U.wood(), grass = U.mat('#6f9a4a', 0.95, 0);

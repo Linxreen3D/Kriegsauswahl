@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS = {
   botDifficulty: 'normal',
   armageddonMin: 20, // ab wann Meteore fallen (Modus Armageddon)
   maxPlayers: 24,
+  nukes: true, // Atomwaffen für historische Atommächte (Kalter Krieg)
 };
 
 // ---------------- Epochen ----------------
@@ -460,6 +461,10 @@ export const BUILDINGS = {
   dock: { name: 'Werft', size: 3, hp: 900, cost: { wood: 200 }, time: 35, sight: 7, minEra: 1, key: 'X', coastal: true, drop: true, desc: 'Muss an die Küste gebaut werden. Baut Fischerboote, Transporter und Kriegsschiffe; Abgabestelle für alle Rohstoffe.' },
   coastgun: { name: 'Küstenbatterie', size: 2, hp: 900, cost: { stone: 200, gold: 80 }, time: 35, atk: 20, range: 11, cd: 3, sight: 11, minEra: 5, key: 'A', page: 2, coastal: true, vsShip: 2.2, desc: 'An der Küste: schwere Geschütze gegen Schiffe (große Reichweite, doppelter Schaden gegen Schiffe).' },
   airfield: { name: 'Flugplatz', size: 3, hp: 1100, cost: { wood: 250, stone: 150, gold: 100 }, time: 45, sight: 9, minEra: 6, key: 'D', page: 2, desc: 'Baut Flugzeuge und Fallschirmjäger. Flugzeuge tanken und munitionieren hier wieder auf – ohne Flugplatz stürzen sie bei leerem Tank ab.' },
+  nukelab: { name: 'Atomforschungszentrum', size: 3, hp: 2400, cost: { wood: 1500, stone: 2000, gold: 3000 }, time: 300, sight: 6, minEra: 7, key: 'X', page: 2, nuclear: true, desc: 'Nur Atommächte. Ermöglicht Raketensilos. Andere Spieler erfahren, dass jemand baut – aber nicht wo.' },
+  silo: { name: 'Raketensilo', size: 2, hp: 1800, cost: { stone: 1200, gold: 1200 }, time: 120, sight: 5, minEra: 7, key: 'V', page: 2, nuclear: true, needs: 'nukelab', desc: 'Baut eine Atomrakete (6 min). Wird das Silo beschädigt, stoppt der Bau.' },
+  abm: { name: 'Raketenabwehr', size: 2, hp: 1200, cost: { stone: 800, gold: 1000 }, time: 90, sight: 12, minEra: 7, key: 'C', page: 2, desc: 'Fängt Atomraketen im Umkreis von 16 Feldern mit 30 % ab, mehrere Stellungen bis 50 %. Danach 5 min Nachladen. Nationen ohne Atomwaffen: 40 % billiger, doppelt so schnell nachgeladen.' },
+  bunker: { name: 'Bunker', size: 2, hp: 2600, cost: { stone: 500, gold: 150 }, time: 60, sight: 6, minEra: 6, key: 'Y', page: 2, desc: 'Bis zu 12 eigene Einheiten im Umkreis von 2 Feldern überstehen einen Atomschlag unversehrt.' },
   flakpos: { name: 'Flak-Stellung', size: 2, hp: 700, cost: { stone: 120, gold: 80 }, time: 30, atk: 16, range: 9, cd: 1.2, sight: 10, minEra: 6, key: 'G', page: 2, dmgRow: 'aa', desc: 'Schießt auf Flugzeuge und Hubschrauber (dreifacher Schaden gegen Luftziele).' },
   celohouse: { name: 'Celos Haus', size: 2, hp: 99999, cost: {}, time: 1, sight: 3, minEra: 99, decor: true, desc: 'Hier warten Ljilje, Antonija und Marija auf Celo.' },
   memorial: { name: 'Gedenkstein', size: 1, hp: 99999, cost: {}, time: 1, sight: 3, minEra: 99, decor: true, walkable: true, desc: 'Celo – Leibwächter, Vater, Ehemann. Für Ljilje, Antonija und Marija.' },
@@ -471,7 +476,7 @@ export const WONDER = { name: 'Weltwunder', cost: { food: 6000, wood: 5000, ston
 export const wonderHold = mapW => (mapW >= 160 ? WONDER.holdLarge : WONDER.hold);
 export const WONDER_ERA = 8; // Anzeige-Epoche für das Modell (nach der letzten Epoche)
 
-export const BUILD_ORDER = ['house', 'storage', 'farm', 'outpost', 'road', 'bridge', 'rail', 'station', 'dock', 'coastgun', 'airfield', 'flakpos', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
+export const BUILD_ORDER = ['house', 'storage', 'farm', 'outpost', 'road', 'bridge', 'rail', 'station', 'dock', 'coastgun', 'airfield', 'flakpos', 'nukelab', 'silo', 'abm', 'bunker', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
 
 // ---------------- Rohstoffe auf der Karte ----------------
 export const RESOURCE_TYPES = {
@@ -589,7 +594,7 @@ export function playerMods(culture, nation, late = false, leader = null) {
   const m = {
     gather: { food: 1, wood: 1, stone: 1, gold: 1 }, armyCost: 1, cavCost: 1, cavSpeed: 1, cavHp: 1, infAtk: 1, infHp: 1, infSpeed: 1,
     bldHp: 1, buildSpeed: 1, towerAtk: 1, towerRange: 0, housePop: 0, trainSpeed: 1, rangedRange: 0, siegeDmg: 1, regen: 0,
-    armyHp: 1, armyDmg: 1, late: !!late, fortCost: 1, uniqueCost: 1, infCost: 1, hillDmg: 1, shipCost: 1, shipBuild: 1,
+    armyHp: 1, armyDmg: 1, late: !!late, nation: nation || null, fortCost: 1, uniqueCost: 1, infCost: 1, hillDmg: 1, shipCost: 1, shipBuild: 1,
   };
   if (culture === 'steppe') { m.cavSpeed = 1.15; m.cavCost = 0.85; }
   if (culture === 'traders') { m.gather.gold = 1.25; m.gather.stone = 1.25; }
@@ -664,6 +669,7 @@ export function buildingStats(type, era, mods) {
     if (mods.outpostCost && type === 'outpost') s.cost = scaleCost(s.cost || b.cost, mods.outpostCost);
     if (mods.railCost && (type === 'rail' || type === 'station')) s.cost = scaleCost(s.cost || b.cost, mods.railCost);
     if (mods.bldCost && !b.decor) s.cost = scaleCost(s.cost || b.cost, mods.bldCost);
+    if (type === 'abm' && !NUCLEAR_NATIONS.includes(mods.nation)) s.cost = scaleCost(s.cost || b.cost, 0.6);
   }
   s.time = b.time / (mods ? mods.buildSpeed : 1);
   return s;
@@ -819,3 +825,10 @@ export const LEADERS = [
 export const LEADER = Object.fromEntries(LEADERS.map(l => [l.id, l]));
 export const LEADER_CD = 600;
 export function leaderOptions(nation, era) { return LEADERS.filter(l => l.nation === nation && l.era === era); }
+
+// ---------------- Atomwaffen (Kalter Krieg) ----------------
+export const NUCLEAR_NATIONS = ['usa', 'russia', 'britain', 'france', 'china'];
+export const NUKE = {
+  cost: { food: 3000, wood: 2000, gold: 5000 }, time: 360, flight: 10, radius: 9, inner: 4, pause: 720, maxPerGame: 3,
+  abmRange: 16, abmBase: 0.3, abmStep: 0.1, abmCap: 0.5, abmReload: 300, radiation: 240, bunkerCap: 12, wonderSetback: 600,
+};

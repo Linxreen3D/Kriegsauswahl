@@ -12,6 +12,7 @@ import { installNaval } from './naval.js';
 import { installAir } from './air.js';
 import { installCelo } from './celo.js';
 import { installLeaders } from './leaders.js';
+import { installNukes } from './nukes.js';
 import { generateMap, blockedTerrain, waterTerrain, T_HILL, T_SNOW, T_DESERT, T_SWAMP, T_FORD, T_GRASS, T_DIRT } from './mapgen.js';
 
 const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
@@ -405,6 +406,7 @@ export class World {
         const type = c.type;
         const bd = BUILDINGS[type];
         if (!bd || pl.era < bd.minEra) return;
+        { const why = this.buildBlocked(pl, type); if (why) { this.notice(pid, why); return; } }
         const workers = own(c.ids).filter(e => e.kind === 'u' && e.cls === 'wrk');
         const pos = (Array.isArray(c.pos) ? c.pos : []).slice(0, 60);
         const placed = [];
@@ -414,6 +416,7 @@ export class World {
           if (!this.canPlace(type, x | 0, y | 0)) continue;
           this.pay(pl, st.cost);
           const b = this.addBuilding(pid, type, x | 0, y | 0, false);
+          if (b && type === 'nukelab') this.event({ k: 'notice', to: -1, text: '☢ Jemand baut ein Atomforschungszentrum.' });
           if (b) placed.push(b.id);
         }
         if (placed.length && workers.length) {
@@ -527,6 +530,8 @@ export class World {
         break;
       }
       case 'leader': this.leaderAbility(pl, c); break;
+      case 'nukeBuild': this.nukeBuildCommand(pl, own([c.id])[0]); break;
+      case 'nuke': this.nukeLaunchCommand(pl, +c.x, +c.y); break;
       case 'paradrop': {
         this.paradropCommand(pid, own(c.ids).filter(e => e.kind === 'u'), +c.x, +c.y);
         break;
@@ -684,6 +689,7 @@ export class World {
     if (this.buildings.some(b => b.dead)) this.buildings = this.buildings.filter(b => !b.dead);
 
     if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); this.updateRail(1 * this.settings.speed); this.updateParadrops(); this.updateCelo(1 * this.settings.speed); }
+    this.updateNukes();
     if (this.tickNo % 50 === 0) this.updateProvinces();
     if (this.tickNo % 5 === 0) this.recount();
     if (this.tickNo % 10 === 0) this.checkDefeat();
@@ -1135,7 +1141,7 @@ export class World {
     u.dir = Math.atan2(t.cy - u.y, t.cx - u.x);
     const rate = (isFarm ? BUILDINGS[o.rtype].rate : RESOURCE_TYPES[o.rtype].rate) * pl.mods.gather[resKind] * (1 + pl.era * 0.06)
       * (this.ownProvince(u.owner, t.cx, t.cy) ? 1 + PROVINCE_BONUS : 1) * (o.rtype === 'farm' && this.season() === 3 ? 0.7 : 1)
-      * this.buffMul(pl, 'gather', resKind) * (o.rtype === 'farm' ? this.buffMul(pl, 'farm') : 1) * (this.zoneFactor(u)?.noGather ? 0 : 1);
+      * this.buffMul(pl, 'gather', resKind) * (o.rtype === 'farm' ? this.buffMul(pl, 'farm') : 1) * (this.zoneFactor(u)?.noGather || this.inRadiation(t.cx, t.cy) ? 0 : 1);
     let amt = rate * dt;
     if (!u.carry) u.carry = { res: resKind, amt: 0 };
     if (!isFarm) {
@@ -1237,6 +1243,7 @@ export class World {
       }
       return;
     }
+    if (q.nuke) { this.nukeQueueStep(b, q, dt, pl); return; }
     if (q.era != null) {
       b.qProg += dt;
       if (b.qProg >= q.time) {
@@ -1443,7 +1450,7 @@ export class World {
   serialize() {
     return {
       v: 1, settings: this.settings, W: this.W, H: this.H, terrain: Buffer.from(this.terrain).toString('base64'),
-      time: this.time, tickNo: this.tickNo, nextId: this.nextId, mapInfo: this.mapInfo, meteors: this.meteors, nextMeteor: this.nextMeteor || 0,
+      time: this.time, tickNo: this.tickNo, nextId: this.nextId, mapInfo: this.mapInfo, meteors: this.meteors, nextMeteor: this.nextMeteor || 0, nukes: this.nukes || [], radiation: this.radiation || [],
       P: this.P.map(({ mods, ...rest }) => rest),
       units: this.units.filter(u => !u.dead),
       buildings: this.buildings.filter(b => !b.dead),
@@ -1466,7 +1473,7 @@ export class World {
     w.prov = d.prov ? new Uint16Array(new Uint8Array(Buffer.from(d.prov, 'base64')).buffer) : new Uint16Array(N).fill(65535);
     w.provinces = d.provinces || []; w.provOwner = Int16Array.from(d.provOwner || w.provinces.map(() => -1)); w.provDirty = true;
     w.events = []; w.resChanged = new Set(); w.resRemoved = [];
-    w.meteors = d.meteors || []; w.nextMeteor = d.nextMeteor || 0;
+    w.meteors = d.meteors || []; w.nextMeteor = d.nextMeteor || 0; w.nukes = d.nukes || []; w.radiation = d.radiation || [];
     w.cellsW = Math.ceil(w.W / CELL); w.cellsH = Math.ceil(w.H / CELL);
     w.cells = Array.from({ length: w.cellsW * w.cellsH }, () => []);
     w.bcells = Array.from({ length: w.cellsW * w.cellsH }, () => []);
@@ -1518,10 +1525,10 @@ export class World {
   }
   privateState(pl) {
     const qs = [];
-    for (const b of this.buildings) if (b.owner === pl.id && b.queue.length) qs.push([b.id, b.queue.map(q => q.wonder ? 'wonder' : q.late ? 'late' : q.era != null ? 'era' : unitKey(q.line, Math.max(pl.era, LINES[q.line].minEra), q.unique)), +b.qProg.toFixed(1), +b.queue[0].time.toFixed(1), b.blocked ? 1 : 0]);
+    for (const b of this.buildings) if (b.owner === pl.id && b.queue.length) qs.push([b.id, b.queue.map(q => q.nuke ? 'nuke' : q.wonder ? 'wonder' : q.late ? 'late' : q.era != null ? 'era' : unitKey(q.line, Math.max(pl.era, LINES[q.line].minEra), q.unique)), +b.qProg.toFixed(1), +b.queue[0].time.toFixed(1), b.blocked ? 1 : 0]);
     return {
       t: 'me', res: Object.fromEntries(RES.map(k => [k, Math.floor(pl.res[k])])), pop: pl.pop, cap: pl.popCap, era: pl.era,
-      culture: pl.culture, nation: pl.nation, leader: pl.leader || null, leaderCd: pl.leaderCd > this.time ? Math.ceil(pl.leaderCd - this.time) : 0, leaderUsed: !!(pl.leaderUsed && pl.leaderUsed[pl.leaderEra]), choice: pl.choice, adv: pl.advancing, wonderB: pl.wonderBuilding, q: qs, alive: pl.alive,
+      culture: pl.culture, nation: pl.nation, leader: pl.leader || null, leaderCd: pl.leaderCd > this.time ? Math.ceil(pl.leaderCd - this.time) : 0, leaderUsed: !!(pl.leaderUsed && pl.leaderUsed[pl.leaderEra]), nuke: this.nuclearPower(pl) ? [pl.nukeReady ? 1 : 0, pl.nukesUsed || 0, Math.max(0, Math.ceil((pl.nukePauseUntil || 0) - this.time))] : null, choice: pl.choice, adv: pl.advancing, wonderB: pl.wonderBuilding, q: qs, alive: pl.alive,
       late: pl.late, lateR: pl.lateResearch, dip: this.diploPrivate(pl),
       st: this.buildings.filter(b => !b.dead && b.owner === pl.id && b.type === 'station' && b.built).map(b => [b.id, (b.waiting || []).length, Math.round(Object.values(b.stock || {}).reduce((x, y) => x + y, 0)), this.isHomeStation(b) ? 1 : 0, this.reachableStations(b, pl.id).length]),
     };
@@ -1600,3 +1607,4 @@ installNaval(World);
 installAir(World);
 installCelo(World);
 installLeaders(World);
+installNukes(World);
