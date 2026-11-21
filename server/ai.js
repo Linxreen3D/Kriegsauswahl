@@ -117,9 +117,17 @@ export class AI {
     }
     if (pl.era >= 3 && towns.length < 2 && workers.length > 40 && pl.res.wood > 500 && pl.res.stone > 300) this.build('town', workers, 3, 14, 22);
 
-    // Baustellen ohne Bauarbeiter besetzen
+    // Baustellen ohne Bauarbeiter besetzen; hängende Baustellen (kein Fortschritt) abbrechen und den Platz meiden
+    const watch = this.siteWatch || (this.siteWatch = new Map());
+    for (const id of watch.keys()) if (!building.some(b => b.id === id)) watch.delete(id);
     for (const b of building) {
       if (BUILDINGS[b.type].line) continue; // Gleise/Straßen bauen die beauftragten Arbeiter der Reihe nach
+      const sw = watch.get(b.id);
+      if (!sw || sw.p !== b.progress) watch.set(b.id, { p: b.progress, t: w.time });
+      else if (w.time - sw.t > (b.wonder ? 240 : 75)) {
+        watch.delete(b.id);
+        if (!b.wonder) { this.cmd({ c: 'delete', ids: [b.id] }); (this.badSpots || (this.badSpots = [])).push([b.cx, b.cy, w.time + 900]); this.reach = null; continue; }
+      }
       const has = workers.some(u => u.order.t === 'build' && u.order.target === b.id);
       if (has) continue;
       const free = workers.filter(u => u.order.t !== 'build').sort((a, c) => Math.hypot(a.x - b.cx, a.y - b.cy) - Math.hypot(c.x - b.cx, c.y - b.cy))[0];
@@ -473,23 +481,76 @@ export class AI {
     this.cmd({ c: 'build', ids: ws.map(u => u.id), type, pos: [spot] });
     return true;
   }
+  // Felder, die Arbeiter vom Haupthaus aus zu Fuß erreichen (alle 20 s neu berechnet)
+  reachMap() {
+    const w = this.w;
+    if (this.reach && this.reach.until > w.time && this.reach.bx === this.bx && this.reach.by === this.by) return this.reach.vis;
+    const W = w.W, H = w.H, vis = new Uint8Array(W * H), q = [];
+    const b = this.base, x0 = Math.floor(b.x ?? this.bx), y0 = Math.floor(b.y ?? this.by), sz = b.size || 1;
+    for (let y = y0 - 1; y <= y0 + sz; y++) for (let x = x0 - 1; x <= x0 + sz; x++) {
+      if (!w.inBounds(x, y)) continue;
+      const i = w.idx(x, y); if (w.pass[i] && !vis[i]) { vis[i] = 1; q.push(i); }
+    }
+    // auch von den Arbeitern aus (Felder können das Haupthaus ganz umschließen)
+    for (const u of w.units) if (!u.dead && u.owner === this.pid && u.cls === 'wrk' && !u.naval && !u.aboard) {
+      const x = Math.floor(u.x), y = Math.floor(u.y); if (!w.inBounds(x, y)) continue;
+      const i = w.idx(x, y); if (w.pass[i] && !vis[i]) { vis[i] = 1; q.push(i); }
+    }
+    for (let h = 0; h < q.length; h++) {
+      const c = q[h], x = c % W, y = (c - x) / W;
+      if (x > 0) { const n = c - 1; if (!vis[n] && w.pass[n]) { vis[n] = 1; q.push(n); } }
+      if (x < W - 1) { const n = c + 1; if (!vis[n] && w.pass[n]) { vis[n] = 1; q.push(n); } }
+      if (y > 0) { const n = c - W; if (!vis[n] && w.pass[n]) { vis[n] = 1; q.push(n); } }
+      if (y < H - 1) { const n = c + W; if (!vis[n] && w.pass[n]) { vis[n] = 1; q.push(n); } }
+    }
+    this.reach = { vis, until: w.time + 20, bx: this.bx, by: this.by };
+    return vis;
+  }
   findSpot(type, cx, cy, dMin, dMax) {
     const w = this.w, sz = BUILDINGS[type].size;
+    const vis = this.base ? this.reachMap() : null;
+    const bad = (this.badSpots || []).filter(s => s[2] > w.time); this.badSpots = bad;
+    // erst zufällig, dann (wenn eng) alle Plätze nach Abstand geordnet
+    const cands = [];
     for (let tries = 0; tries < 120; tries++) {
       const a = Math.random() * Math.PI * 2, d = dMin + Math.random() * (dMax - dMin) + tries * 0.15;
-      const x = Math.round(cx + Math.cos(a) * d - sz / 2), y = Math.round(cy + Math.sin(a) * d - sz / 2);
+      cands.push([Math.round(cx + Math.cos(a) * d - sz / 2), Math.round(cy + Math.sin(a) * d - sz / 2)]);
+    }
+    const R = Math.ceil(dMax + 18);
+    let scan = null, si = 0;
+    const next = k => {
+      if (k < cands.length) return cands[k];
+      if (!scan) scan = scanOffsets(R).filter(o => o[0] >= dMin);
+      if (si >= scan.length) return null;
+      const o = scan[si++]; return [Math.round(cx + o[1] - sz / 2), Math.round(cy + o[2] - sz / 2)];
+    };
+    for (let tries = 0; ; tries++) {
+      const c = next(tries); if (!c) break;
+      const [x, y] = c;
       if (!w.canPlace(type, x, y)) continue;
-      // Rand freihalten, damit Wege offen bleiben
-      let ok = true;
+      if (bad.some(s => Math.abs(s[0] - x - sz / 2) < 3 && Math.abs(s[1] - y - sz / 2) < 3)) continue;
+      // Rand freihalten, damit Wege offen bleiben; mindestens ein Randfeld muss erreichbar sein
+      let ok = true, reachable = !vis;
       for (let yy = y - 1; yy <= y + sz && ok; yy++) for (let xx = x - 1; xx <= x + sz; xx++) {
         if (!w.inBounds(xx, yy)) { ok = false; break; }
         const i = w.idx(xx, yy);
         if (w.occ[i] && w.ents.get(w.occ[i]) && w.ents.get(w.occ[i]).kind === 'b') { ok = false; break; }
         if (!w.pass[i] && type !== 'storage' && !BUILDINGS[type].coastal) { ok = false; break; }
+        if (vis && vis[i]) reachable = true;
       }
-      if (ok) return [x, y];
+      if (ok && reachable) return [x, y];
     }
     return null;
   }
+}
+// Versätze im Umkreis R, nach Abstand sortiert (zwischengespeichert)
+const SCAN = new Map();
+function scanOffsets(R) {
+  if (!SCAN.has(R)) {
+    const out = [];
+    for (let oy = -R; oy <= R; oy++) for (let ox = -R; ox <= R; ox++) { const d = Math.hypot(ox, oy); if (d <= R) out.push([d, ox, oy]); }
+    out.sort((p, q) => p[0] - q[0]); SCAN.set(R, out);
+  }
+  return SCAN.get(R);
 }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }

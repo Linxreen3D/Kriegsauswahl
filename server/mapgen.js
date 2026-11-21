@@ -256,6 +256,55 @@ export function generateMap({ players, seed, size = 'auto', type = 'random', res
   scatter('gold', Math.round(area / 1000), 2, 16);
   scatter('stone', Math.round(area / 1300), 2, 16);
   scatter('berry', Math.round(area / 1800), 1, 14);
+  // Kein eingeschlossener Start: Ist das baumfreie, zusammenhängende Land um einen Start zu klein (z. B. Felskessel
+  // mit Baumriegel), wird eine Schneise durch die Bäume zum nächsten Start geschlagen (günstigster Weg, Bäume teuer).
+  if (!T.islands && starts.length > 1) {
+    const open = j => !blockedTerrain(terrain[j]) && occ[j] !== 1;
+    const region = (s0, cap) => {
+      const seen = new Uint8Array(W * H), q = [s0.y * W + s0.x]; seen[q[0]] = 1;
+      for (let h = 0; h < q.length && q.length < cap; h++) {
+        const i = q[h], x = i % W, y = (i - x) / W;
+        for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1]) if (j >= 0 && !seen[j] && open(j)) { seen[j] = 1; q.push(j); }
+      }
+      return { n: q.length, seen };
+    };
+    const cleared = new Set();
+    for (const s0 of starts) {
+      const reg = region(s0, 1600);
+      if (reg.n >= 1600) continue;
+      const others = starts.filter(o => o !== s0);
+      if (others.some(o => reg.seen[o.y * W + o.x])) continue;
+      // Dijkstra: freies Feld 1, Baum/Mine 10, Wasser/Fels gesperrt; Ziel: anderer Start
+      const dist = new Float32Array(W * H).fill(Infinity), prev = new Int32Array(W * H).fill(-1), heap = [];
+      const push = (d, i) => { heap.push([d, i]); let k = heap.length - 1; while (k > 0) { const pk = (k - 1) >> 1; if (heap[pk][0] <= heap[k][0]) break; [heap[pk], heap[k]] = [heap[k], heap[pk]]; k = pk; } };
+      const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let k = 0; for (;;) { const l = 2 * k + 1, r = l + 1; let m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+      const goal = new Set(others.map(o => o.y * W + o.x));
+      const st = s0.y * W + s0.x; dist[st] = 0; push(0, st);
+      let found = -1;
+      while (heap.length) {
+        const [d, i] = pop(); if (d > dist[i]) continue;
+        if (goal.has(i)) { found = i; break; }
+        const x = i % W, y = (i - x) / W;
+        for (const j of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1]) {
+          if (j < 0 || blockedTerrain(terrain[j])) continue;
+          const nd = d + (occ[j] === 1 ? 10 : 1);
+          if (nd < dist[j]) { dist[j] = nd; prev[j] = i; push(nd, j); }
+        }
+      }
+      for (let i = found; i >= 0; i = prev[i]) {
+        const x = i % W, y = (i - x) / W;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const j = (y + dy) * W + x + dx; if (j >= 0 && j < W * H && occ[j] === 1) { occ[j] = 0; cleared.add(j); } }
+      }
+    }
+    if (cleared.size) {
+      const sizeOf = t => (t === 'gold' || t === 'stone') ? 2 : 1;
+      for (let k = resList.length - 1; k >= 0; k--) {
+        const r = resList[k], sz = sizeOf(r.type); let hit = false;
+        for (let yy = r.y; yy < r.y + sz && !hit; yy++) for (let xx = r.x; xx < r.x + sz; xx++) if (cleared.has(yy * W + xx)) { hit = true; break; }
+        if (hit) { for (let yy = r.y; yy < r.y + sz; yy++) for (let xx = r.x; xx < r.x + sz; xx++) occ[yy * W + xx] = 0; resList.splice(k, 1); }
+      }
+    }
+  }
   // Fischgründe: Wasserkacheln nahe der Küste (für Fischerboote)
   const isWater = (x, y) => x > 0 && y > 0 && x < W - 1 && y < H - 1 && terrain[y * W + x] === T_WATER && !occ[y * W + x];
   const nearCoast = (x, y) => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const t = terrain[(y + dy) * W + x + dx]; if (t !== undefined && t !== T_WATER) return true; } return false; };
