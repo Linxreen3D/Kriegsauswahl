@@ -238,11 +238,12 @@ export const DMG = {
   spy: { wrk: 1, inf: 0.8, spr: 0.8, rng: 0.8, cav: 0.5, sie: 0.8, art: 0.8, sup: 1, bld: 0.3, env: 1, spy: 1, trn: 0.3, shp: 0.2, sub: 0, air: 0, bmb: 0, hel: 0, aa: 1 },
   atr: { wrk: 1.2, inf: 1.3, spr: 1.3, rng: 1.3, cav: 0.9, sie: 1.2, art: 1.0, sup: 1, bld: 0.8, env: 1, spy: 1, trn: 1.2, shp: 0.4, sub: 0, air: 0, bmb: 0, hel: 0.6, aa: 1 },
   trn: { wrk: 0, inf: 0, spr: 0, rng: 0, cav: 0, sie: 0, art: 0, sup: 0, bld: 0, env: 0, spy: 0, trn: 0, shp: 0, sub: 0, air: 0, bmb: 0, hel: 0, aa: 0 },
+  bsh: { wrk: 0.8, inf: 0.8, spr: 0.8, rng: 0.8, cav: 0.9, sie: 1, art: 1, sup: 0.8, env: 0.5, spy: 0.8, bld: 1.3, trn: 1, shp: 1.3, sub: 0.15, air: 0, bmb: 0, hel: 0.3, aa: 0.8 },
   shp: { wrk: 0.8, inf: 0.8, spr: 0.8, rng: 0.8, cav: 0.8, sie: 1, art: 1, sup: 0.8, env: 0.5, spy: 0.8, bld: 1, trn: 1, shp: 1.2, sub: 1.5, air: 0.5, bmb: 0.5, hel: 0.8, aa: 0.8 },
   sub: { wrk: 0, inf: 0, spr: 0, rng: 0, cav: 0, sie: 0, art: 0, sup: 0, env: 0, spy: 0, bld: 0, trn: 0, shp: 2.5, sub: 1, air: 0, bmb: 0, hel: 0, aa: 0 },
   air: { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.2, sie: 0.4, art: 0.4, sup: 0.3, env: 0.2, spy: 0.3, bld: 0.1, trn: 0.4, shp: 0.3, sub: 0, air: 1.5, bmb: 1.8, hel: 1.6, aa: 0.3 },
-  bmb: { wrk: 1, inf: 1.2, spr: 1.2, rng: 1.2, cav: 1.3, sie: 1.5, art: 1.5, sup: 1, env: 0.5, spy: 1, bld: 3, trn: 2, shp: 1.5, sub: 0.5, air: 0, bmb: 0, hel: 0, aa: 1.2 },
-  hel: { wrk: 1.2, inf: 1.2, spr: 1.1, rng: 1.2, cav: 2, sie: 1.5, art: 1.5, sup: 1, env: 0.5, spy: 1, bld: 0.6, trn: 1.5, shp: 1, sub: 0.8, air: 0, bmb: 0, hel: 0.6, aa: 0.8 },
+  bmb: { wrk: 1, inf: 1.2, spr: 1.2, rng: 1.2, cav: 1.4, sie: 1.6, art: 1.6, sup: 1, env: 0.5, spy: 1, bld: 3, trn: 2, shp: 1.5, sub: 0.5, air: 0, bmb: 0, hel: 0, aa: 0.7 },
+  hel: { wrk: 1.2, inf: 1.2, spr: 1.1, rng: 1.2, cav: 2.6, sie: 1.6, art: 1.5, sup: 1, env: 0.5, spy: 1, bld: 0.6, trn: 1.5, shp: 1, sub: 0.8, air: 0, bmb: 0, hel: 0.6, aa: 0.8 },
   aa: { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.3, sie: 0.3, art: 0.3, sup: 0.3, env: 0, spy: 0.3, bld: 0.2, trn: 0.3, shp: 0.3, sub: 0, air: 3, bmb: 3, hel: 3, aa: 0.5 },
   bld: { wrk: 1, inf: 1, spr: 1, rng: 1.1, cav: 0.9, sie: 1, art: 1, sup: 1, bld: 0.3, env: 1, spy: 1, trn: 1, shp: 1.2, sub: 0, air: 0, bmb: 0, hel: 0, aa: 1 },
 };
@@ -312,7 +313,7 @@ export const LINES = {
   },
   battleship: {
     cls: 'shp', naval: true, at: 'dock', minEra: 5, key: 'R', names: ['', '', '', '', '', 'Linienschiff', 'Schlachtschiff', 'Kreuzer'], late: 'Schlachtschiff',
-    hp: 700, atk: 40, range: 10, minRange: 2, cd: 4, speed: 1.5, sight: 10, cost: { wood: 250, gold: 250, stone: 100 }, pop: 5, time: 50, splash: 1.5,
+    hp: 1100, atk: 90, range: 10, cd: 4, dmgRow: 'bsh', speed: 1.5, sight: 10, cost: { wood: 250, gold: 250, stone: 100 }, pop: 5, time: 50, splash: 1.5,
   },
   sub: {
     cls: 'sub', naval: true, at: 'dock', minEra: 6, key: 'T', names: ['', '', '', '', '', '', 'U-Boot', 'Atom-U-Boot'],
@@ -328,11 +329,11 @@ export const LINES = {
   },
   bomber: {
     cls: 'bmb', air: true, reqLate: true, at: 'airfield', minEra: 6, key: 'E', names: ['', '', '', '', '', '', 'Bomber', 'Strategischer Bomber'],
-    hp: 320, atk: 70, range: 1.5, cd: 3, speed: 4.2, sight: 9, cost: { wood: 200, gold: 260, stone: 60 }, pop: 5, time: 45, fuel: 110, ammo: 3, splash: 1.8,
+    hp: 320, atk: 70, range: 1.5, cd: 3, speed: 4.2, sight: 9, cost: { wood: 200, gold: 260, stone: 60 }, pop: 5, time: 45, fuel: 110, ammo: 4, splash: 1.8,
   },
   heli: {
     cls: 'hel', air: true, low: true, at: 'airfield', minEra: 7, key: 'R', names: ['', '', '', '', '', '', '', 'Kampfhubschrauber'],
-    hp: 380, atk: 24, range: 5, cd: 1.5, speed: 3.6, sight: 10, cost: { wood: 150, gold: 280 }, pop: 4, time: 40, fuel: 140, ammo: 12,
+    hp: 420, atk: 34, range: 6.5, cd: 1.5, speed: 3.6, sight: 10, cost: { wood: 150, gold: 280 }, pop: 4, time: 40, fuel: 140, ammo: 18,
   },
   para: {
     cls: 'inf', reqLate: true, at: 'airfield', minEra: 6, key: 'T', names: ['', '', '', '', '', '', 'Fallschirmjäger', 'Luftlandesoldat'],
