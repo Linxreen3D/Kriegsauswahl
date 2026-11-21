@@ -1,5 +1,6 @@
 import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
+import { music } from './music.js';
 import { createDiplomacy } from './diplomacy.js';
 import { createConference } from './conference.js';
 import { icon, iconize, EMOJI } from './icons.js';
@@ -313,6 +314,7 @@ function onLobby(m) {
 
 // ---------------- Spielstart ----------------
 function onStart(m) {
+  music.start();
   if (TUT) { if (m.settings && m.settings.tutorial) TUT.start(); else TUT.stop(); }
   G.phase = 'play';
   if (m.hostId != null) { G.hostId = m.hostId; document.body.classList.toggle('is-host', m.hostId === m.you); }
@@ -461,7 +463,7 @@ function onEvent(e, now) {
     case 'ping': UI.pings.push({ x: e.x, y: e.y, t0: now }); UI.lastAlert = { x: e.x, y: e.y }; break;
     case 'alert':
       UI.pings.push({ x: e.x, y: e.y, t0: now }); UI.lastAlert = { x: e.x, y: e.y };
-      notice('⚠ Du wirst angegriffen! (Leertaste)', 'bad'); sfx.alert();
+      notice('⚠ Du wirst angegriffen! (Leertaste)', 'bad'); sfx.alert(); music.alarm();
       break;
     case 'built': sfx.build(); updateCmdCard(true); break;
     case 'wonder': {
@@ -474,7 +476,7 @@ function onEvent(e, now) {
     }
     case 'ach': unlockAchievement(e.id); break;
     case 'nukeWarn':
-      notice('☢ ATOMRAKETE IM ANFLUG! Einschlag in 10 Sekunden – Einheiten in Bunker oder aus dem Zielgebiet!', 'bad'); sfx.alert();
+      notice('☢ ATOMRAKETE IM ANFLUG! Einschlag in 10 Sekunden – Einheiten in Bunker oder aus dem Zielgebiet!', 'bad'); sfx.alert(); music.alarm();
       UI.pings.push({ x: e.x, y: e.y, t0: now }); UI.lastAlert = { x: e.x, y: e.y };
       renderer.addEffect('meteor', e.x, e.y, { dur: e.t * 1000 / (G.settings.speed || 1) });
       break;
@@ -1273,6 +1275,8 @@ function setupOptions() {
   $('o_quality').onchange = e => { try { localStorage.setItem('fl_quality', e.target.value); } catch { /* egal */ } $('o_hint').textContent = 'Die Grafikqualität gilt ab dem nächsten Start des Spiels.'; };
   $('o_volume').oninput = e => { sfx.setVolume(+e.target.value / 100); $('o_volumeOut').textContent = e.target.value + ' %'; };
   $('o_volume').onchange = () => sfx.click();
+  $('o_music').value = music.enabled ? Math.round(music.volume * 100) : 0; $('o_musicOut').textContent = $('o_music').value + ' %';
+  $('o_music').oninput = e => { const v = +e.target.value; $('o_musicOut').textContent = v + ' %'; music.setVolume(v / 100); music.setEnabled(v > 0); };
   $('o_camSpeed').oninput = e => { OPT.camSpeed = +e.target.value / 100; $('o_camSpeedOut').textContent = e.target.value + ' %'; saveOpt(); };
   $('o_edge').onchange = e => { OPT.edge = e.target.value === '1'; saveOpt(); };
   $('o_fullscreen').onchange = e => DESKTOP && DESKTOP.setFullscreen(e.target.value === '1');
