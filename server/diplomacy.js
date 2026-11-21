@@ -281,14 +281,15 @@ export function installDiplomacy(World) {
 
   // ---------- Ereignisse ----------
   W.startEvent = function (pl) {
-    const list = Object.entries(EVENTS).filter(([, e]) => pl.era >= (e.minEra || 0) && pl.era <= (e.maxEra ?? 99) && (!e.nation || e.nation === pl.nation) && !(pl.seenEvents || []).includes(e.title));
+    const list = Object.entries(EVENTS).filter(([, e]) => pl.era >= (e.minEra || 0) && pl.era <= (e.maxEra ?? 99) && (!e.nation || e.nation === pl.nation) && (e.repeat || !(pl.seenEvents || []).includes(e.title))
+      && (!e.needCelo || this.units.some(u => !u.dead && u.owner === pl.id && u.st.celo)));
     pl.nextEvent = this.time + EVENT_GAP[0] + Math.random() * (EVENT_GAP[1] - EVENT_GAP[0]);
     if (!list.length) return;
     // nationale Ereignisse bevorzugen
     const nat = list.filter(([, e]) => e.nation);
     const [key] = nat.length && Math.random() < 0.6 ? nat[0] : list[Math.floor(Math.random() * list.length)];
     pl.event = { key, until: this.time + EVENT_TIMEOUT };
-    if (EVENTS[key].nation) (pl.seenEvents || (pl.seenEvents = [])).push(EVENTS[key].title);
+    if (EVENTS[key].nation && !EVENTS[key].repeat) (pl.seenEvents || (pl.seenEvents = [])).push(EVENTS[key].title);
     if (pl.isBot || (this.room && this.room.subs && this.room.subs.has(pl.id))) this.chooseEvent(pl, Math.random() < 0.5 ? 0 : 1);
   };
   W.chooseEvent = function (pl, choice) {
@@ -300,6 +301,7 @@ export function installDiplomacy(World) {
     if (e.morale) for (const u of this.units) if (u.owner === pl.id && u.morale != null) u.morale = Math.max(0, Math.min(100, u.morale + e.morale));
     if (e.rep) this.repChange(pl.id, e.rep);
     if (e.eraDiscount) pl.eraDiscount = Math.max(pl.eraDiscount || 0, e.eraDiscount);
+    if (e.celoPause || e.celoLetter) this.celoLetter(pl, e);
     if (e.workers && Math.random() < e.workers.chance) {
       const ws = this.units.filter(u => u.owner === pl.id && u.cls === 'wrk' && !u.dead).slice(0, e.workers.n);
       for (const u of ws) this.kill(u, -1);

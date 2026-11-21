@@ -880,6 +880,31 @@ function trainModel(era, color) {
 }
 
 const INFRA = {
+  // Celos Haus: kleines Familienhaus mit Garten und drei Blumen (Ljilje, Antonija, Marija)
+  celohouse(era, color) {
+    const g = new THREE.Group(), wall = U.mat('#e9e2d0', 0.9, 0), roof = U.mat('#a9472f', 0.8, 0), wood = U.wood(), grass = U.mat('#6f9a4a', 0.95, 0);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.BoxGeometry(4, 0.08, 4), grass, 0, 0.04, 0);
+    add(new THREE.BoxGeometry(2.4, 1.6, 2), wall, -0.3, 0.88, -0.5);
+    const r = add(new THREE.ConeGeometry(1.95, 1.1, 4), roof, -0.3, 2.23, -0.5); r.rotation.y = Math.PI / 4;
+    add(new THREE.BoxGeometry(0.5, 0.9, 0.05), wood, -0.3, 0.5, 0.52);
+    for (const x of [-1, 0.4]) add(new THREE.BoxGeometry(0.4, 0.4, 0.05), U.mat('#ffd98a', 0.4, 0), x, 1.1, 0.52);
+    for (let k = 0; k < 9; k++) add(new THREE.BoxGeometry(0.06, 0.4, 0.06), wood, -1.8 + k * 0.45, 0.2, 1.8);
+    add(new THREE.BoxGeometry(3.7, 0.05, 0.05), wood, 0, 0.32, 1.8);
+    ['#e4405f', '#f2c14e', '#8e6bd8'].forEach((c, k) => { add(new THREE.CylinderGeometry(0.02, 0.02, 0.35, 4), U.mat('#3c6e2e', 0.9, 0), 0.9 + k * 0.35, 0.2, 1.2); add(new THREE.SphereGeometry(0.1, 8, 6), U.mat(c, 0.6, 0), 0.9 + k * 0.35, 0.4, 1.2); });
+    const flag = Md.banner(color, 1.8, 0.5, 0.7, 0.12); flag.position.set(1.5, 0, -1.4); g.add(flag);
+    return g;
+  },
+  // Gedenkstein für Celo
+  memorial() {
+    const g = new THREE.Group(), stone = U.mat('#8d8f92', 0.9, 0.05), dark = U.mat('#55585c', 0.8, 0.1);
+    const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+    add(new THREE.BoxGeometry(1.3, 0.15, 0.9), dark, 0, 0.08, 0);
+    add(new THREE.BoxGeometry(0.8, 1.1, 0.25), stone, 0, 0.7, 0);
+    add(new THREE.CylinderGeometry(0.4, 0.4, 0.25, 16, 1, false, 0, Math.PI), stone, 0, 1.25, 0).rotation.set(Math.PI / 2, 0, Math.PI / 2);
+    for (const [x, c] of [[-0.35, '#e4405f'], [0, '#f2c14e'], [0.35, '#8e6bd8']]) add(new THREE.SphereGeometry(0.07, 8, 6), U.mat(c, 0.6, 0), x, 0.22, 0.3);
+    return g;
+  },
   airfield(era, color) {
     const g = new THREE.Group(), tarmac = U.mat(era >= 7 ? '#5c5e60' : '#6f8a4a', 0.95, 0), hangar = U.mat('#7a7f84', 0.6, 0.4), white = U.mat('#e8e6df', 0.8, 0);
     const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; g.add(o); return o; };

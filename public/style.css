@@ -309,3 +309,5 @@ body:not(.is-host) .settings input, body:not(.is-host) .settings select { pointe
 .awards .aw { border: 1px solid var(--gold2); border-radius: 6px; padding: 4px 8px; font-size: 13px; }
 .end-chron summary { cursor: pointer; }
 @media (max-width: 760px) { .dip-grid, .treaty-grid { grid-template-columns: 1fr; } }
+
+.dedication { margin: 14px 0 0; text-align: center; font-size: 12px; font-style: italic; opacity: .65; letter-spacing: .02em; }

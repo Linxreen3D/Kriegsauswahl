@@ -95,63 +95,125 @@ export const NATION_UNITS = {
     { era: 3, id: 'germany_otto', line: 'cav', name: 'Ottonischer Panzerreiter', icon: '🏇', hist: 'Lechfeld, 955', mods: { hpMul: 1.3 }, costMul: 1.05 },
     { era: 4, id: 'germany_landsknecht', line: 'inf', name: 'Landsknecht', icon: '⚔', hist: 'ab 1490, Zweihänder', mods: { atkMul: 1.1, splash: 0.8, dmgVs: { spr: 1.5 } }, costMul: 1.15 },
     { era: 5, id: 'germany_grenadier', line: 'inf', name: 'Preußischer Grenadier', icon: '🪖', hist: 'Zündnadelgewehr, 1841', mods: { cdMul: 0.75 }, costMul: 1.15 },
+    { era: 6, id: 'germany_krupp', line: 'art', name: 'Krupp-Feldartillerie', icon: '💣', hist: '1870/71', mods: { rangeAdd: 2, atkMul: 1.1 }, costMul: 1.1 },
+    { era: 6, reqLate: true, id: 'germany_tiger', line: 'cav', name: 'Tiger I', icon: '🛡', hist: '1942, schwerer Panzer', mods: { hpMul: 1.5, atkMul: 1.25, speedMul: 0.8 }, costMul: 1.4 },
+    { era: 6, reqLate: true, sig: true, max: 1, id: 'germany_gustav', line: 'sie', name: 'Schwerer Gustav', icon: '💥', hist: '80-cm-Eisenbahngeschütz, 1942', mods: { range: 26, minRange: 8, atkMul: 4, cdMul: 3, speedMul: 0.6, hpMul: 3, splash: 3, railOnly: true }, costMul: 7 },
+    { era: 7, id: 'germany_gepard', line: 'flak', name: 'Gepard', icon: '🎯', hist: 'Flakpanzer, 1976', mods: { atkMul: 1.4, hpMul: 1.2 }, costMul: 1.2 },
+    { era: 7, sig: true, max: 6, id: 'germany_leopard', line: 'cav', name: 'Leopard 2', icon: '🛡', hist: '1979', mods: { hpMul: 1.4, atkMul: 1.3, speedMul: 1.1 }, costMul: 1.3 },
   ],
   austria: [
     { era: 3, id: 'austria_magyar', line: 'cav', name: 'Magyarischer Bogenreiter', icon: '🏹', hist: 'Ungarnzüge, 10. Jh.', mods: { range: 4, atkMul: 0.95, speedMul: 1.1 }, costMul: 1.05 },
     { era: 4, id: 'austria_hussar', line: 'cav', name: 'Ungarischer Husar', icon: '🐎', hist: 'Schwarze Armee, 15. Jh.', mods: { speedMul: 1.2, atkMul: 1.1 }, costMul: 0.95 },
     { era: 5, id: 'austria_cuirassier', line: 'cav', name: 'Kaiserlicher Kürassier', icon: '🛡', hist: '18. Jh.', mods: { hpMul: 1.25, atkMul: 1.05 }, costMul: 1.15 },
+    { era: 6, id: 'austria_kaiserjaeger', line: 'inf', name: 'Tiroler Kaiserjäger', icon: '⛰', hist: 'Gebirgstruppe', mods: { hpMul: 1.15, speedMul: 1.1, noHillSlow: true }, costMul: 1.0 },
+    { era: 6, reqLate: true, id: 'austria_zrinyi', line: 'art', name: 'Zrínyi II', icon: '🛡', hist: 'ungarisches Sturmgeschütz, 1943', mods: { hpMul: 1.7, dmgVs: { bld: 1.5 } }, costMul: 1.3 },
+    { era: 6, sig: true, max: 1, id: 'austria_skoda', line: 'sie', name: 'Škoda-30,5-cm-Mörser', icon: '💥', hist: '1911, im Einsatz ab 1914', mods: { range: 18, minRange: 5, atkMul: 3, cdMul: 2.2, hpMul: 2, splash: 2.5 }, costMul: 5 },
+    { era: 7, id: 'austria_sk105', line: 'cav', name: 'SK-105 Kürassier', icon: '🛡', hist: 'Jagdpanzer, 1971', mods: { speedMul: 1.25, atkMul: 1.1, hpMul: 0.9 }, costMul: 1.0 },
+    { era: 7, sig: true, max: 10, id: 'austria_jagdkommando', line: 'inf', name: 'Jagdkommando', icon: '🎖', hist: 'Spezialkräfte, ab 1962', mods: { hpMul: 1.4, atkMul: 1.6, camo: true }, costMul: 1.4 },
   ],
   russia: [
     { era: 3, id: 'russia_druzhina', line: 'inf', name: 'Druschina', icon: '🛡', hist: 'Kiewer Rus', mods: { hpMul: 1.25 }, costMul: 1.1 },
     { era: 4, id: 'russia_strelets', line: 'rng', name: 'Strelize', icon: '🔫', hist: 'ab 1550, Arkebuse und Berdysch', mods: { hpMul: 1.3, atkMul: 1.05, dmgVs: { inf: 1.15 } }, costMul: 1.1 },
     { era: 5, id: 'russia_cossack', line: 'cav', name: 'Kosak', icon: '🐎', hist: 'Höhepunkt 18./19. Jh., plündert', mods: { hpMul: 0.9, speedMul: 1.1, plunder: true }, costMul: 0.8 },
+    { era: 6, sig: true, max: 2, id: 'russia_muromets', line: 'bomber', name: 'Ilja Muromez', icon: '🛬', hist: '1913, erster viermotoriger Bomber', mods: { hpMul: 1.3, atkMul: 0.8 }, costMul: 1.3 },
+    { era: 6, reqLate: true, id: 'russia_t34', line: 'cav', name: 'T-34', icon: '🛡', hist: '1940', mods: { hpMul: 1.05 }, costMul: 0.8, timeMul: 0.7 },
+    { era: 6, reqLate: true, sig: true, max: 4, id: 'russia_katyusha', line: 'art', name: 'Katjuscha (BM-13)', icon: '🎆', hist: 'Raketenwerfer, 1941', mods: { splash: 3, atkMul: 1.7, cdMul: 2, rangeAdd: 2 }, costMul: 1.6 },
+    { era: 7, id: 'russia_mi24', line: 'heli', name: 'Mi-24 „Hind“', icon: '🚁', hist: 'Kampfhubschrauber, 1972', mods: { hpMul: 1.35, atkMul: 1.1 }, costMul: 1.2 },
+    { era: 7, sig: true, max: 1, id: 'russia_tu160', line: 'bomber', name: 'Tu-160', icon: '🛬', hist: 'strategischer Bomber, 1987', mods: { hpMul: 2, atkMul: 2, fuelMul: 2, speedMul: 1.3 }, costMul: 3 },
   ],
   china: [
-    { era: 3, id: 'china_zhugenu', line: 'rng', name: 'Repetierarmbrust (Zhuge Nu)', icon: '🏹', hist: 'seit der Han-Zeit', mods: { cdMul: 0.5, atkMul: 0.8, range: 4.5 }, costMul: 1.05 },
+    { era: 3, id: 'china_zhugenu', line: 'rng', name: 'Repetierarmbrust (Zhuge Nu)', icon: '🏹', hist: 'seit der Han-Zeit', mods: { cdMul: 0.5, atkMul: 0.8, range: 4.5 }, costMul: 0.95 },
     { era: 4, id: 'china_beehive', line: 'sie', name: 'Raketenwerfer „Bienenstock“', icon: '🎆', hist: 'Ming, um 1400', mods: { splash: 2.4, dmgVs: { inf: 2.5, spr: 2.5, rng: 2.5, wrk: 2 }, atkMul: 0.8 }, costMul: 1.1 },
     { era: 5, id: 'china_banner', line: 'cav', name: 'Banner-Reiter', icon: '🏹', hist: 'Acht Banner der Qing', mods: { range: 5, hpMul: 1.15 }, costMul: 1.1 },
+    { era: 6, id: 'china_newarmy', line: 'inf', name: 'Neue Armee (Xinjun)', icon: '🪖', hist: '1895–1911', mods: { atkMul: 1.15 }, costMul: 1.0, timeMul: 0.7 },
+    { era: 6, id: 'china_dingyuan', line: 'warship', name: 'Panzerschiff Dingyuan', icon: '🚢', hist: '1881, Beiyang-Flotte', mods: { hpMul: 1.6, atkMul: 1.3 }, costMul: 1.5 },
+    { era: 6, reqLate: true, id: 'china_dadao', line: 'inf', name: 'Dadao-Truppe', icon: '🗡', hist: '29. Armee an der Großen Mauer, 1933', mods: { range: 0.5, atkMul: 2.0, hpMul: 1.25, speedMul: 1.15 }, costMul: 1.1 },
+    { era: 6, reqLate: true, sig: true, max: 3, id: 'china_guerilla', line: 'inf', name: 'Guerilla der 8. Route-Armee', icon: '🌾', hist: '1937–45', mods: { camo: true, atkMul: 1.2 }, costMul: 0.9 },
+    { era: 7, id: 'china_type59', line: 'cav', name: 'Typ 59', icon: '🛡', hist: 'Kampfpanzer, 1959', mods: {}, costMul: 0.75 },
+    { era: 7, sig: true, max: 3, id: 'china_hq2', line: 'flak', name: 'HQ-2-Raketenstellung', icon: '🚀', hist: 'Flugabwehrraketen, 1960er', mods: { rangeAdd: 5, atkMul: 2, speedMul: 0.5 }, costMul: 1.4 },
   ],
   india: [
     { era: 3, id: 'india_elephant', line: 'cav', name: 'Kriegselefant', icon: '🐘', hist: 'Standard indischer Reiche', mods: { hpMul: 1.8, speedMul: 0.75, dmgVs: { bld: 2 }, atkMul: 1.1 }, costMul: 1.3 },
     { era: 4, id: 'india_rajput', line: 'cav', name: 'Rajputen-Reiter', icon: '🏇', hist: 'Rajputen-Reiche, 8.–16. Jh.', mods: { atkMul: 1.25 }, costMul: 1.1 },
     { era: 5, id: 'india_mysore', line: 'rng', name: 'Mysore-Raketenträger', icon: '🎆', hist: 'Tipu Sultan, 1780–1799', mods: { rangeAdd: 2, splash: 1.2, cdMul: 1.3 }, costMul: 1.15 },
+    { era: 6, id: 'india_elephantbattery', line: 'art', name: 'Elefanten-Batterie', icon: '🐘', hist: 'Britisch-Indien, 1860–1900', mods: { hpMul: 1.5, speedMul: 1.2, noHillSlow: true }, costMul: 1.2 },
+    { era: 6, reqLate: true, id: 'india_sikh', line: 'inf', name: 'Sikh-Infanterie', icon: '🪖', hist: 'Sikh-Regimenter in beiden Weltkriegen', mods: { hpMul: 1.3, atkMul: 1.1 }, costMul: 1.15 },
+    { era: 6, reqLate: true, sig: true, max: 10, id: 'india_gurkha', line: 'inf', name: 'Gurkha', icon: '🗡', hist: 'Gurkha-Regimenter', mods: { range: 0.5, atkMul: 2.0, hpMul: 1.5, speedMul: 1.1 }, costMul: 1.25 },
+    { era: 7, id: 'india_vijayanta', line: 'cav', name: 'Vijayanta', icon: '🛡', hist: 'Kampfpanzer, 1965', mods: { hpMul: 1.15 }, costMul: 0.95 },
+    { era: 7, sig: true, max: 2, id: 'india_prithvi', line: 'art', name: 'Prithvi-Raketenwerfer', icon: '🚀', hist: '1988', mods: { rangeAdd: 7, atkMul: 2.2, cdMul: 1.6, splash: 2.5 }, costMul: 1.6 },
   ],
   yugoslavia: [
     { era: 3, id: 'yugoslavia_narentine', line: 'inf', name: 'Narentaner', icon: '⛵', hist: 'Adria-Seeräuber, 9. Jh., plündert', mods: { speedMul: 1.25, plunder: true }, costMul: 1.0 },
     { era: 4, id: 'yugoslavia_serbknight', line: 'cav', name: 'Serbischer Panzerreiter', icon: '🏇', hist: 'Heer Stefan Dušans, 1340er', mods: { hpMul: 1.15, atkMul: 1.1 }, costMul: 1.1 },
     { era: 5, id: 'yugoslavia_pandur', line: 'inf', name: 'Pandur', icon: '🌲', hist: 'Militärgrenze, 1740er', mods: { speedMul: 1.15, atkMul: 1.1, sightAdd: 2 }, costMul: 1.05 },
+    { era: 6, id: 'yugoslavia_komitadji', line: 'inf', name: 'Komitadschi', icon: '🌲', hist: 'Freischärler, Balkankriege 1912–13', mods: { camo: true, speedMul: 1.1 }, costMul: 1.0 },
+    { era: 6, reqLate: true, id: 'yugoslavia_partisan', line: 'inf', name: 'Partisan', icon: '⭐', hist: 'Tito, 1941–45', mods: { speedMul: 1.1 }, costMul: 0.7, timeMul: 0.7 },
+    { era: 6, sig: true, max: 3, id: 'yugoslavia_mountainbattery', line: 'art', name: 'Serbische Gebirgsbatterie', icon: '⛰', hist: '1912–18', mods: { speedMul: 1.35, noHillSlow: true, rangeAdd: 1, hpMul: 1.1 }, costMul: 1.0 },
+    { era: 7, id: 'yugoslavia_m84', line: 'cav', name: 'M-84', icon: '🛡', hist: 'Kampfpanzer, 1984', mods: { hpMul: 1.2, atkMul: 1.05 }, costMul: 1.0 },
   ],
   usa: [
     { era: 5, id: 'usa_minuteman', line: 'inf', at: 'town', name: 'Minuteman', icon: '🪖', hist: '1775, Miliz aus dem Haupthaus', mods: { hpMul: 0.85 }, costMul: 0.7, timeMul: 0.5 },
     { era: 5, id: 'usa_kentucky', line: 'rng', name: 'Kentucky-Büchsenschütze', icon: '🎯', hist: '18. Jh., gezogene Büchse', mods: { rangeAdd: 2, cdMul: 1.2, atkMul: 1.45 }, costMul: 1.1 },
+    { era: 6, id: 'usa_roughrider', line: 'cav', name: 'Rough Rider', icon: '🏇', hist: '1898', mods: { speedMul: 1.15, atkMul: 1.1 }, costMul: 1.05 },
+    { era: 6, reqLate: true, id: 'usa_sherman', line: 'cav', name: 'M4 Sherman', icon: '🛡', hist: '1942', mods: {}, costMul: 0.85, timeMul: 0.7 },
+    { era: 6, reqLate: true, sig: true, max: 3, id: 'usa_b17', line: 'bomber', name: 'B-17 „Fliegende Festung“', icon: '🛬', hist: '1938', mods: { hpMul: 1.7, atkMul: 1.1 }, costMul: 1.5 },
+    { era: 7, id: 'usa_abrams', line: 'cav', name: 'M1 Abrams', icon: '🛡', hist: '1980', mods: { rangeAdd: 1.5, hpMul: 1.2 }, costMul: 1.0 },
+    { era: 7, sig: true, max: 4, id: 'usa_apache', line: 'heli', name: 'AH-64 Apache', icon: '🚁', hist: '1986', mods: { atkMul: 1.6, hpMul: 1.2 }, costMul: 1.6 },
   ],
   france: [
     { era: 3, id: 'france_scara', line: 'cav', name: 'Fränkische Scara', icon: '🏇', hist: 'Panzerreiter der Karolinger', mods: { hpMul: 1.3, atkMul: 1.05 }, costMul: 1.1 },
     { era: 4, id: 'france_gendarme', line: 'cav', name: 'Gendarme', icon: '🛡', hist: 'Ordonnanzkompanien, 1445', mods: { hpMul: 1.3, atkMul: 1.1 }, costMul: 1.15 },
     { era: 5, id: 'france_oldguard', line: 'inf', name: 'Alte Garde', icon: '🎖', hist: 'Grande Armée, 1804', mods: { hpMul: 1.3, atkMul: 1.2 }, costMul: 1.15 },
+    { era: 6, id: 'france_mitrailleuse', line: 'rng', name: 'Mitrailleuse', icon: '🔫', hist: '1866', mods: { cdMul: 0.5, atkMul: 0.75 }, costMul: 1.1 },
+    { era: 6, reqLate: true, id: 'france_ft', line: 'cav', name: 'Renault FT', icon: '🛡', hist: '1917, erster Panzer mit Drehturm', mods: { hpMul: 0.9 }, costMul: 0.75, timeMul: 0.8 },
+    { era: 6, reqLate: true, sig: true, max: 10, id: 'france_legion', line: 'inf', name: 'Fremdenlegionär', icon: '🎖', hist: 'Légion étrangère', mods: { hpMul: 1.4, atkMul: 1.4 }, costMul: 1.3 },
+    { era: 7, id: 'france_mirage', line: 'fighter', name: 'Mirage III', icon: '✈', hist: '1961', mods: { atkMul: 1.2, speedMul: 1.2 }, costMul: 1.15 },
+    { era: 7, sig: true, max: 10, id: 'france_2rep', line: 'para', name: 'Fremdenlegion-Fallschirmjäger (2e REP)', icon: '🪂', hist: 'ab 1955', mods: { hpMul: 1.5, atkMul: 1.5 }, costMul: 1.35 },
   ],
   britain: [
     { era: 3, id: 'britain_huscarl', line: 'inf', name: 'Huskarl', icon: '🪓', hist: 'angelsächsische Leibgarde, um 1000', mods: { atkMul: 1.25, dmgVs: { inf: 1.15 } }, costMul: 1.15 },
     { era: 4, id: 'britain_longbow', line: 'rng', name: 'Englischer Langbogenschütze', icon: '🏹', hist: 'Crécy, 1346', mods: { rangeAdd: 2 }, costMul: 1.1 },
     { era: 5, id: 'britain_redcoat', line: 'inf', name: 'Rotrock', icon: '🪖', hist: 'Brown Bess', mods: { cdMul: 0.85, hpMul: 1.1 }, costMul: 1.0 },
     { era: 5, id: 'britain_congreve', line: 'sie', name: 'Congreve-Raketen', icon: '🎆', hist: 'ab 1805', mods: { splash: 2, dmgVs: { inf: 2.2, spr: 2.2, rng: 2.2 }, rangeAdd: 2 }, costMul: 1.1 },
+    { era: 6, id: 'britain_leeenfield', line: 'inf', name: 'Lee-Enfield-Schütze', icon: '🪖', hist: '1895, „Mad Minute“', mods: { cdMul: 0.8 }, costMul: 1.1 },
+    { era: 6, reqLate: true, id: 'britain_markiv', line: 'cav', name: 'Mark-IV-Panzer', icon: '🛡', hist: '1916, erste Panzer der Welt', mods: { hpMul: 1.3, atkMul: 1.1, speedMul: 0.75, dmgVs: { bld: 1.4 } }, costMul: 1.15 },
+    { era: 6, reqLate: true, sig: true, max: 6, id: 'britain_spitfire', line: 'fighter', name: 'Spitfire', icon: '✈', hist: '1938', mods: { atkMul: 1.4, speedMul: 1.15 }, costMul: 1.15 },
+    { era: 7, id: 'britain_harrier', line: 'fighter', name: 'Harrier', icon: '✈', hist: 'Senkrechtstarter, 1969', mods: { dmgVs: { cav: 4, art: 4, inf: 3, bld: 3 }, fuelMul: 1.3 }, costMul: 1.25 },
+    { era: 7, sig: true, max: 8, id: 'britain_sas', line: 'inf', name: 'SAS', icon: '🎖', hist: 'Spezialkräfte, ab 1941', mods: { hpMul: 1.3, atkMul: 1.6, camo: true, dmgVs: { bld: 2 } }, costMul: 1.35 },
   ],
   italy: [
     { era: 3, id: 'italy_lombard', line: 'cav', name: 'Langobardischer Reiter', icon: '🏇', hist: 'ab 568, Lanze', mods: { atkMul: 1.3, hpMul: 1.1 }, costMul: 1.1 },
     { era: 4, id: 'italy_genoese', line: 'rng', name: 'Genuesischer Armbrustschütze', icon: '🏹', hist: '14. Jh., mit Setzschild', mods: { hpMul: 1.4, atkMul: 1.1 }, costMul: 1.15 },
     { era: 5, id: 'italy_bersaglieri', line: 'inf', name: 'Bersagliere', icon: '🪶', hist: '1836', mods: { speedMul: 1.3, atkMul: 1.1 }, costMul: 1.0 },
+    { era: 6, id: 'italy_alpini', line: 'inf', name: 'Alpino', icon: '⛰', hist: '1872', mods: { hpMul: 1.1, speedMul: 1.1, noHillSlow: true }, costMul: 1.05 },
+    { era: 6, reqLate: true, id: 'italy_folgore', line: 'para', name: 'Folgore-Fallschirmjäger', icon: '🪂', hist: 'El Alamein, 1942', mods: { hpMul: 1.3, atkMul: 1.2 }, costMul: 1.15 },
+    { era: 6, reqLate: true, sig: true, max: 4, id: 'italy_decimamas', line: 'sub', name: 'Decima MAS', icon: '🤿', hist: 'Kampfschwimmer, Alexandria 1941', mods: { atkMul: 1.6, hpMul: 0.6, speedMul: 1.2 }, costMul: 0.9 },
+    { era: 7, id: 'italy_mod56', line: 'art', name: 'Mod-56-Gebirgshaubitze', icon: '⛰', hist: '1957, zerlegbar', mods: { speedMul: 1.4, noHillSlow: true }, costMul: 0.8 },
+    { era: 7, sig: true, max: 4, id: 'italy_mangusta', line: 'heli', name: 'A129 Mangusta', icon: '🚁', hist: 'Kampfhubschrauber, 1990', mods: { speedMul: 1.2, atkMul: 1.3 }, costMul: 1.4 },
   ],
   japan: [
     { era: 3, id: 'japan_bushi', line: 'cav', name: 'Berittener Bogenkrieger (Bushi)', icon: '🏹', hist: 'Heian-Zeit, 10. Jh.', mods: { range: 4.5, atkMul: 0.85 }, costMul: 1.1 },
     { era: 4, id: 'japan_ashigaru', line: 'rng', name: 'Ashigaru mit Teppō', icon: '🔫', hist: 'Nagashino, 1575', mods: { atkMul: 1.0 }, costMul: 0.9, timeMul: 0.7 },
     { era: 5, id: 'japan_samurai', line: 'inf', name: 'Samurai der Edo-Zeit', icon: '🗡', hist: 'bis 1868', mods: { range: 0.5, atkMul: 1.6, hpMul: 1.3, speedMul: 1.1 }, costMul: 1.2 },
+    { era: 6, id: 'japan_meiji', line: 'inf', name: 'Meiji-Infanterie', icon: '🪖', hist: 'ab 1873', mods: { atkMul: 1.1, hpMul: 1.05 }, costMul: 1.05 },
+    { era: 6, reqLate: true, id: 'japan_zero', line: 'fighter', name: 'A6M „Zero“', icon: '✈', hist: '1940', mods: { speedMul: 1.15, fuelMul: 1.6, hpMul: 0.85 }, costMul: 1.0 },
+    { era: 6, reqLate: true, sig: true, max: 1, id: 'japan_yamato', line: 'battleship', name: 'Yamato', icon: '🚢', hist: 'Schlachtschiff, 1941', mods: { hpMul: 2.2, atkMul: 1.7, rangeAdd: 3 }, costMul: 3 },
+    { era: 7, id: 'japan_type74', line: 'cav', name: 'Typ 74', icon: '🛡', hist: 'Kampfpanzer, 1975', mods: { hpMul: 1.1, noHillSlow: true }, costMul: 1.05 },
+    { era: 7, sig: true, max: 6, id: 'japan_type90', line: 'cav', name: 'Typ 90', icon: '🛡', hist: 'Kampfpanzer, 1990', mods: { hpMul: 1.4, atkMul: 1.3 }, costMul: 1.6 },
   ],
   ottoman: [
     { era: 3, id: 'ottoman_turkmen', line: 'cav', name: 'Turkmenischer Bogenreiter', icon: '🏹', hist: '10. Jh.', mods: { range: 4, speedMul: 1.15 }, costMul: 1.05 },
     { era: 4, id: 'ottoman_janissary', line: 'rng', name: 'Janitschar', icon: '🔫', hist: 'ab 1360er', mods: { hpMul: 1.3, atkMul: 1.2 }, costMul: 1.15 },
     { era: 5, id: 'ottoman_nizam', line: 'inf', name: 'Nizam-ı Cedid', icon: '🪖', hist: '„Neue Ordnung“, 1792', mods: { atkMul: 1.1 }, costMul: 0.95 },
+    { era: 6, id: 'ottoman_hamidiye', line: 'cav', name: 'Hamidiye-Reiter', icon: '🐎', hist: '1891', mods: { speedMul: 1.1 }, costMul: 0.85 },
+    { era: 6, reqLate: true, id: 'ottoman_mehmetcik', line: 'inf', name: 'Mehmetçik (Gallipoli)', icon: '🪖', hist: '1915', mods: { hpMul: 1.35 }, costMul: 1.1 },
+    { era: 6, sig: true, max: 2, id: 'ottoman_dardanelles', line: 'art', name: 'Dardanellen-Batterie', icon: '🎯', hist: '1915', mods: { rangeAdd: 4, dmgVs: { shp: 3, sub: 1 }, hpMul: 1.5, speedMul: 0.5 }, costMul: 1.3 },
+    { era: 7, id: 'ottoman_commando', line: 'para', name: 'Türkischer Kommando', icon: '🪂', hist: 'Zypern, 1974', mods: { hpMul: 1.3, atkMul: 1.1 }, costMul: 1.1 },
+    { era: 7, sig: true, max: 4, id: 'ottoman_f16', line: 'fighter', name: 'F-16 (Lizenzfertigung)', icon: '✈', hist: 'ab 1987', mods: { atkMul: 1.4, hpMul: 1.2 }, costMul: 1.2 },
   ],
 };
+// Widmung: Celo – Leibwächter, Elite der Top 40 (nur Jugoslawien, Kalter Krieg, max. 1)
+NATION_UNITS.yugoslavia.push({ era: 7, sig: true, max: 1, id: 'yugoslavia_celo', line: 'inf', at: 'town', name: 'Celo', icon: '🛡', hist: 'In Erinnerung an Celo – Leibwächter, Vater, Ehemann', mods: { hpMul: 2.2, atkMul: 1.8, rangeAdd: 1, sightAdd: 4, celo: true }, costMul: 1.5, celo: true });
 export const NATION_UNIT = {};
 for (const [n, list] of Object.entries(NATION_UNITS)) for (const u of list) NATION_UNIT['nu_' + u.id] = { ...u, nation: n };
 export const isNationUnit = uq => !!uq && uq.startsWith('nu_');
@@ -189,7 +251,7 @@ export const LINES = {
   },
   inf: {
     cls: 'inf', at: 'barracks', minEra: 0, key: 'Q', names: ['Keulenträger', 'Axtkämpfer', 'Schwertkämpfer', 'Hauskrieger', 'Fußritter', 'Linieninfanterist', 'Schütze', 'Mechanisierte Infanterie'], late: 'Infanterist',
-    hp: 60, atk: 7, range: 0.5, cd: 1.2, speed: 1.45, sight: 6, cost: { food: 55, wood: 10, env: 1, spy: 1, trn: 0.6, shp: 0.3, sub: 0, air: 0, bmb: 0, hel: 0.3, aa: 1 }, pop: 1, time: 16,
+    hp: 60, atk: 7, range: 0.5, cd: 1.2, speed: 1.45, sight: 6, cost: { food: 55, wood: 10 }, pop: 1, time: 16,
     eraOverride: { 5: { range: 3 }, 6: { range: 4 }, 7: { range: 4.5, speed: 1.7 } },
   },
   spear: {
@@ -199,20 +261,20 @@ export const LINES = {
   },
   rng: {
     cls: 'rng', at: 'range', minEra: 0, key: 'Q', names: ['Steinschleuderer', 'Bogenschütze', 'Kompositbogner', 'Langbogenschütze', 'Armbrustschütze', 'Jäger', 'Scharfschütze', 'MG-Schütze'], late: 'MG-Schütze',
-    hp: 38, atk: 5, range: 5, cd: 1.6, speed: 1.4, sight: 7, cost: { food: 30, wood: 35, env: 1, spy: 1, trn: 0.5, shp: 0.6, sub: 0, air: 0, bmb: 0, hel: 0.6, aa: 1 }, pop: 1, time: 18,
+    hp: 38, atk: 5, range: 5, cd: 1.6, speed: 1.4, sight: 7, cost: { food: 30, wood: 35 }, pop: 1, time: 18,
     eraOverride: { 6: { range: 6 }, 7: { range: 6.5 } },
   },
   cav: {
     cls: 'cav', at: 'stable', minEra: 1, key: 'Q', names: ['', 'Streitwagen', 'Reiter', 'Panzerreiter', 'Ritter', 'Husar', 'Panzerwagen', 'Kampfpanzer'], late: 'Panzer',
-    hp: 110, atk: 9, range: 0.6, cd: 1.4, speed: 2.4, sight: 7, cost: { food: 70, gold: 45, env: 1, spy: 1, trn: 0.8, shp: 0.3, sub: 0, air: 0, bmb: 0, hel: 0.2, aa: 0.7 }, pop: 1, time: 22,
+    hp: 110, atk: 9, range: 0.6, cd: 1.4, speed: 2.4, sight: 7, cost: { food: 70, gold: 45 }, pop: 1, time: 22,
     eraOverride: { 5: { range: 3.5 }, 6: { range: 5, speed: 2.0, hpMul: 1.6, pop: 2 }, 7: { range: 6, speed: 2.2, hpMul: 1.7, pop: 2 } },
   },
   sie: {
     cls: 'sie', at: 'workshop', minEra: 2, key: 'Q', names: ['', '', 'Torsionsgeschütz', 'Blide', 'Bombarde', 'Belagerungsmörser', 'Schwerer Mörser', 'Raketenartillerie'], late: 'Schwere Haubitze',
-    hp: 120, atk: 38, range: 7, minRange: 2, cd: 4, speed: 0.95, sight: 8, cost: { wood: 160, gold: 90, env: 1, spy: 1, trn: 1.5, shp: 1, sub: 0, air: 0, bmb: 0, hel: 0, aa: 1 }, pop: 2, time: 32, splash: 1.2,
+    hp: 120, atk: 38, range: 7, minRange: 2, cd: 4, speed: 0.95, sight: 8, cost: { wood: 160, gold: 90 }, pop: 2, time: 32, splash: 1.2,
   },  art: {
     cls: 'art', at: 'workshop', minEra: 5, key: 'W', names: ['', '', '', '', '', 'Feldkanone', 'Feldgeschütz', 'Panzerhaubitze'], late: 'Haubitze',
-    hp: 110, atk: 40, range: 9, minRange: 2.5, cd: 3.5, speed: 1.0, sight: 8, cost: { wood: 140, gold: 110, env: 1, spy: 1, trn: 1.5, shp: 1.5, sub: 0, air: 0, bmb: 0, hel: 0, aa: 1 }, pop: 3, time: 30, splash: 1.6,
+    hp: 110, atk: 40, range: 9, minRange: 2.5, cd: 3.5, speed: 1.0, sight: 8, cost: { wood: 140, gold: 110 }, pop: 3, time: 30, splash: 1.6,
   },
   envoy: {
     cls: 'env', at: 'town', minEra: 0, key: 'T', names: ['Läufer', 'Reitender Bote', 'Reitender Bote', 'Gesandter', 'Gesandter mit Eskorte', 'Kurier', 'Kurier im Automobil', 'Diplomat im Regierungsjet'],
@@ -221,7 +283,7 @@ export const LINES = {
   },
   spy: {
     cls: 'spy', at: 'town', minEra: 4, key: 'A', names: ['', '', '', '', 'Kundschafter', 'Spion', 'Agent', 'Geheimagent'],
-    hp: 40, atk: 4, range: 0.5, cd: 1.2, speed: 1.7, sight: 9, cost: { food: 50, gold: 80, trn: 0.3, shp: 0.2, sub: 0, air: 0, bmb: 0, hel: 0, aa: 1 }, pop: 1, time: 25, grow: 0.15,
+    hp: 40, atk: 4, range: 0.5, cd: 1.2, speed: 1.7, sight: 9, cost: { food: 50, gold: 80 }, pop: 1, time: 25, grow: 0.15,
   },
   train: {
     cls: 'trn', at: null, minEra: 5, key: '', names: ['', '', '', '', '', 'Dampfzug', 'Dampfzug', 'Diesellok'],
@@ -245,7 +307,7 @@ export const LINES = {
   },
   sub: {
     cls: 'sub', naval: true, at: 'dock', minEra: 6, key: 'T', names: ['', '', '', '', '', '', 'U-Boot', 'Atom-U-Boot'],
-    hp: 260, atk: 45, range: 5, cd: 4, speed: 1.9, sight: 8, cost: { wood: 100, gold: 220, air: 0, bmb: 0, hel: 0, aa: 0 }, pop: 3, time: 45,
+    hp: 260, atk: 45, range: 5, cd: 4, speed: 1.9, sight: 8, cost: { wood: 100, gold: 220 }, pop: 3, time: 45,
   },
   scout: {
     cls: 'air', air: true, at: 'airfield', minEra: 6, key: 'Q', names: ['', '', '', '', '', '', 'Doppeldecker-Aufklärer', 'Aufklärungsjet'], late: 'Aufklärer',
@@ -354,6 +416,9 @@ export const EVENTS = {
   gallipoli: { title: 'Gallipoli 1915', nation: 'ottoman', minEra: 6, text: 'Die Verteidiger der Dardanellen halten stand.', options: [
     { label: 'Halten: 5 Min. +20 % Schaden', e: { buff: { k: 'dmg', v: 1.2, s: 300 } } },
     { label: 'Neu aufstellen: +300 Nahrung, +200 Gold', e: { res: { food: 300, gold: 200 } } }] },
+  letter: { title: 'Brief von zu Hause', nation: 'yugoslavia', minEra: 7, needCelo: true, repeat: true, text: 'Ein Brief von Ljilje, Antonija und Marija ist für Celo angekommen.', options: [
+    { label: 'Celo liest ihn sofort: alle Einheiten 3 Minuten mehr Moral', e: { morale: 15, buff: { k: 'dmg', v: 1.05, s: 180 }, celoPause: 30 } },
+    { label: 'Er steckt ihn ein und kämpft weiter: Celo +10 % Schaden', e: { celoLetter: true } }] },
   winterwar: { title: 'Strenger Winter', nation: 'russia', minEra: 3, text: 'Der Frost kommt früh – für den Feind.', options: [
     { label: 'Vorräte anlegen: +300 Holz', e: { res: { wood: 300 } } },
     { label: 'Mobilmachen: 5 Min. +20 % Ausbildungstempo', e: { buff: { k: 'train', v: 1.2, s: 300 } } }] },
@@ -396,6 +461,8 @@ export const BUILDINGS = {
   coastgun: { name: 'Küstenbatterie', size: 2, hp: 900, cost: { stone: 200, gold: 80 }, time: 35, atk: 20, range: 11, cd: 3, sight: 11, minEra: 5, key: 'A', page: 2, coastal: true, vsShip: 2.2, desc: 'An der Küste: schwere Geschütze gegen Schiffe (große Reichweite, doppelter Schaden gegen Schiffe).' },
   airfield: { name: 'Flugplatz', size: 3, hp: 1100, cost: { wood: 250, stone: 150, gold: 100 }, time: 45, sight: 9, minEra: 6, key: 'D', page: 2, desc: 'Baut Flugzeuge und Fallschirmjäger. Flugzeuge tanken und munitionieren hier wieder auf – ohne Flugplatz stürzen sie bei leerem Tank ab.' },
   flakpos: { name: 'Flak-Stellung', size: 2, hp: 700, cost: { stone: 120, gold: 80 }, time: 30, atk: 16, range: 9, cd: 1.2, sight: 10, minEra: 6, key: 'G', page: 2, dmgRow: 'aa', desc: 'Schießt auf Flugzeuge und Hubschrauber (dreifacher Schaden gegen Luftziele).' },
+  celohouse: { name: 'Celos Haus', size: 2, hp: 99999, cost: {}, time: 1, sight: 3, minEra: 99, decor: true, desc: 'Hier warten Ljilje, Antonija und Marija auf Celo.' },
+  memorial: { name: 'Gedenkstein', size: 1, hp: 99999, cost: {}, time: 1, sight: 3, minEra: 99, decor: true, walkable: true, desc: 'Celo – Leibwächter, Vater, Ehemann. Für Ljilje, Antonija und Marija.' },
   wall: { name: 'Palisade', size: 1, hp: 350, cost: { wood: 4 }, time: 3, sight: 2, minEra: 0, key: 'C', line: true, desc: 'Günstiges Hindernis (ab Mittelalter Steinmauer).' },
 };
 // Weltwunder: Ausbau des Haupthauses in der letzten Epoche. Wer es 30 Minuten (große Karten: 60) hält, gewinnt.
@@ -496,6 +563,13 @@ export function unitBase(line, era, unique) {
     if (m.splash != null) s.splash = m.splash;
     if (m.dmgVs) s.dmgVs = m.dmgVs;
     if (m.plunder) s.plunder = true;
+    if (m.camo) s.camo = true;
+    if (m.noHillSlow) s.noHillSlow = true;
+    if (m.railOnly) s.railOnly = true;
+    if (m.fuelMul) s.fuel *= m.fuelMul;
+    if (m.minRange != null) s.minRange = m.minRange;
+    if (m.celo) s.celo = true;
+    if (u.sig) { s.sig = true; s.max = u.max; }
   } else if (unique) {
     const u = UNIQUE[unique], m = u.mods;
     s.name = u.name;
@@ -577,7 +651,7 @@ export function trainable(bType, era, culture, nation, late = true) {
     if (LINES[UNIQUE[uq].line].at === bType) out.push({ line: UNIQUE[uq].line, unique: uq });
   }
   if (nation && NATION_UNITS[nation]) for (const u of NATION_UNITS[nation]) {
-    if (u.era === era && (u.at || LINES[u.line].at) === bType) out.push({ line: u.line, unique: 'nu_' + u.id });
+    if (u.era === era && (u.at || LINES[u.line].at) === bType && !(u.reqLate && !late)) out.push({ line: u.line, unique: 'nu_' + u.id });
   }
   return out;
 }

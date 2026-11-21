@@ -8,7 +8,7 @@ export const waterTerrain = t => t === T_WATER || t === T_FORD;
 // Provinznamen (zusammengesetzt), dazu sehr selten die Widmungsnamen
 const PROV_A = ['Eichen', 'Birken', 'Grauen', 'Silber', 'Raben', 'Wolfs', 'Falken', 'Nebel', 'Sonnen', 'Kalten', 'Roten', 'Hohen', 'Tiefen', 'Weiden', 'Stein', 'Linden', 'Bären', 'Adler', 'Moos', 'Kiefern', 'Erlen', 'Mühl', 'Burg', 'Fels', 'Dorn', 'Klee', 'Hirsch', 'Ulmen', 'Schwarzen', 'Weißen'];
 const PROV_B = ['tal', 'mark', 'au', 'feld', 'heim', 'grund', 'wald', 'berg', 'land', 'furt', 'stein', 'hain', 'bruck', 'moor', 'ried', 'eck', 'hof', 'weiler', 'gau', 'see'];
-const DEDICATION = ['Antonija', 'Marija'];
+const DEDICATION = ['Antonija', 'Marija', 'Ljiljes See'];
 
 export function rng(seed) {
   let a = seed >>> 0;

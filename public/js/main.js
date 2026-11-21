@@ -3,7 +3,7 @@ import { sfx } from './sound.js';
 import { createDiplomacy } from './diplomacy.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -35,7 +35,7 @@ const UNIT_ICONS = {
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
-const BLD_ICONS = { town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', airfield: '🛫', flakpos: '💥', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
+const BLD_ICONS = { celohouse: '🏡', memorial: '🪦', town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', airfield: '🛫', flakpos: '💥', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 function iconOf(def) {
   if (def.kind === 'b') return BLD_ICONS[def.key];
   if (def.unique) return def.icon || UNIQUE_ICONS[def.unique];
@@ -291,7 +291,7 @@ function applyTuple(t, now) {
     const x = t[3] / 20, y = t[4] / 20;
     if (isNew) { e.px = x; e.py = y; e.rx = x; e.ry = y; } else { e.px = e.rx ?? x; e.py = e.ry ?? y; }
     e.t0 = now; e.x = x; e.y = y; e.state = t[7]; e.carry = t[8]; e.dir = t[9] / 10 - Math.PI;
-    e.rank = t[10] || 0; e.morale = t[11]; e.sup = t[12]; e.form = FORMATION_KEYS[t[13]] || 'none'; e.fuel = t[14]; e.ammo = t[15];
+    e.rank = t[10] || 0; e.morale = t[11]; e.sup = t[12]; e.form = FORMATION_KEYS[t[13]] || 'none'; e.fuel = t[14]; e.ammo = t[15]; e.title = t[16] || '';
   } else {
     e.x = t[3]; e.y = t[4]; e.prog = t[7]; e.q = t[8]; e.era = t[9]; e.ghost = false;
     setBld(e);
@@ -496,6 +496,13 @@ function smartCommand(wx, wy, attackMove = false) {
     const workers = units.filter(u => u.def.cls === 'wrk').map(u => u.id);
     const others = units.filter(u => u.def.cls !== 'wrk').map(u => u.id);
     const ships = units.filter(u => LINES[u.def.line] && LINES[u.def.line].naval);
+    const celos = units.filter(u => String(u.def.key).includes('celo'));
+    if (celos.length && t && t.def && !t.isRes && t.owner === G.you && !celos.includes(t)) {
+      cmd({ c: 'guard', ids: celos.map(u => u.id), target: t.id });
+      UI.markers.push({ x: wx, y: wy, t0: now, color: '#7fd3ff' });
+      sfx.command();
+      if (celos.length === units.length) return;
+    }
     if (t && t.def && t.def.kind === 'u' && t.owner === G.you && LINES[t.def.line].capacity && units.some(u => !LINES[u.def.line].naval)) {
       cmd({ c: 'board', ids: units.filter(u => !LINES[u.def.line].naval).map(u => u.id), ship: t.id });
       return;
@@ -635,6 +642,8 @@ function updateCmdCard(force) {
           });
         }
       } else {
+        const celos = units.filter(u => String(u.def.key).includes('celo'));
+        if (celos.length) put('D', { icon: '🛡', title: 'Personenschutz (D)', desc: 'Celos Schutzziel ist 8 Sekunden lang unverwundbar (Abklingzeit 3 Minuten). Schutzziel wählen: Rechtsklick auf eine eigene Einheit oder ein Gebäude.', fn: () => cmd({ c: 'protect', ids: celos.map(u => u.id) }) });
         const paras = units.filter(u => u.def.line === 'para');
         if (paras.length) put('Q', { icon: '🪂', title: 'Absprung (Q)', desc: 'Fallschirmjäger an einem eigenen Flugplatz springen über einem sichtbaren Ort ab. Danach Ziel anklicken.', on: UI.mode && UI.mode.para,
           fn: () => { UI.mode = { para: true }; renderer.canvas.style.cursor = 'crosshair'; updateCmdCard(true); } });
@@ -664,11 +673,14 @@ function updateCmdCard(force) {
       const same = blds.filter(b => b.def.key === type && b.prog >= 100);
       if (same.length) {
         const opts = trainable(type, era, G.me.culture, G.me.nation, G.me.late);
+        const natKeys = ['D', 'G', 'X', 'V'];
+        let natI = 0;
         opts.forEach((o, i) => {
           const st = unitStats(o.line, Math.max(era, LINES[o.line].minEra), o.unique, mods);
-          const national = o.unique && o.unique.startsWith('nu_'), key = national ? 'R' : o.unique ? 'E' : LINES[o.line].key;
+          const national = o.unique && o.unique.startsWith('nu_'), key = national ? natKeys[natI++] || 'V' : o.unique ? 'E' : LINES[o.line].key;
+          const nu = national ? NATION_UNIT[o.unique] : null;
           put(key, {
-            icon: national ? TYPES[TYPE_INDEX[o.unique]].icon : o.unique ? UNIQUE_ICONS[o.unique] : (UNIT_ICONS[o.line] || [])[Math.max(era, LINES[o.line].minEra)] || '•', title: `${st.name} ausbilden`, cost: st.cost,
+            icon: national ? TYPES[TYPE_INDEX[o.unique]].icon : o.unique ? UNIQUE_ICONS[o.unique] : (UNIT_ICONS[o.line] || [])[Math.max(era, LINES[o.line].minEra)] || '•', title: `${st.name} ausbilden${nu && nu.max ? ` (max. ${nu.max})` : ''}`, cost: st.cost,
             desc: `Leben ${st.hp} · Angriff ${st.atk.toFixed(0)} · Reichweite ${st.range < 1 ? 'Nahkampf' : st.range.toFixed(0)} · Bevölkerung ${st.pop}` + (national ? ` · Nationaleinheit (${TYPES[TYPE_INDEX[o.unique]].hist || ''})` : o.unique ? ' · Spezialeinheit deiner Kultur' : ''),
             off: !affordable(st.cost), fn: ev => cmd({ c: 'train', ids: same.map(b => b.id), line: o.line, unique: o.unique, n: ev && ev.shiftKey ? 5 : 1 }),
             cnt: queueCount(same, unitKey(o.line, Math.max(era, LINES[o.line].minEra), o.unique)),
@@ -741,7 +753,7 @@ function updateSelInfo() {
       ${G.me.culture ? `Kultur: <b>${CULTURES[G.me.culture].icon} ${CULTURES[G.me.culture].name}</b>` : ''} ${G.me.nation ? ` · Nation: <b>${NATIONS[G.me.nation].name}</b>` : ''}</div>`;
   } else if (sel.length === 1) {
     const e = sel[0], p = G.players[e.owner], st = myStats(e);
-    const name = e.def.kind === 'b' ? (st.name || BUILDINGS[e.def.key].name) : st.name;
+    const name = e.def.kind === 'b' ? (st.name || BUILDINGS[e.def.key].name) : (e.title ? `${st.name} „${e.title}“` : st.name);
     let stats = '';
     if (e.def.kind === 'u') {
       stats = `<span>⚔ ${st.atk.toFixed(0)}</span><span>🎯 ${st.range < 1 ? 'Nahkampf' : st.range.toFixed(1)}</span><span>👟 ${st.speed.toFixed(1)}</span><span>👁 ${st.sight}</span>`;

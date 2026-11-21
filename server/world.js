@@ -2,7 +2,7 @@
 import {
   TICK_MS, RES, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, RESOURCE_TYPES, RESOURCE_KINDS,
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
-  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, scaleCost, isProducer, DEPOSIT_LAYERS, hasLayers,
+  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, scaleCost, NATION_UNIT, EVENTS, isProducer, DEPOSIT_LAYERS, hasLayers,
   VET_RANKS, VET_BONUS, FORMATIONS, FORMATION_KEYS, SUPPLY_RANGE, SUPPLY_GRACE,
   seasonAt, PROVINCE_BONUS, PROVINCE_WEIGHT, RAIL,
 } from '../shared/rules.js';
@@ -10,6 +10,7 @@ import { installDiplomacy } from './diplomacy.js';
 import { installRail } from './rail.js';
 import { installNaval } from './naval.js';
 import { installAir } from './air.js';
+import { installCelo } from './celo.js';
 import { generateMap, blockedTerrain, waterTerrain, T_HILL, T_SNOW, T_DESERT, T_SWAMP, T_FORD, T_GRASS, T_DIRT } from './mapgen.js';
 
 const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
@@ -335,6 +336,7 @@ export class World {
     if (d < 0.02) return true;
     const sp = Math.min(d, this.speedOf(u) * dt);
     let nx = u.x + dx / d * sp, ny = u.y + dy / d * sp;
+    if (u.st.railOnly && !this.railAt[this.idx(Math.floor(nx), Math.floor(ny))]) { u.state = ST.idle; return false; }
     if (this.passableAt(nx, ny)) { u.x = nx; u.y = ny; } else if (this.passableAt(nx, u.y)) u.x = nx; else if (this.passableAt(u.x, ny)) u.y = ny;
     u.dir = Math.atan2(dy, dx);
     u.state = u.carry && u.carry.amt > 0 && u.order.t === 'gather' ? ST.carry : ST.move;
@@ -431,8 +433,10 @@ export class World {
           if (!b || b.queue.length >= 15) break;
           const st = unitStats(c.line, Math.max(pl.era, LINES[c.line].minEra), c.unique || null, pl.mods);
           if (!this.canAfford(pl, st.cost)) { this.notice(pid, 'Nicht genug Rohstoffe.'); break; }
+          if (st.sig && this.countUnique(pid, c.unique) >= st.max) { this.notice(pid, `${st.name}: höchstens ${st.max} gleichzeitig.`); break; }
           this.pay(pl, st.cost);
           b.queue.push({ line: c.line, unique: c.unique || null, cost: st.cost, time: st.time });
+          if (st.sig && NATION_UNIT[c.unique] && NATION_UNIT[c.unique].costMul >= 3) this.event({ k: 'notice', to: -1, text: `⚠ ${pl.name} baut eine Superwaffe: ${st.name}!` });
         }
         break;
       }
@@ -501,6 +505,25 @@ export class World {
         for (const s of own(c.ids)) if (s.kind === 'u' && s.st.capacity) this.unloadCommand(s, +c.x, +c.y);
         break;
       }
+      case 'guard': {
+        const t = this.ents.get(c.target);
+        for (const u of own(c.ids)) if (u.st.celo && t && !t.dead && this.allied(t.owner, pid) && t !== u) {
+          if (u.guarding) { const old = this.ents.get(u.guarding); if (old && old.guardedBy === u.id) old.guardedBy = null; }
+          u.guarding = t.id; t.guardedBy = u.id; u.order = { t: 'idle' };
+          this.notice(pid, `🛡 Celo schützt jetzt: ${t.kind === 'u' ? t.st.name : BUILDINGS[t.type].name}.`);
+        }
+        break;
+      }
+      case 'protect': {
+        for (const u of own(c.ids)) if (u.st.celo) {
+          if (u.protectCd > this.time) { this.notice(pid, `Personenschutz wieder bereit in ${Math.ceil(u.protectCd - this.time)} s.`); continue; }
+          const t = this.ents.get(u.guarding);
+          if (!t || t.dead) { this.notice(pid, 'Celo braucht zuerst ein Schutzziel (Rechtsklick auf eine eigene Einheit oder ein Gebäude).'); continue; }
+          t.invulnUntil = this.time + 8; u.protectCd = this.time + 180;
+          this.notice(pid, '🛡 Personenschutz: 8 Sekunden lang ist das Schutzziel unverwundbar.');
+        }
+        break;
+      }
       case 'paradrop': {
         this.paradropCommand(pid, own(c.ids).filter(e => e.kind === 'u'), +c.x, +c.y);
         break;
@@ -524,6 +547,7 @@ export class World {
         break;
       case 'delete':
         for (const e of own(c.ids)) {
+          if (e.kind === 'b' && e.st.decor) continue;
           if (e.kind === 'b' && !e.built) this.refund(pl, e.st.cost);
           this.kill(e, -1);
         }
@@ -549,6 +573,7 @@ export class World {
   updateMods(pl) {
     pl.mods = playerMods(pl.culture, pl.nation, pl.late);
   }
+  countUnique(pid, uq) { let n = 0; for (const u of this.units) if (!u.dead && u.owner === pid && u.unique === uq) n++; for (const b of this.buildings) if (b.owner === pid) for (const q of b.queue) if (q.unique === uq) n++; return n; }
   leaderEra() { let m = 0; for (const p of this.P) if (p.alive && p.era > m) m = p.era; return m; }
   notice(pid, text) { this.events.push({ k: 'notice', to: pid, text }); }
   event(e) { this.events.push(e); }
@@ -612,8 +637,8 @@ export class World {
     const t = this.terrain[i], veh = isVehicle(u), sea = this.season();
     const winterFree = this.P[u.owner].mods.winter && this.ownProvince(u.owner, u.x, u.y);
     let m = 1;
-    if (t === T_HILL) m *= 0.85;
-    else if (t === T_SNOW) m *= winterFree ? 1 : sea === 3 ? 0.7 : 0.85;
+    if (t === T_HILL) m *= u.st.noHillSlow ? 1 : 0.85;
+    else if (t === T_SNOW) m *= winterFree || u.st.noHillSlow ? 1 : sea === 3 ? 0.7 : 0.85;
     else if (t === T_SWAMP) m *= veh ? 0.5 : 0.65;
     else if (t === T_FORD) m *= 0.6;
     else if (t === T_DESERT) m *= 0.9;
@@ -652,7 +677,7 @@ export class World {
     if (this.units.some(u => u.dead)) this.units = this.units.filter(u => !u.dead);
     if (this.buildings.some(b => b.dead)) this.buildings = this.buildings.filter(b => !b.dead);
 
-    if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); this.updateRail(1 * this.settings.speed); this.updateParadrops(); }
+    if (this.tickNo % 10 === 0) { this.updateSupply(1 * this.settings.speed); this.updateDiplomacy(1 * this.settings.speed); this.updateRail(1 * this.settings.speed); this.updateParadrops(); this.updateCelo(1 * this.settings.speed); }
     if (this.tickNo % 50 === 0) this.updateProvinces();
     if (this.tickNo % 5 === 0) this.recount();
     if (this.tickNo % 10 === 0) this.checkDefeat();
@@ -716,7 +741,7 @@ export class World {
     for (const pl of this.P) { pl.pop = 0; pl.popCap = 0; pl.military = 0; pl.nUnits = 0; pl.nBuildings = 0; }
     for (const u of this.units) { const pl = this.P[u.owner]; pl.pop += u.st.pop; pl.nUnits++; if (u.cls !== 'wrk') pl.military++; }
     for (const b of this.buildings) {
-      const pl = this.P[b.owner]; pl.nBuildings++;
+      const pl = this.P[b.owner]; if (!b.st.decor) pl.nBuildings++;
       if (b.built && b.st.pop) pl.popCap += b.st.pop;
       for (const q of b.queue) if (!q.era) pl.pop += 0; // Warteschlange zählt nicht
     }
@@ -746,7 +771,7 @@ export class World {
     });
     if (best && preferUnits) return best;
     this.nearbyBuildings(x, y, r, b => {
-      if (b.dead || !this.enemy(owner, b.owner) || b.type === 'wall' && best || (row && row.bld === 0)) return;
+      if (b.dead || b.st.decor || !this.enemy(owner, b.owner) || b.type === 'wall' && best || (row && row.bld === 0)) return;
       const d = Math.hypot(b.cx - x, b.cy - y) - b.size / 2 + 3; // Gebäude nachrangig
       if (d < r && d < bd) { bd = d; best = b; }
     });
@@ -754,6 +779,7 @@ export class World {
   }
 
   updateUnit(u, dt) {
+    if (u.stunUntil && u.stunUntil > this.time) { u.state = ST.idle; return; }
     if (u.cd > 0) u.cd -= dt;
     const pl = this.P[u.owner];
     if (pl.mods.regen && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + pl.mods.regen * dt);
@@ -855,7 +881,7 @@ export class World {
   }
   // Schadensfaktor des Angreifers: Veteranenrang, Moral, Formation
   dealMul(u, range) {
-    let m = (1 + u.rank * VET_BONUS) * this.buffMul(this.P[u.owner], 'dmg');
+    let m = (1 + u.rank * VET_BONUS) * this.buffMul(this.P[u.owner], 'dmg') * (u.letterBuff ? 1.1 : 1);
     if (u.morale < 50) m *= 0.8;
     const hd = this.P[u.owner].mods.hillDmg; if (hd && hd !== 1 && (u.cls === 'inf' || u.cls === 'spr' || u.cls === 'rng') && this.onHill(u)) m *= hd;
     const f = FORMATIONS[u.form];
@@ -919,12 +945,22 @@ export class World {
     }
   }
   damage(t, dmg, by, src) {
+    if (t.kind === 'b' && t.st.decor) return;
+    if (t.invulnUntil && t.invulnUntil > this.time) return;
+    if (t.guardedBy) {
+      const g = this.ents.get(t.guardedBy);
+      if (g && !g.dead && g !== t && Math.hypot(g.x - (t.cx ?? t.x), g.y - (t.cy ?? t.y)) <= 3.5) {
+        if (t.cls === 'env') return; // Ehrengeleit: Botschafter in Celos Begleitung bleiben unversehrt
+        g.hp -= dmg * 0.5; dmg *= 0.5; if (g.hp <= 0 && !g.dead) this.kill(g, by, src);
+      }
+    }
     t.hp -= dmg;
     if (t.hp <= 0 && !t.dead) this.kill(t, by, src);
   }
   kill(e, by, src) {
     if (e.dead) return;
     if (e.kind === 'u' && e.cls === 'trn') this.trainDestroyed(e);
+    if (e.kind === 'u' && e.st && e.st.celo) this.celoFallen(e);
     if (e.kind === 'u' && e.cargo && e.cargo.length) this.shipSunk(e);
     if (e.kind === 'b' && e.type === 'station' && e.stock && by >= 0) for (const k in e.stock) this.P[by].res[k] += Math.round(e.stock[k] * 0.5);
     if (e.kind === 'u' && e.cls === 'env') this.envoyKilled(e, by);
@@ -1217,6 +1253,7 @@ export class World {
       if (!spawn) return;
       b.queue.shift(); b.qProg = 0;
       const u = this.addUnit(b.owner, q.line, q.unique, spawn[0], spawn[1]);
+      this.nameShip(u, pl);
       pl.pop += st.pop;
       pl.stats.trained++;
       this.cells[this.cellOf(u.x, u.y)].push(u);
@@ -1296,7 +1333,7 @@ export class World {
         if (nx >= 0 && ny >= 0 && nx < this.W && ny < this.H && v[ny * this.W + nx] < val) v[ny * this.W + nx] = val;
       }
     };
-    for (const u of this.units) if (!u.dead && !u.aboard) { const v = this.vis.get(this.P[u.owner].team); stamp(v, u.x, u.y, this.sightOf(u)); stamp(v, u.x, u.y, u.st.detects ? 6 : 3, 2); }
+    for (const u of this.units) if (!u.dead && !u.aboard) { const v = this.vis.get(this.P[u.owner].team); stamp(v, u.x, u.y, this.sightOf(u)); stamp(v, u.x, u.y, u.st.celo ? 10 : u.st.detects ? 6 : 3, 2); }
     for (const b of this.buildings) if (!b.dead) stamp(this.vis.get(this.P[b.owner].team), b.cx, b.cy, b.st.sight + b.size / 2);
     for (const r of this.reveals || []) stamp(this.vis.get(this.P[r.pid].team), r.x, r.y, 12);
   }
@@ -1307,7 +1344,7 @@ export class World {
     if (e.kind === 'u') {
       const s = v[this.idx(Math.floor(e.x), Math.floor(e.y))];
       // Infanterie im Wald und Spione sind erst aus der Nähe (3 Kacheln) zu sehen; Wachgebäude enttarnen Spione
-      const seen = v2 => (e.cls === 'sub' ? v2 === 2 : e.cls === 'spy' ? v2 === 2 || this.detectedSpy(e) : CAMO[e.cls] && this.inForest(e) ? v2 === 2 : v2 >= 1);
+      const seen = v2 => (e.st && e.st.camo && e.state !== ST.attack ? v2 === 2 : e.cls === 'sub' ? v2 === 2 : e.cls === 'spy' ? v2 === 2 || this.detectedSpy(e) : CAMO[e.cls] && this.inForest(e) ? v2 === 2 : v2 >= 1);
       if (seen(s)) return true;
       for (const q of this.P) if (q.team !== this.P[pid].team && this.sharesVision(pid, q.id)) { const v2 = this.vis.get(q.team); if (v2 && seen(v2[this.idx(Math.floor(e.x), Math.floor(e.y))])) return true; }
       return false;
@@ -1479,7 +1516,7 @@ export class World {
       const carry = e.owner === pid && e.carry && e.carry.amt > 0 ? RES.indexOf(e.carry.res) + 1 : 0;
       return [e.id, e.typeIdx, e.owner, Math.round(e.x * 20), Math.round(e.y * 20), Math.ceil(e.hp), e.maxHp, e.state, carry, Math.round(((e.dir || 0) + Math.PI) * 10),
         e.rank || 0, e.owner === pid ? Math.round((e.morale ?? 100) / 10) : 0, e.owner === pid && e.supplied === false ? 0 : 1, FORMATION_KEYS.indexOf(e.form || 'none'),
-        e.air && e.owner === pid ? Math.round(e.fuel / e.st.fuel * 10) : -1, e.air && e.owner === pid ? Math.ceil(e.ammo) : -1];
+        e.air && e.owner === pid ? Math.round(e.fuel / e.st.fuel * 10) : -1, e.air && e.owner === pid ? Math.ceil(e.ammo) : -1, e.title || 0];
     }
     return [e.id, e.typeIdx, e.owner, e.x, e.y, Math.ceil(e.hp), e.maxHp, e.built ? 100 : Math.floor(e.progress * 100), e.queue.length ? 1 : 0, e.era];
   }
@@ -1546,3 +1583,4 @@ installDiplomacy(World);
 installRail(World);
 installNaval(World);
 installAir(World);
+installCelo(World);
