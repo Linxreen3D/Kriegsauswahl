@@ -1226,5 +1226,13 @@
  "Mi-24 „Hind“": "Mi-24 “Hind”",
  "Palisade": "Palisade",
  "Union": "Union",
- "Druschina": "Druzhina"
+ "Druschina": "Druzhina",
+ "{0} · {1}": "{0} · {1}",
+ "{0} · {1} · {2}": "{0} · {1} · {2}",
+ "{0} Holz": "{0} wood",
+ "{0} Nahrung": "{0} food",
+ "{0} Stein": "{0} stone",
+ "{0} Gold": "{0} gold",
+ "{0}, {1}": "{0}, {1}",
+ "{0} und {1}": "{0} and {1}"
 }
