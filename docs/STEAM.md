@@ -66,6 +66,13 @@ Unity wäre die einzige ernsthafte Alternative, aber erst, wenn die Web-Technik 
 2. Rechner A: „Mehrspieler-Raum erstellen“ und dann „Steam-Freunde einladen“.
 3. Rechner B: Einladung im Steam-Overlay oder in der Freundesliste annehmen.
 
+**Grafiken für Steam (Entwürfe):** `node tools/steam-art.cjs` erzeugt sie in `build/steam/`.
+- Kapseln: Header 920×430, Small 462×174, Main 1232×706, Vertical 748×896.
+- Bibliothek: Capsule 600×900, Hero 3840×1240, Logo 1280×720 transparent.
+- Seitenhintergrund 1438×810.
+- Je Errungenschaft ein Symbol, freigeschaltet und gesperrt (256×256, im Backend hochladen).
+- Hero und Seitenhintergrund nutzen `build/steam/scene.png`. Sobald die Blender-Modelle da sind, eine schönere Spielszene dort ablegen und das Skript erneut laufen lassen.
+
 **Im Steamworks-Backend einrichten, sobald die App-ID da ist:**
 - Die App-ID in `desktop/steam.json` eintragen.
 - **Errungenschaften** mit genau diesen API-Namen anlegen: FIRST_WIN, WIN_HARD, ERA_MEDIEVAL, ERA_INDUSTRY, ERA_COLD_WAR, LEADER, FREIGHT, LANDING, VETERAN, PEACE, MEDIATOR, WONDER, INTERCEPT, CELO. Namen und Beschreibungen stehen in `ACHIEVEMENTS`.
