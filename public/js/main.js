@@ -2,6 +2,7 @@ import { Renderer3D } from './render3d.js';
 import { sfx } from './sound.js';
 import { createDiplomacy } from './diplomacy.js';
 import { createConference } from './conference.js';
+import { icon, iconize, EMOJI } from './icons.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
   RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, NUKE, NUCLEAR_NATIONS, LEADER, LEADER_CD, leaderOptions, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
@@ -38,11 +39,53 @@ const UNIT_ICONS = {
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
 const BLD_ICONS = { nukelab: '☢', silo: '🚀', abm: '🛰', bunker: '🏚', celohouse: '🏡', memorial: '🪦', town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', airfield: '🛫', flakpos: '💥', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
-function iconOf(def) {
-  if (def.kind === 'b') return BLD_ICONS[def.key];
-  if (def.unique) return def.icon || UNIQUE_ICONS[def.unique];
-  return (UNIT_ICONS[def.line] || [])[def.era] || '•';
+// Symbole für Einheiten (nach Linie und Epoche) und Gebäude – einheitlicher Satz statt Emojis
+const BLD_ICON = { town: 'town', house: 'house', storage: 'storage', farm: 'farm', outpost: 'outpost', road: 'road', bridge: 'bridge', rail: 'rail', station: 'station', dock: 'dock',
+  coastgun: 'coastgun', airfield: 'airfield', flakpos: 'flakpos', barracks: 'barracks', range: 'range_b', stable: 'stable', tower: 'tower', workshop: 'workshop', wall: 'wall',
+  nukelab: 'nukelab', silo: 'silo', abm: 'abm', bunker: 'bunker', celohouse: 'celohouse', memorial: 'memorial' };
+const UQ_ICON = { uq_steppe: 'cavalry', uq_traders: 'gold', uq_builders: 'catapult', uq_warriors: 'axe' };
+function lineIcon(line, era) {
+  switch (line) {
+    case 'worker': return 'worker';
+    case 'inf': return era <= 1 ? 'axe' : era <= 3 ? 'sword' : era === 4 ? 'helmet' : era === 5 ? 'musket' : era === 6 ? 'rifle' : 'soldier';
+    case 'spear': return era <= 4 ? 'spear' : era === 5 ? 'musket' : 'rocket';
+    case 'rng': return era <= 4 ? 'bow' : era === 5 ? 'musket' : 'rifle';
+    case 'cav': return era >= 6 ? 'tank' : 'cavalry';
+    case 'sie': return era <= 3 ? 'catapult' : era <= 5 ? 'cannon' : 'artillery';
+    case 'art': return era <= 5 ? 'cannon' : 'artillery';
+    case 'warship': return era <= 3 ? 'galley' : era <= 5 ? 'sailship' : 'warship';
+    case 'fishboat': case 'transport': case 'battleship': case 'sub': case 'scout': case 'fighter': case 'bomber': case 'heli': case 'para': case 'flak':
+    case 'envoy': case 'spy': case 'train': case 'armtrain': case 'med': return line;
+    default: return 'star';
+  }
 }
+function iconOf(def) {
+  if (def.kind === 'b') return icon(BLD_ICON[def.key] || 'build');
+  if (def.unique && def.unique.includes('celo')) return icon('celo');
+  if (def.unique && UQ_ICON[def.unique]) return icon(UQ_ICON[def.unique]);
+  return icon(lineIcon(def.line, def.era)) + (def.unique ? '<i class="nat-mark"></i>' : '');
+}
+// Alle verbliebenen Emojis im Dokument (auch aus Server-Meldungen) durch Symbole ersetzen
+const EMO_RE = /(?:\p{Extended_Pictographic}|[◆☰✕✖★✚⚔⏸▶◀⁘➖⬛⏬])/u;
+function deEmoji(root) {
+  const fix = t => {
+    if (!EMO_RE.test(t.data) || !t.parentNode || t.parentNode.closest('svg, textarea, script')) return;
+    const span = document.createElement('span');
+    span.innerHTML = iconize(esc(t.data));
+    t.replaceWith(...span.childNodes);
+  };
+  if (root.nodeType === 3) return fix(root);
+  if (root.nodeType !== 1) return;
+  const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [];
+  while (tw.nextNode()) if (EMO_RE.test(tw.currentNode.data)) list.push(tw.currentNode);
+  list.forEach(fix);
+  // Titel-Attribute (native Tooltips) ohne Emojis
+  if (root.querySelectorAll) for (const el of [root, ...root.querySelectorAll('[title]')]) if (el.title && EMO_RE.test(el.title)) el.title = el.title.replace(new RegExp(EMO_RE.source, 'gu'), '').replace(/^\s+/, '');
+}
+new MutationObserver(ms => { for (const m of ms) { if (m.type === 'characterData') deEmoji(m.target); else m.addedNodes.forEach(deEmoji); } })
+  .observe(document.documentElement, { subtree: true, childList: true, characterData: true });
+document.addEventListener('DOMContentLoaded', () => deEmoji(document.body));
+deEmoji(document.body);
 function keyIcon(key) { return iconOf(TYPES[TYPE_INDEX[key]]); }
 
 // ---------------- Zustand ----------------
@@ -434,7 +477,7 @@ function drawEndChart(m) {
   const maxT = Math.max(1, ...m.players.flatMap(p => p.history.map(h => h[0])));
   const k = +($('endMetric').value || 1), label = { 1: 'Bevölkerung', 2: 'Armee', 3: 'Epoche', 4: 'Gesammelte Rohstoffe' }[k];
   const maxV = Math.max(1, ...m.players.flatMap(p => p.history.map(h => h[k])));
-  g.strokeStyle = 'rgba(255,255,255,0.08)'; g.fillStyle = '#8d9ab3'; g.font = '11px Inter, sans-serif';
+  g.strokeStyle = 'rgba(255,255,255,0.08)'; g.fillStyle = '#9a958a'; g.font = '11px Plex, sans-serif';
   for (let i = 0; i <= 4; i++) { const y = H - pad - (H - 2 * pad) * i / 4; g.beginPath(); g.moveTo(pad, y); g.lineTo(W - 10, y); g.stroke(); g.fillText(Math.round(maxV * i / 4), 4, y + 4); }
   g.fillText(label + ' im Verlauf', pad, 16);
   for (const p of m.players) {
@@ -661,7 +704,7 @@ function updateCmdCard(force) {
           const needOk = !b.needs || [...G.ents.values()].some(x => x.owner === G.you && x.def.key === b.needs && x.prog >= 100);
           const ok = era >= b.minEra && nucOk && needOk;
           put(b.key, {
-            icon: BLD_ICONS[type], title: st.name || b.name, desc: b.desc + (era < b.minEra ? ` (ab ${ERAS[b.minEra].name})` : !nucOk ? ' (nicht für deine Nation)' : !needOk ? ` (benötigt ${BUILDINGS[b.needs].name})` : ''), cost: st.cost,
+            icon: icon(BLD_ICON[type] || 'build'), title: st.name || b.name, desc: b.desc + (era < b.minEra ? ` (ab ${ERAS[b.minEra].name})` : !nucOk ? ' (nicht für deine Nation)' : !needOk ? ` (benötigt ${BUILDINGS[b.needs].name})` : ''), cost: st.cost,
             off: !ok || !affordable(st.cost), fn: () => ok && enterBuildMode(type),
           });
         }
@@ -712,7 +755,7 @@ function updateCmdCard(force) {
           const national = o.unique && o.unique.startsWith('nu_'), key = national ? natKeys[natI++] || 'V' : o.unique ? 'E' : LINES[o.line].key;
           const nu = national ? NATION_UNIT[o.unique] : null;
           put(key, {
-            icon: national ? TYPES[TYPE_INDEX[o.unique]].icon : o.unique ? UNIQUE_ICONS[o.unique] : (UNIT_ICONS[o.line] || [])[Math.max(era, LINES[o.line].minEra)] || '•', title: `${st.name} ausbilden${nu && nu.max ? ` (max. ${nu.max})` : ''}`, cost: st.cost,
+            icon: keyIcon(unitKey(o.line, Math.max(era, LINES[o.line].minEra), o.unique)), title: `${st.name} ausbilden${nu && nu.max ? ` (max. ${nu.max})` : ''}`, cost: st.cost,
             desc: `Leben ${st.hp} · Angriff ${st.atk.toFixed(0)} · Reichweite ${st.range < 1 ? 'Nahkampf' : st.range.toFixed(0)} · Bevölkerung ${st.pop}` + (national ? ` · Nationaleinheit (${TYPES[TYPE_INDEX[o.unique]].hist || ''})` : o.unique ? ' · Spezialeinheit deiner Kultur' : ''),
             off: !affordable(st.cost), fn: ev => cmd({ c: 'train', ids: same.map(b => b.id), line: o.line, unique: o.unique, n: ev && ev.shiftKey ? 5 : 1 }),
             cnt: queueCount(same, unitKey(o.line, Math.max(era, LINES[o.line].minEra), o.unique)),
@@ -747,7 +790,7 @@ function updateCmdCard(force) {
       put('B', { icon: '🗑', title: 'Löschen (Entf)', fn: deleteSelection });
     }
   }
-  const html = slots.map((b, i) => b ? `<div class="cmd ${b.off ? 'off' : ''} ${b.on ? 'on' : ''}" data-slot="${i}"><span class="hk">${b.key}</span>${b.icon}${b.cnt ? `<span class="cnt">${b.cnt}</span>` : ''}</div>` : '<div class="cmd empty"></div>').join('');
+  const html = slots.map((b, i) => b ? `<div class="cmd ${b.off ? 'off' : ''} ${b.on ? 'on' : ''}" data-slot="${i}">${iconize(b.icon)}<span class="hk">${b.key}</span>${b.cnt ? `<span class="cnt">${b.cnt}</span>` : ''}</div>` : '<div class="cmd empty"></div>').join('');
   cardButtons = slots;
   if ($('cmdCard')._html !== html) { $('cmdCard').innerHTML = html; $('cmdCard')._html = html; }
 }
@@ -812,7 +855,7 @@ function updateSelInfo() {
         queue = '<div class="queue">' + q[1].map((k, i) => `<div class="qi ${i === 0 && q[4] ? 'blocked' : ''}" data-cancel="${e.id}:${i}" title="${i === 0 && q[4] ? 'Bevölkerungslimit erreicht – baue Häuser! ' : ''}Klicken zum Abbrechen">${k === 'era' ? '⬆' : k === 'wonder' ? '🏛' : k === 'late' ? '🔬' : k === 'nuke' ? '☢' : keyIcon(k)}${i === 0 ? `<span class="bar" style="width:${Math.min(100, q[2] / q[3] * 100)}%"></span>` : ''}</div>`).join('') + '</div>';
       }
     }
-    html = `<div class="sel-main"><div class="portrait" style="border-color:${p ? p.color : '#888'}">${iconOf(e.def)}</div>
+    html = `<div class="sel-main"><div class="portrait" style="border-bottom-color:${p ? p.color : '#888'}">${iconOf(e.def)}</div>
       <div class="sel-text"><h3>${esc(name)}</h3><div class="sub">${p ? esc(p.name) : ''}${e.def.kind === 'u' ? ' · ' + ERAS[e.def.era].name : ''}</div>
       <div class="hpbar"><i style="width:${Math.max(0, e.hp / e.maxHp * 100)}%"></i></div>
       <div class="stats"><span>❤ ${Math.ceil(e.hp)}/${e.maxHp}</span>${stats}</div>${queue}</div></div>`;

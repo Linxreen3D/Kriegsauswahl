@@ -34,7 +34,7 @@ export function createConference({ G, send, notice, portrait }) {
   }
   function partyHtml(id) {
     const p = pl(id), L = p.leader && LEADER[p.leader];
-    return `<div class="conf-party" style="border-color:${p.color}">${L ? portrait(L) : '<span class="leader-portrait"><i>🏳</i></span>'}<div><b>${esc(p.name)}</b><div class="muted small">${p.nation ? esc(NATIONS[p.nation].name) : ''}${L ? ' · ' + esc(L.name) : ''}</div></div></div>`;
+    return `<div class="conf-party" style="border-bottom-color:${p.color}">${L ? portrait(L) : '<span class="leader-portrait"><i>🏳</i></span>'}<div><b>${esc(p.name)}</b><div class="muted small">${p.nation ? esc(NATIONS[p.nation].name) : ''}${L ? ' · ' + esc(L.name) : ''}</div></div></div>`;
   }
   function editorHtml() {
     const med = !party();

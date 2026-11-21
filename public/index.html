@@ -4,11 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Frontlinien</title>
-  <meta name="theme-color" content="#0b1220">
+  <meta name="theme-color" content="#0d0e0f">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=Cinzel:wght@600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script type="importmap">{ "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }</script>
 </head>
@@ -19,7 +16,7 @@
   <!-- Startbildschirm -->
   <section id="home" class="screen">
     <div class="card hero">
-      <div class="logo"><span class="logo-mark">◆</span> FRONTLINIEN</div>
+      <div class="logo">Frontlinien</div>
       <p class="tagline">Echtzeitstrategie von der Steinzeit bis zum Kalten Krieg – mit Freunden.</p>
       <label class="field">Dein Name
         <input id="nameInput" maxlength="20" placeholder="Kommandant" autocomplete="nickname">
@@ -43,6 +40,14 @@
           <li>Bauen: Arbeiter wählen → Gebäude in der Befehlsleiste (Hotkeys) → platzieren. <b>Shift</b> = mehrere.</li>
         </ul>
       </details>
+      <details class="howto">
+        <summary>Mitwirkende</summary>
+        <ul>
+          <li>Symbole: game-icons.net (Lorc, Delapouite u. a., CC BY 3.0) und Lucide (ISC)</li>
+          <li>Schriften: Oswald und IBM Plex Sans Condensed (SIL Open Font License)</li>
+          <li>3D: three.js (MIT)</li>
+        </ul>
+      </details>
       <p class="dedication">In Erinnerung an Celo. Für Ljilje, Antonija und Marija.</p>
     </div>
   </section>
@@ -52,7 +57,7 @@
     <div class="card lobby-card">
       <div class="lobby-head">
         <div>
-          <div class="muted small">Raumcode</div>
+          <div class="panel-title">Raumcode</div>
           <div class="code-row"><span id="roomCode" class="room-code">-----</span>
             <button id="copyLink" class="btn small">Einladungslink kopieren</button></div>
         </div>
@@ -81,7 +86,7 @@
       </div>
       <div id="saveInfo" class="save-info hidden"></div>
       <div class="lobby-foot">
-        <button id="loadSaveBtn" class="btn host-only">📂 Spielstand laden</button>
+        <button id="loadSaveBtn" class="btn host-only">Spielstand laden</button>
         <span id="lobbyHint" class="muted"></span>
         <button id="startBtn" class="btn primary big host-only">Spiel starten</button>
       </div>
@@ -156,10 +161,10 @@
         <h2>Menü</h2>
         <p class="muted">Raumcode: <b id="menuCode"></b></p>
         <button id="menuInvite" class="btn">Einladungslink kopieren</button>
-        <button id="pauseBtn" class="btn host-only">⏸ Pause</button>
-        <button id="saveBtn" class="btn host-only">💾 Spiel speichern</button>
+        <button id="pauseBtn" class="btn host-only">Pause</button>
+        <button id="saveBtn" class="btn host-only">Spiel speichern</button>
         <p class="muted small">Alle 5 Spielminuten wird automatisch gespeichert.</p>
-        <button id="chronBtn" class="btn">📜 Chronik</button>
+        <button id="chronBtn" class="btn">Chronik</button>
         <button id="surrenderBtn" class="btn danger">Aufgeben</button>
         <button id="leaveGame" class="btn">Spiel verlassen</button>
         <button id="closeMenu" class="btn primary">Weiterspielen</button>
@@ -178,11 +183,11 @@
     </div>
 
     <div id="chronDlg" class="modal hidden">
-      <div class="card chron-card"><h2>📜 Chronik</h2><div id="chronList" class="chron-list"></div><button id="chronClose" class="btn">Schließen</button></div>
+      <div class="card chron-card"><h2>Chronik</h2><div id="chronList" class="chron-list"></div><button id="chronClose" class="btn">Schließen</button></div>
     </div>
 
     <div id="pauseOverlay" class="modal hidden">
-      <div class="card"><h2>⏸ Pausiert</h2><p class="muted">Der Gastgeber hat das Spiel angehalten.</p><button id="pauseResume" class="btn primary host-only">▶ Fortsetzen</button></div>
+      <div class="card"><h2>Pausiert</h2><p class="muted">Der Gastgeber hat das Spiel angehalten.</p><button id="pauseResume" class="btn primary host-only">Fortsetzen</button></div>
     </div>
 
     <div id="endScreen" class="modal hidden">
@@ -193,7 +198,7 @@
         <canvas id="endChart" width="680" height="220"></canvas>
         <div id="endAwards" class="awards"></div>
         <table id="endTable"></table>
-        <details class="end-chron"><summary>📜 Chronik der Partie</summary><div id="endChron" class="chron-list"></div></details>
+        <details class="end-chron"><summary>Chronik der Partie</summary><div id="endChron" class="chron-list"></div></details>
         <div class="row center">
           <button id="rematchBtn" class="btn primary">Zurück zur Lobby</button>
           <button id="endLeave" class="btn">Hauptmenü</button>
