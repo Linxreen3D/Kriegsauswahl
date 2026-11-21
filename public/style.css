@@ -363,3 +363,10 @@ body:not(.desktop) .desktop-only { display: none !important; }
 .options-card .setting select { min-width: 140px; }
 .join-row.lan input { text-transform: none; letter-spacing: 0; font-family: var(--font); font-size: 14px; text-align: left; }
 body:not(.steam) .steam-only { display: none !important; }
+
+.keys-box summary { cursor: pointer; font-family: var(--font-display); text-transform: uppercase; letter-spacing: .1em; font-size: 12px; color: var(--muted); padding: 6px 0; }
+.keys-list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 18px; max-height: 40vh; overflow: auto; margin: 6px 0; }
+.key-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+.key-btn { min-width: 64px; font-family: var(--font-display); }
+.key-btn.wait { border-color: var(--accent); color: var(--accent); }
+.key-sub { grid-column: 1 / -1; margin-top: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }

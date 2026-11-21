@@ -114,6 +114,10 @@
         <div class="setting"><label for="o_camSpeed">Kamera-Tempo</label><output id="o_camSpeedOut"></output><input type="range" id="o_camSpeed" min="50" max="200" step="10"></div>
         <div class="setting"><label for="o_edge">Kamera am Bildschirmrand bewegen</label><select id="o_edge"><option value="1">An</option><option value="0">Aus</option></select></div>
       </div>
+      <details class="keys-box"><summary>Tastenbelegung</summary>
+        <div id="keysList" class="keys-list"></div>
+        <button id="keysReset" class="btn ghost small">Standard wiederherstellen</button>
+      </details>
       <p id="o_hint" class="muted small"></p>
       <p id="o_lan" class="muted small desktop-only"></p>
       <button id="optionsClose" class="btn primary">Schließen</button>

@@ -716,6 +716,16 @@ function affordable(cost) { for (const k in cost) if ((G.me.res[k] || 0) < cost[
 
 // ---------------- Befehlsleiste ----------------
 const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'T', 'A', 'S', 'D', 'F', 'G', 'Y', 'X', 'C', 'V', 'B'];
+// Tastenbelegung (änderbar im Optionsmenü). Befehlsplätze behalten intern ihre Buchstaben, die echte Taste steht in KEYS.slots.
+const KEY_DEFAULTS = { diplomacy: 'P', leader: 'L', town: 'H', attackMove: 'A', idle: '.', alert: ' ', score: 'Tab', menu: 'F10', delete: 'Delete', chat: 'Enter',
+  camLeft: 'ArrowLeft', camRight: 'ArrowRight', camUp: 'ArrowUp', camDown: 'ArrowDown', slots: SLOT_KEYS.slice() };
+const KEY_LABELS = { diplomacy: 'Diplomatie', leader: 'Führer-Fähigkeit', town: 'Haupthaus', attackMove: 'Angriffsbewegung', idle: 'Untätiger Arbeiter', alert: 'Zur letzten Warnung',
+  score: 'Nationen-Übersicht', menu: 'Menü', delete: 'Löschen', chat: 'Chat', camLeft: 'Kamera links', camRight: 'Kamera rechts', camUp: 'Kamera hoch', camDown: 'Kamera runter' };
+const KEYS = (() => { try { const k = JSON.parse(localStorage.getItem('fl_keys') || 'null'); if (k && Array.isArray(k.slots) && k.slots.length === 15) return { ...KEY_DEFAULTS, ...k }; } catch { /* egal */ } return { ...KEY_DEFAULTS, slots: SLOT_KEYS.slice() }; })();
+const saveKeys = () => { try { localStorage.setItem('fl_keys', JSON.stringify(KEYS)); } catch { /* egal */ } };
+const keyName = e => (e.key.length === 1 ? (e.key === 'z' || e.key === 'Z' ? 'Y' : e.key.toUpperCase()) : e.key);
+const keyLabel = k => ({ ' ': 'Leertaste', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓', Delete: 'Entf', Enter: 'Enter', Tab: 'Tab', Escape: 'Esc' }[k] || k);
+const slotKey = letter => keyLabel(KEYS.slots[SLOT_KEYS.indexOf(letter)] || letter);
 let cardButtons = [];
 function updateCmdCard(force) {
   if (!force && performance.now() - (G.lastCard || 0) < 250) return;
@@ -829,7 +839,7 @@ function updateCmdCard(force) {
       put('B', { icon: '🗑', title: 'Löschen (Entf)', fn: deleteSelection });
     }
   }
-  const html = slots.map((b, i) => b ? `<div class="cmd ${b.off ? 'off' : ''} ${b.on ? 'on' : ''}" data-slot="${i}">${iconize(b.icon)}<span class="hk">${b.key}</span>${b.cnt ? `<span class="cnt">${b.cnt}</span>` : ''}</div>` : '<div class="cmd empty"></div>').join('');
+  const html = slots.map((b, i) => b ? `<div class="cmd ${b.off ? 'off' : ''} ${b.on ? 'on' : ''}" data-slot="${i}">${iconize(b.icon)}<span class="hk">${esc(slotKey(b.key))}</span>${b.cnt ? `<span class="cnt">${b.cnt}</span>` : ''}</div>` : '<div class="cmd empty"></div>').join('');
   cardButtons = slots;
   if ($('cmdCard')._html !== html) { $('cmdCard').innerHTML = html; $('cmdCard')._html = html; }
 }
@@ -847,7 +857,8 @@ function deleteSelection() {
 function showTooltip(b, x, y) {
   const tt = $('tooltip');
   if (!b) { tt.classList.add('hidden'); return; }
-  let html = `<b>${esc(b.title)}</b>`;
+  const title = b.key ? String(b.title).replace(/\s\((?:[A-Z]|Entf)\)$/, '') + ` (${slotKey(b.key)})` : b.title;
+  let html = `<b>${esc(title)}</b>`;
   if (b.desc) html += `<div class="muted">${esc(b.desc)}</div>`;
   if (b.cost) html += '<div class="cost">' + Object.entries(b.cost).map(([k, v]) => `<span class="${(G.me.res[k] || 0) < v ? 'no' : ''}">${RES_ICONS[k]} ${v}</span>`).join('') + '</div>';
   tt.innerHTML = html;
@@ -1137,15 +1148,15 @@ function setupInput() {
       return;
     }
     if (G.phase !== 'play' && G.phase !== 'end') return;
-    keys.add(e.key);
-    const k = e.key;
-    if (k === 'Enter') { $('chatInput').classList.remove('hidden'); $('chatInput').focus(); e.preventDefault(); return; }
+    const k = keyName(e);
+    keys.add(k);
+    if (k === KEYS.chat) { $('chatInput').classList.remove('hidden'); $('chatInput').focus(); e.preventDefault(); return; }
     if (k === 'Escape') { if (UI.mode) cancelMode(); else if (!$('menu').classList.contains('hidden')) $('menu').classList.add('hidden'); else setSelection([]); return; }
-    if (k === 'Tab') { e.preventDefault(); $('scorePanel').classList.toggle('hidden'); updateScore(); return; }
-    if (k === 'F10') { e.preventDefault(); $('menu').classList.toggle('hidden'); return; }
-    if (k === 'Delete') { deleteSelection(); return; }
-    if (k === ' ') { e.preventDefault(); const a = UI.lastAlert || G.home; if (a) { renderer.cam.x = a.x; renderer.cam.y = a.y; renderer.clampCam(); } return; }
-    if (k === '.' || k === ',') { cycleIdle(); return; }
+    if (k === KEYS.score) { e.preventDefault(); $('scorePanel').classList.toggle('hidden'); updateScore(); return; }
+    if (k === KEYS.menu) { e.preventDefault(); $('menu').classList.toggle('hidden'); return; }
+    if (k === KEYS.delete) { deleteSelection(); return; }
+    if (k === KEYS.alert) { e.preventDefault(); const a = UI.lastAlert || G.home; if (a) { renderer.cam.x = a.x; renderer.cam.y = a.y; renderer.clampCam(); } return; }
+    if (k === KEYS.idle || (KEYS.idle === '.' && k === ',')) { cycleIdle(); return; }
     if (/^[1-9]$/.test(k)) {
       if (e.ctrlKey || e.metaKey) { e.preventDefault(); G.groups[k] = [...G.selected]; notice(`Gruppe ${k} gespeichert (${G.groups[k].length})`); return; }
       const ids = (G.groups[k] || []).filter(id => G.ents.has(id));
@@ -1157,17 +1168,17 @@ function setupInput() {
       return;
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const up = k.toUpperCase();
-    if (up === 'P') { DIP.open(); return; }
-    if (up === 'L' && G.me.leader) { useLeaderAbility(); return; }
-    if (up === 'H') { const tc = [...G.ents.values()].find(x => x.owner === G.you && x.def.key === 'town'); if (tc) { setSelection([tc.id]); centerOn([tc.id]); } return; }
-    if (up === 'A' && selectedOwn().some(x => x.def.kind === 'u')) {
+    const up = k;
+    if (up === KEYS.diplomacy) { DIP.open(); return; }
+    if (up === KEYS.leader && G.me.leader) { useLeaderAbility(); return; }
+    if (up === KEYS.town) { const tc = [...G.ents.values()].find(x => x.owner === G.you && x.def.key === 'town'); if (tc) { setSelection([tc.id]); centerOn([tc.id]); } return; }
+    if (up === KEYS.attackMove && selectedOwn().some(x => x.def.kind === 'u')) {
       UI.mode = { amove: true }; renderer.canvas.style.cursor = 'crosshair'; updateCmdCard(true); return;
     }
-    const i = SLOT_KEYS.indexOf(up === 'Z' ? 'Y' : up);
+    const i = KEYS.slots.indexOf(up);
     if (i >= 0 && cardButtons[i] && cardButtons[i].fn) { if (!cardButtons[i].off || cardButtons[i].title.startsWith('Aufstieg')) cardButtons[i].fn(e); else sfx.error(); }
   });
-  window.addEventListener('keyup', e => keys.delete(e.key));
+  window.addEventListener('keyup', e => keys.delete(keyName(e)));
   window.addEventListener('blur', () => keys.clear());
   window.addEventListener('resize', () => renderer.resize());
 
@@ -1245,6 +1256,30 @@ function setupOptions() {
   $('o_edge').onchange = e => { OPT.edge = e.target.value === '1'; saveOpt(); };
   $('o_fullscreen').onchange = e => DESKTOP && DESKTOP.setFullscreen(e.target.value === '1');
   $('optionsDlg').addEventListener('keydown', e => e.stopPropagation());
+  // Neue Taste abfangen, solange eine Belegung wartet (vor allen anderen Tastenhandlern)
+  window.addEventListener('keydown', e => {
+    if (!KEYS._wait) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    const w = KEYS._wait; KEYS._wait = null;
+    if (e.key !== 'Escape') {
+      const nk = keyName(e), get = id => (id.startsWith('slot') ? KEYS.slots[+id.slice(4)] : KEYS[id]), set = (id, v) => { if (id.startsWith('slot')) KEYS.slots[+id.slice(4)] = v; else KEYS[id] = v; };
+      // Doppelbelegung vermeiden: die andere Aktion bekommt die alte Taste
+      const all = [...Object.keys(KEY_LABELS), ...KEYS.slots.map((x, i) => 'slot' + i)];
+      const clash = all.find(id => id !== w && get(id) === nk);
+      if (clash) set(clash, get(w));
+      set(w, nk); saveKeys();
+    }
+    renderKeys(); updateCmdCard(true);
+  }, true);
+  $('keysReset').onclick = () => { Object.assign(KEYS, KEY_DEFAULTS, { slots: SLOT_KEYS.slice() }); saveKeys(); renderKeys(); updateCmdCard(true); };
+  $('keysList').onclick = e => { const b = e.target.closest('[data-key]'); if (!b) return; KEYS._wait = b.dataset.key; renderKeys(); b.focus(); };
+  renderKeys();
+}
+function renderKeys() {
+  const row = (id, label, key) => `<div class="key-row"><span>${esc(label)}</span><button class="btn small key-btn ${KEYS._wait === id ? 'wait' : ''}" data-key="${id}">${KEYS._wait === id ? 'Taste drücken …' : esc(keyLabel(key))}</button></div>`;
+  $('keysList').innerHTML = Object.entries(KEY_LABELS).map(([id, l]) => row(id, l, KEYS[id])).join('')
+    + '<div class="key-sub">Befehlsleiste (Plätze von links oben nach rechts unten)</div>'
+    + KEYS.slots.map((k, i) => row('slot' + i, `Platz ${Math.floor(i / 5) + 1}.${(i % 5) + 1}`, k)).join('');
 }
 
 // ---------------- UI-Verdrahtung ----------------
@@ -1335,7 +1370,7 @@ function loop(now) {
     // Kamera: Pfeiltasten & Bildschirmrand
     const sp = 26 / renderer.cam.z * dt * OPT.camSpeed;
     let dx = 0, dy = 0;
-    if (keys.has('ArrowLeft')) dx -= 1; if (keys.has('ArrowRight')) dx += 1; if (keys.has('ArrowUp')) dy -= 1; if (keys.has('ArrowDown')) dy += 1;
+    if (keys.has(KEYS.camLeft)) dx -= 1; if (keys.has(KEYS.camRight)) dx += 1; if (keys.has(KEYS.camUp)) dy -= 1; if (keys.has(KEYS.camDown)) dy += 1;
     if (OPT.edge && mouse.inside && document.hasFocus() && !UI.box) {
       const m = 4;
       if (mouse.x <= m) dx -= 1; else if (mouse.x >= window.innerWidth - m) dx += 1;
@@ -1376,7 +1411,7 @@ async function init() {
   renderer = new Renderer3D($('game'), $('overlay'));
   DIP = createDiplomacy({ G, send, notice, selectedOwn, conference: id => CONF && CONF.request(id) });
   CONF = createConference({ G, send, notice, portrait: l => leaderPortrait(l) });
-  window.__renderer = renderer; window.__send = send; window.__G = G; // für automatisierte Tests
+  window.__renderer = renderer; window.__send = send; window.__G = G; window.__KEYS = KEYS; // für automatisierte Tests
   await renderer.init();
   window.__G = G; window.__R = renderer; // Debug-Zugriff
   setupInput();

@@ -37,7 +37,8 @@ Unity wäre die einzige ernsthafte Alternative, aber erst, wenn die Web-Technik 
   - `npm run dist:linux` baut ein AppImage (getestet).
   - `npm run dist:win` baut einen Windows-Installer, das geht nur unter Windows.
   - Bequemer: GitHub → Actions → „Desktop-Build“ → „Run workflow“. Das baut beide Versionen und stellt sie zum Download bereit.
-- **Noch offen in Phase A:** Tastenbelegung ändern und Sprache wählen. Die Sprache kommt mit der englischen Übersetzung in Phase C.
+- Tastenbelegung im Optionsmenü änderbar: alle 15 Plätze der Befehlsleiste und 14 globale Kürzel, Doppelbelegungen werden getauscht, Standard wiederherstellbar.
+- **Noch offen in Phase A:** Sprache wählen. Sie kommt mit der englischen Übersetzung in Phase C.
 
 **Ursprünglicher Plan:**
 1. **Electron-Hülle:** Ein Fenster lädt das Spiel. Der Spielserver (`server/`) läuft im selben Programm, der Gastgeber ist also selbst Server („Listen-Server“).
