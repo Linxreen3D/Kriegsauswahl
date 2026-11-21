@@ -289,6 +289,12 @@ export class AI {
   }
   pickTarget() {
     const w = this.w;
+    // aufgedeckte Atomanlagen haben Vorrang
+    for (const r of w.reveals || []) {
+      if (r.pid !== this.pid || !r.site || r.until < w.time) continue;
+      const b = w.ents.get(r.site);
+      if (b && !b.dead && w.enemy(this.pid, b.owner)) return { x: b.cx, y: b.cy };
+    }
     let best = null, bd = Infinity;
     for (const b of w.buildings) {
       if (b.dead || !w.enemy(this.pid, b.owner)) continue;

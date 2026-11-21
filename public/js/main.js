@@ -358,6 +358,7 @@ function onEvent(e, now) {
       break;
     case 'impact': renderer.addEffect('boom', e.x, e.y); sfx.strike(); break;
     case 'notice': notice(e.text, e.to === -1 ? 'bad' : ''); break;
+    case 'ping': UI.pings.push({ x: e.x, y: e.y, t0: now }); UI.lastAlert = { x: e.x, y: e.y }; break;
     case 'alert':
       UI.pings.push({ x: e.x, y: e.y, t0: now }); UI.lastAlert = { x: e.x, y: e.y };
       notice('⚠ Du wirst angegriffen! (Leertaste)', 'bad'); sfx.alert();

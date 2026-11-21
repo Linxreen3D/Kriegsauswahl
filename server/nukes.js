@@ -60,7 +60,28 @@ export function installNukes(World) {
     for (const pid of hit) this.checkBreach && this.checkBreach(pl.id, pid);
   };
 
+  // Aufklärer, Botschafter und Spione in der Nähe decken Atomanlagen auf (5 min Sicht, Meldung)
+  W.scanNuclearSites = function () {
+    const sites = this.buildings.filter(b => !b.dead && (b.type === 'nukelab' || b.type === 'silo'));
+    if (!sites.length) return;
+    for (const u of this.units) {
+      if (u.dead || u.aboard || !(u.line === 'scout' || u.cls === 'env' || u.cls === 'spy')) continue;
+      for (const b of sites) {
+        if (b.owner === u.owner || this.allied(b.owner, u.owner) || Math.hypot(b.cx - u.x, b.cy - u.y) > 12) continue;
+        const key = 'n' + b.id + ':' + u.owner;
+        (this.nukeSpotted || (this.nukeSpotted = {}));
+        if ((this.nukeSpotted[key] || 0) > this.time) continue;
+        this.nukeSpotted[key] = this.time + 300;
+        this.reveals.push({ pid: u.owner, x: b.cx, y: b.cy, until: this.time + 300, site: b.id });
+        this.notice(u.owner, `☢ Entdeckt: ${BUILDINGS[b.type].name} von ${this.P[b.owner].name}! Standort ist 5 Minuten sichtbar.`);
+        this.event({ k: 'ping', to: u.owner, x: b.cx, y: b.cy });
+        // Der Betreiber erfährt, dass er aufgeflogen ist
+        this.notice(b.owner, `Fremde Aufklärung hat dein${b.type === 'silo' ? ' Raketensilo' : ' Atomforschungszentrum'} entdeckt.`);
+      }
+    }
+  };
   W.updateNukes = function () {
+    if (this.tickNo % 10 === 5) this.scanNuclearSites();
     if (!this.nukes || !this.nukes.length) { this.updateRadiation(); return; }
     for (const n of this.nukes) {
       if (n.done || n.at > this.time) continue;

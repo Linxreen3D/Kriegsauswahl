@@ -775,10 +775,11 @@ Formationen werden per Taste gewählt. Die Einheiten halten sie beim Marschieren
 9. ✅ **Spätphase:** Nationseinheiten VII–VIII, **Sondereinheit Celo**, Signatur-Einheiten, **Staatsführer mit Porträts**, **Friedenskonferenz**, Panzerzüge, Eisenbahngeschütze, Atomwaffen.
    - *Stand der Umsetzung:* Porträts sind Monogramm-Platzhalter (Bilder unter `public/assets/leaders/<id>.png`), A.H. immer Schattenriss. Führer-Boni, die ein noch nicht vorhandenes System brauchen (Pfand bei Verträgen, Handel, Vermittler-Provision), wurden durch gleichwertige, umsetzbare Boni ersetzt; die Texte im Spiel zeigen immer die tatsächliche Wirkung.
    - *Konferenz:* alles aus 12.4 umgesetzt, auch Vermitteln (beide Parteien wählen denselben Zuschauer; +Ansehen und 5 % Provision), Sanktionen, Beitreten, entmilitarisierte Zone (Truppen der Parteien verlieren dort Leben, Türme schweigen) und Abrüstung (¼ der Truppen, ½ Kosten zurück). Außerdem: Antrag, Annehmen/Ablehnen, Pause für alle mit Pausenbudget (15 min je Spielstunde), „Ohne Pause“ mit Waffenruhe, Zeitlimit 3/5/8 min, Frieden, Waffenstillstand, Gebietsabtretung, Reparationen, Rohstoffe, Rüstungsbeschränkung, Galerie mit Unterstützung und Garantien, Friedensbruch mit Garantiemächten, Bots.
-   - *Atomwaffen, noch offen:* Bots bauen noch keine Atomwaffen oder Raketenabwehr; Aufdecken des Forschungszentrums durch Botschafter.
+   - *Atomwaffen:* vollständig, inklusive Aufdecken von Forschungszentrum und Silo durch Aufklärer, Botschafter und Spione (5 min Sicht); Bots bauen Abwehr und Atomwaffen und greifen aufgedeckte Anlagen gezielt an.
 10. **Feinschliff:** Simulationen und Balancing.
    - *Erledigt:* Bots bauen Werften (auf Inseln mit Vorrang), Flugplätze, Flak bei feindlichen Flugzeugen, Raketenabwehr gegen Atommächte und als Atommacht auch Atomwaffen; Bots nutzen Führer und Konferenzen; Einheitenwahl der Bots bevorzugt Kampfeinheiten; Spätphase-Nationaleinheiten per geländeneutralem Duell nachbalanciert; Kostenfehler der späten Epochen behoben.
-   - *Offen:* Bots legen noch keine Gleise und landen nicht mit Transportern an (Inselkarte für Bots schwach), Feinabstimmung von Luft- und Seekampf, lange Partien mit Menschen testen.
+   - *Ebenfalls erledigt:* Bots bauen Eisenbahnstrecken (Güterzüge, Panzerzüge) und setzen mit Transportern über; Luft- und Seekampf per Duell ausbalanciert (Hubschrauber > Panzer, Flak > Flugzeuge, Zerstörer > U-Boot > Schlachtschiff > Zerstörer); Inselkarte verteilt Rohstoffe auf alle Startinseln.
+   - *Offen:* lange Partien mit Menschen testen und danach nachjustieren.
 
 Modelle bleiben bis dahin Platzhalter. Die richtigen Modelle kommen später aus Blender als `.glb`.
 
