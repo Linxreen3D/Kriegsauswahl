@@ -42,9 +42,9 @@ const UNIT_ICONS = {
   sie: ['', '', '🪨', '🪵', '💣', '💣', '💥', '🚀'],
 };
 const UNIQUE_ICONS = { uq_steppe: '🏹', uq_traders: '💰', uq_builders: '🐏', uq_warriors: '😡' };
-const BLD_ICONS = { nukelab: '☢', silo: '🚀', abm: '🛰', bunker: '🏚', celohouse: '🏡', memorial: '🪦', town: '🏰', house: '🏠', storage: '📦', farm: '🌾', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', airfield: '🛫', flakpos: '💥', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
+const BLD_ICONS = { nukelab: '☢', silo: '🚀', abm: '🛰', bunker: '🏚', celohouse: '🏡', memorial: '🪦', town: '🏰', house: '🏠', storage: '📦', farm: '🌾', forestry: '🌲', outpost: '🚩', road: '🛣', bridge: '🌉', rail: '🛤', station: '🚉', dock: '⚓', coastgun: '🎯', airfield: '🛫', flakpos: '💥', barracks: '⚔', range: '🎯', stable: '🐴', tower: '🗼', workshop: '⚙', wall: '🧱' };
 // Symbole für Einheiten (nach Linie und Epoche) und Gebäude – einheitlicher Satz statt Emojis
-const BLD_ICON = { town: 'town', house: 'house', storage: 'storage', farm: 'farm', outpost: 'outpost', road: 'road', bridge: 'bridge', rail: 'rail', station: 'station', dock: 'dock',
+const BLD_ICON = { town: 'town', house: 'house', storage: 'storage', farm: 'farm', forestry: 'forest', outpost: 'outpost', road: 'road', bridge: 'bridge', rail: 'rail', station: 'station', dock: 'dock',
   coastgun: 'coastgun', airfield: 'airfield', flakpos: 'flakpos', barracks: 'barracks', range: 'range_b', stable: 'stable', tower: 'tower', workshop: 'workshop', wall: 'wall',
   nukelab: 'nukelab', silo: 'silo', abm: 'abm', bunker: 'bunker', celohouse: 'celohouse', memorial: 'memorial' };
 const UQ_ICON = { uq_steppe: 'cavalry', uq_traders: 'gold', uq_builders: 'catapult', uq_warriors: 'axe' };

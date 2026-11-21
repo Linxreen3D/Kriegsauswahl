@@ -479,6 +479,7 @@ export const BUILDINGS = {
   celohouse: { name: 'Celos Haus', size: 2, hp: 99999, cost: {}, time: 1, sight: 3, minEra: 99, decor: true, desc: 'Hier warten Ljilje, Antonija und Marija auf Celo.' },
   memorial: { name: 'Gedenkstein', size: 1, hp: 99999, cost: {}, time: 1, sight: 3, minEra: 99, decor: true, walkable: true, desc: 'Celo – Leibwächter, Vater, Ehemann. Für Ljilje, Antonija und Marija.' },
   wall: { name: 'Palisade', size: 1, hp: 350, cost: { wood: 4 }, time: 3, sight: 2, minEra: 0, key: 'C', line: true, desc: 'Günstiges Hindernis (ab Mittelalter Steinmauer).' },
+  forestry: { name: 'Forstgut', size: 2, hp: 300, cost: { stone: 40, gold: 70 }, time: 20, sight: 3, minEra: 3, key: 'A', yields: 'wood', rate: 0.55, desc: 'Angelegter Wald: unerschöpfliches Holz für einen Arbeiter. Hilft, wenn die Wälder abgeholzt sind.' },
 };
 // Weltwunder: Ausbau des Haupthauses in der letzten Epoche. Wer es 30 Minuten (große Karten: 60) hält, gewinnt.
 export const WONDER = { name: 'Weltwunder', cost: { food: 6000, wood: 5000, stone: 5000, gold: 7000 }, time: 240, hold: 1800, holdLarge: 3600, hpMul: 4 };
@@ -486,7 +487,7 @@ export const WONDER = { name: 'Weltwunder', cost: { food: 6000, wood: 5000, ston
 export const wonderHold = mapW => (mapW >= 160 ? WONDER.holdLarge : WONDER.hold);
 export const WONDER_ERA = 8; // Anzeige-Epoche für das Modell (nach der letzten Epoche)
 
-export const BUILD_ORDER = ['house', 'storage', 'farm', 'outpost', 'road', 'bridge', 'rail', 'station', 'dock', 'coastgun', 'airfield', 'flakpos', 'nukelab', 'silo', 'abm', 'bunker', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
+export const BUILD_ORDER = ['house', 'storage', 'farm', 'forestry', 'outpost', 'road', 'bridge', 'rail', 'station', 'dock', 'coastgun', 'airfield', 'flakpos', 'nukelab', 'silo', 'abm', 'bunker', 'barracks', 'range', 'stable', 'tower', 'workshop', 'wall', 'town'];
 
 // ---------------- Rohstoffe auf der Karte ----------------
 export const RESOURCE_TYPES = {

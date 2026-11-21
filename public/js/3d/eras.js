@@ -122,6 +122,19 @@ const BUILDERS = {
     c => { const g = brickHouse(c, 4.6, 3.6, 2, 9, E.brick, M.roofSlate); add(g, crane(4.4), 2.2, 0, 2.1); for (let k = 0; k < 4; k++) add(g, Md.barrel(), -2 + k * 0.7, 0, 2.3); return g; },
     c => { const g = G(); add(g, m(boxT(4.2, 3.2, 3.2, 2), E.darkBrick), -0.8, 1.6, 0); const rf = gableRoof(4.2, 3.2, 1, E.metal, E.darkBrick, 0.2); rf.position.set(-0.8, 3.2, 0); g.add(rf); add(g, silo(1, 5.5), 2.2, 0, -0.6); add(g, silo(0.8, 4.5), 2.4, 0, 1.4); return g; },
   ],
+  forestry: [0, 1, 2, 3, 4, 5, 6].map(e => c => {
+    const g = G(); if (e < 3) return g; // erst ab dem Frühen Mittelalter
+    add(g, m(boxT(4, 0.08, 4, 1), col('#4b3c28', 1)), 0, 0.04, 0);
+    for (let k = 0; k < 9; k++) {
+      const x = -1.35 + (k % 3) * 1.35, z = -1.35 + Math.floor(k / 3) * 1.1, h = 0.7 + ((k * 37) % 5) * 0.22;
+      if (k === 8) continue;
+      add(g, m(cylT(0.06, 0.09, h * 0.4, 6, 1), M.wood), x, h * 0.2, z);
+      add(g, m(coneT(0.38 + h * 0.12, h, 8, 1), col(k % 2 ? '#2f5a2a' : '#3b6a30', 0.9)), x, h * 0.4 + h / 2, z);
+    }
+    add(g, Md.woodpile(), 1.35, 0, 1.25, 0, 0, 0, 0.7);
+    if (e >= 5) add(g, m(boxT(0.9, 0.7, 0.7, 1), M.planks), -1.4, 0.35, 1.5);
+    return g;
+  }),
   farm: [0, 1, 2, 3, 4, 5, 6].map(e => c => { const g = Md.field(4, 4, 3 + e, e !== 0); if (e >= 5) add(g, Md.haystack(), 1.5, 0, 1.5, 0, 0, 0, 0.5); if (e === 0) for (let k = 0; k < 6; k++) add(g, m(new THREE.DodecahedronGeometry(0.15), col('#7a6a5a')), -1.8 + k * 0.7, 0.1, 2.2); return g; }),
   barracks: [
     c => { const g = G(); for (let k = 0; k < 3; k++) add(g, tent(c, 1.2, 2), -2.4 + k * 2.4, 0, -1.2); add(g, fire(0.7), 0, 0, 1.6); add(g, weaponRack(col('#7a6a5a')), 2.6, 0, 2); return g; },

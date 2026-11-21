@@ -375,7 +375,17 @@ export class AI {
           }
         } else {
           const rt = best === 'wood' ? 'tree' : best;
-          for (const r of [16, 30, 50, 80]) { target = w.findResourceNear(rt, u.x, u.y, r, this.pid); if (target) break; }
+          for (const r of [16, 30]) { target = w.findResourceNear(rt, u.x, u.y, r, this.pid); if (target) break; }
+          // Wälder in der Nähe abgeholzt: Forstgut nutzen oder anlegen, bevor die Arbeiter weit laufen
+          if (!target && best === 'wood' && pl.era >= BUILDINGS.forestry.minEra) {
+            const fo = w.findResourceNear('forestry', this.bx, this.by, 40, this.pid);
+            if (fo) { this.cmd({ c: 'gather', ids: [u.id], target: fo.id }); counts.wood++; done = true; break; }
+            const unbuilt = blds.find(b => b.type === 'forestry' && !b.built);
+            if (unbuilt) { this.cmd({ c: 'repair', ids: [u.id], target: unbuilt.id }); counts.wood++; done = true; break; }
+            const nF = blds.filter(b => b.type === 'forestry').length;
+            if (this.build('forestry', [u], 1, 4, 10 + nF * 0.6)) { counts.wood++; done = true; break; }
+          }
+          if (!target) for (const r of [50, 80]) { target = w.findResourceNear(rt, u.x, u.y, r, this.pid); if (target) break; }
           if (!target) continue;
           // weit vom Lager? Lager bauen
           const drop = w.dropoffFor({ x: target.cx, y: target.cy, owner: this.pid });
