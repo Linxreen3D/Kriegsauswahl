@@ -14,6 +14,7 @@ Alle starten in der Steinzeit auf einer zufällig erzeugten Karte und führen ih
 - **Friedenskonferenz** mit Pause, Galerie, Vermittler, Garantien, Sanktionen, entmilitarisierter Zone und Abrüstung.
 - **Eisenbahn** (Truppen-, Güter- und Panzerzüge, Eisenbahngeschütze), **Seekrieg** (Fischerei, Transporter, Kriegsschiffe, U-Boote, Landungen), **Luftkrieg** (Jäger, Bomber, Hubschrauber, Fallschirmjäger, Flak).
 - **Atomwaffen** nur für historische Atommächte, mit Raketenabwehr, Bunkern, Aufklärung und Zweitschlag.
+- **Wirtschaft**: Felder und Forstgüter als unerschöpfliche Quellen, Gold- und Steinvorkommen mit tieferen Abbauschichten je Epoche.
 - **Gelände und Klima**: Hügel, Wald, Flüsse und Furten, Brücken, Straßen, Jahreszeiten, Provinzen, Nachschub und Moral, Veteranenränge, Formationen.
 - **Kartentypen**: Kontinent, Seenplatte, Hochland, Urwald, Inseln. **Spielmodi**: Jeder gegen jeden, Teams, Armageddon.
 - **Bots** in drei Stufen. Sie nutzen Wirtschaft, Eisenbahn, Flotten mit Landungen, Luftwaffe, Führer und Konferenzen.
