@@ -19,7 +19,7 @@ const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
 const isVehicle = u => (u.cls === 'cav' && u.era >= 6) || u.cls === 'art' || u.cls === 'sie';
 
 const RADIUS = { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.42, sie: 0.48, art: 0.48, sup: 0.3, env: 0.3, spy: 0.3, trn: 0.5, shp: 0.7, sub: 0.6, air: 0.5, bmb: 0.6, hel: 0.6, aa: 0.45 };
-const MILITARY = cls => cls !== 'wrk' && cls !== 'sup' && cls !== 'env' && cls !== 'spy' && cls !== 'trn';
+const MILITARY = cls => cls !== 'wrk' && cls !== 'sup' && cls !== 'env' && cls !== 'spy';
 const AIRCLS = { air: 1, bmb: 1, hel: 1 }; // kämpft selbstständig
 const START_RES = { low: { food: 150, wood: 150, stone: 50, gold: 50 }, normal: { food: 250, wood: 250, stone: 150, gold: 100 }, high: { food: 600, wood: 600, stone: 400, gold: 400 } };
 const ST = { idle: 0, move: 1, attack: 2, gather: 3, build: 4, carry: 5 };
@@ -369,7 +369,7 @@ export class World {
   command(pid, c) {
     const pl = this.P[pid];
     if (!pl || !pl.alive) return;
-    const own = ids => (Array.isArray(ids) ? ids : []).slice(0, 300).map(id => this.ents.get(id)).filter(e => e && e.owner === pid && !e.dead && !e.aboard && e.cls !== 'trn');
+    const own = ids => (Array.isArray(ids) ? ids : []).slice(0, 300).map(id => this.ents.get(id)).filter(e => e && e.owner === pid && !e.dead && !e.aboard && e.line !== 'train');
     switch (c.c) {
       case 'move': {
         const us = own(c.ids).filter(e => e.kind === 'u');
@@ -588,6 +588,8 @@ export class World {
   event(e) { this.events.push(e); }
 
   groupMove(us, x, y, amove) {
+    const rail = us.filter(u => u.st.railOnly);
+    if (rail.length) { for (const u of rail) this.railMoveCommand(u, x, y, amove); us = us.filter(u => !u.st.railOnly); }
     if (!us.length) return;
     x = Math.max(0.5, Math.min(this.W - 0.5, x)); y = Math.max(0.5, Math.min(this.H - 0.5, y));
     let cx = 0, cy = 0;
@@ -803,8 +805,8 @@ export class World {
           u.scan -= dt;
           if (u.scan <= 0) {
             u.scan = 0.5;
-            const t = this.findTarget(u.owner, u.x, u.y, this.sightOf(u), true, u.cls);
-            if (t) u.order = { t: 'attack', target: t.id, guard: { x: u.x, y: u.y } };
+            const t = this.findTarget(u.owner, u.x, u.y, u.st.railOnly ? this.rangeOf(u) + 0.5 : this.sightOf(u), true, u.st.atkCls || u.cls);
+            if (t) u.order = { t: 'attack', target: t.id, guard: u.st.railOnly ? null : { x: u.x, y: u.y } };
           }
         } else if (u.buildQ.length) {
           u.order = { t: 'build', target: u.buildQ.shift() };
@@ -817,7 +819,7 @@ export class World {
           u.scan -= dt;
           if (u.scan <= 0) {
             u.scan = 0.4;
-            const t = this.findTarget(u.owner, u.x, u.y, this.sightOf(u), true, u.cls);
+            const t = this.findTarget(u.owner, u.x, u.y, this.sightOf(u), true, u.st.atkCls || u.cls);
             if (t) { u.order = { t: 'attack', target: t.id, resume: o }; break; }
           }
         }
@@ -836,6 +838,7 @@ export class World {
       case 'spy': this.doSpy(u, dt); break;
       case 'board': this.doBoard(u, dt); break;
       case 'boardShip': this.doBoardShip(u, dt); break;
+      case 'railMove': this.doRailMove(u, dt); break;
       case 'unload': this.doUnload(u, dt); break;
       case 'ride': this.doRide(u, dt); break;
       case 'wait': break;
@@ -855,7 +858,7 @@ export class World {
     const done = () => {
       if (o.resume) u.order = o.resume;
       else if (o.guard && u.cls !== 'wrk') {
-        const nt = this.findTarget(u.owner, u.x, u.y, this.sightOf(u), true, u.cls);
+        const nt = this.findTarget(u.owner, u.x, u.y, this.sightOf(u), true, u.st.atkCls || u.cls);
         u.order = nt ? { t: 'attack', target: nt.id, guard: o.guard } : { t: 'move', x: o.guard.x, y: o.guard.y, key: 'p' + Math.floor(o.guard.x) + ',' + Math.floor(o.guard.y), tx: Math.floor(o.guard.x), ty: Math.floor(o.guard.y) };
       } else u.order = { t: 'idle' };
     };
@@ -868,6 +871,7 @@ export class World {
     const range = this.rangeOf(u);
     const d = this.distTo(u, t);
     if (d > range + u.r) {
+      if (u.st.railOnly) { u.order = o.resume || { t: 'idle' }; return; } // Schienenfahrzeuge verfolgen nicht
       // Fernkämpfer im Angriffsbewegung: neues, näheres Ziel?
       const r = this.approach(u, t, range, dt);
       if (r === 'fail') return done();
@@ -875,6 +879,7 @@ export class World {
       return;
     }
     u.lastD = null;
+    if (u.st.minRange && d < u.st.minRange && u.st.railOnly) { u.order = { t: 'idle' }; return; }
     if (u.st.minRange && d < u.st.minRange) {
       // zu nah: zurückweichen
       const ax = u.x - (t.kind === 'u' ? t.x : t.cx), ay = u.y - (t.kind === 'u' ? t.y : t.cy), al = Math.hypot(ax, ay) || 1;
@@ -887,7 +892,7 @@ export class World {
     u.dir = Math.atan2((t.kind === 'u' ? t.y : t.cy) - u.y, (t.kind === 'u' ? t.x : t.cx) - u.x);
     if (u.cd <= 0) {
       u.cd = u.st.cd;
-      this.hit(u, t, u.st.atk * this.dealMul(u, range), u.cls, u.st.splash);
+      this.hit(u, t, u.st.atk * this.dealMul(u, range), u.st.atkCls || u.cls, u.st.splash);
       if (range > 1.2) this.event({ k: 'shot', x: u.x, y: u.y, tx: t.kind === 'u' ? t.x : t.cx, ty: t.kind === 'u' ? t.y : t.cy, c: u.cls === 'sie' ? 1 : (u.era >= 4 ? 2 : 0) });
     }
   }
@@ -978,7 +983,7 @@ export class World {
   }
   kill(e, by, src) {
     if (e.dead) return;
-    if (e.kind === 'u' && e.cls === 'trn') this.trainDestroyed(e);
+    if (e.kind === 'u' && e.line === 'train') this.trainDestroyed(e);
     if (e.kind === 'u' && e.st && e.st.celo) this.celoFallen(e);
     if (e.kind === 'u' && e.cargo && e.cargo.length) this.shipSunk(e);
     if (e.kind === 'b' && e.type === 'station' && e.stock && by >= 0) for (const k in e.stock) this.P[by].res[k] += Math.round(e.stock[k] * 0.5);
@@ -1270,7 +1275,7 @@ export class World {
     if (b.qProg >= q.time) {
       if (pl.pop + st.pop > pl.popCap) { b.blocked = true; return; }
       b.blocked = false;
-      const spawn = LINES[q.line].naval ? this.withWater(() => this.spawnPoint(b)) : this.spawnPoint(b);
+      const spawn = LINES[q.line].naval ? this.withWater(() => this.spawnPoint(b)) : st.railOnly ? [b.cx, b.cy] : this.spawnPoint(b);
       if (!spawn) return;
       b.queue.shift(); b.qProg = 0;
       const u = this.addUnit(b.owner, q.line, q.unique, spawn[0], spawn[1]);

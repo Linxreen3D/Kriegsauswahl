@@ -98,7 +98,7 @@ export const NATION_UNITS = {
     { era: 5, id: 'germany_grenadier', line: 'inf', name: 'Preußischer Grenadier', icon: '🪖', hist: 'Zündnadelgewehr, 1841', mods: { cdMul: 0.75 }, costMul: 1.15 },
     { era: 6, id: 'germany_krupp', line: 'art', name: 'Krupp-Feldartillerie', icon: '💣', hist: '1870/71', mods: { rangeAdd: 2, atkMul: 1.1 }, costMul: 1.1 },
     { era: 6, reqLate: true, id: 'germany_tiger', line: 'cav', name: 'Tiger I', icon: '🛡', hist: '1942, schwerer Panzer', mods: { hpMul: 1.5, atkMul: 1.25, speedMul: 0.8 }, costMul: 1.4 },
-    { era: 6, reqLate: true, sig: true, max: 1, id: 'germany_gustav', line: 'sie', name: 'Schwerer Gustav', icon: '💥', hist: '80-cm-Eisenbahngeschütz, 1942', mods: { range: 26, minRange: 8, atkMul: 4, cdMul: 3, speedMul: 0.6, hpMul: 3, splash: 3, railOnly: true }, costMul: 7 },
+    { era: 6, reqLate: true, sig: true, max: 1, id: 'germany_gustav', line: 'sie', name: 'Schwerer Gustav', icon: '💥', hist: '80-cm-Eisenbahngeschütz, 1942 – nur auf Gleisen, wird am Bahnhof gebaut', at: 'station', mods: { range: 26, minRange: 8, atkMul: 4, cdMul: 3, speedMul: 0.6, hpMul: 3, splash: 3, railOnly: true }, costMul: 7 },
     { era: 7, id: 'germany_gepard', line: 'flak', name: 'Gepard', icon: '🎯', hist: 'Flakpanzer, 1976', mods: { atkMul: 1.4, hpMul: 1.2 }, costMul: 1.2 },
     { era: 7, sig: true, max: 6, id: 'germany_leopard', line: 'cav', name: 'Leopard 2', icon: '🛡', hist: '1979', mods: { hpMul: 1.4, atkMul: 1.3, speedMul: 1.1 }, costMul: 1.3 },
   ],
@@ -234,6 +234,7 @@ export const DMG = {
   sup: { wrk: 0.5, inf: 0.5, spr: 0.5, rng: 0.5, cav: 0.5, sie: 0.5, art: 0.5, sup: 0.5, bld: 0.2, env: 1, spy: 1, trn: 0.3, shp: 0, sub: 0, air: 0, bmb: 0, hel: 0, aa: 1 },
   env: { wrk: 0.3, inf: 0.3, spr: 0.3, rng: 0.3, cav: 0.3, sie: 0.3, art: 0.3, sup: 0.3, bld: 0.1, env: 0.3, spy: 0.3, trn: 0.3, shp: 0, sub: 0, air: 0, bmb: 0, hel: 0, aa: 0.3 },
   spy: { wrk: 1, inf: 0.8, spr: 0.8, rng: 0.8, cav: 0.5, sie: 0.8, art: 0.8, sup: 1, bld: 0.3, env: 1, spy: 1, trn: 0.3, shp: 0.2, sub: 0, air: 0, bmb: 0, hel: 0, aa: 1 },
+  atr: { wrk: 1.2, inf: 1.3, spr: 1.3, rng: 1.3, cav: 0.9, sie: 1.2, art: 1.0, sup: 1, bld: 0.8, env: 1, spy: 1, trn: 1.2, shp: 0.4, sub: 0, air: 0, bmb: 0, hel: 0.6, aa: 1 },
   trn: { wrk: 0, inf: 0, spr: 0, rng: 0, cav: 0, sie: 0, art: 0, sup: 0, bld: 0, env: 0, spy: 0, trn: 0, shp: 0, sub: 0, air: 0, bmb: 0, hel: 0, aa: 0 },
   shp: { wrk: 0.8, inf: 0.8, spr: 0.8, rng: 0.8, cav: 0.8, sie: 1, art: 1, sup: 0.8, env: 0.5, spy: 0.8, bld: 1, trn: 1, shp: 1.2, sub: 1.5, air: 0.5, bmb: 0.5, hel: 0.8, aa: 0.8 },
   sub: { wrk: 0, inf: 0, spr: 0, rng: 0, cav: 0, sie: 0, art: 0, sup: 0, env: 0, spy: 0, bld: 0, trn: 0, shp: 2.5, sub: 1, air: 0, bmb: 0, hel: 0, aa: 0 },
@@ -285,6 +286,11 @@ export const LINES = {
   spy: {
     cls: 'spy', at: 'town', minEra: 4, key: 'A', names: ['', '', '', '', 'Kundschafter', 'Spion', 'Agent', 'Geheimagent'],
     hp: 40, atk: 4, range: 0.5, cd: 1.2, speed: 1.7, sight: 9, cost: { food: 50, gold: 80 }, pop: 1, time: 25, grow: 0.15,
+  },
+  // Panzerzug: fährt nur auf Gleisen, stark bewaffnet (DMG-Zeile 'atr')
+  armtrain: {
+    cls: 'trn', at: 'station', minEra: 6, key: 'Q', names: ['', '', '', '', '', '', 'Panzerzug', 'Panzerzug'], dmgRow: 'atr',
+    hp: 1500, atk: 34, range: 6, cd: 2.2, speed: 3.2, sight: 9, cost: { wood: 250, stone: 150, gold: 300 }, pop: 4, time: 50, railOnly: true, grow: 0.3,
   },
   train: {
     cls: 'trn', at: null, minEra: 5, key: '', names: ['', '', '', '', '', 'Dampfzug', 'Dampfzug', 'Diesellok'],
@@ -551,7 +557,7 @@ export function unitBase(line, era, unique) {
     minRange: d.minRange || 0,
     cd: d.cd, speed: ov.speed || d.speed, sight: d.sight, pop: ov.pop || d.pop,
     time: d.time * (1 + steps * 0.05), splash: d.splash || 0, heal: d.heal ? d.heal * Math.pow(1 + g, steps) : 0,
-    naval: !!d.naval, capacity: d.capacity || 0, detects: !!d.detects, air: !!d.air, low: !!d.low, fuel: d.fuel || 0, ammo: d.ammo || 0, para: !!d.para,
+    naval: !!d.naval, capacity: d.capacity || 0, detects: !!d.detects, air: !!d.air, low: !!d.low, fuel: d.fuel || 0, ammo: d.ammo || 0, para: !!d.para, railOnly: !!d.railOnly, atkCls: d.dmgRow || null,
     cost: scaleCost(d.cost, Math.pow(cg, steps)),
   };
   if (isNationUnit(unique)) {

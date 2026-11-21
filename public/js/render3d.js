@@ -548,6 +548,7 @@ export class Renderer3D {
       else if (e.def.line === 'flak') g = flakModel(era, color);
       else if (NAVAL[e.def.line]) g = shipModel(e.def.line, era, color);
       else if (e.def.line === 'train') g = trainModel(era, color);
+      else if (e.def.line === 'armtrain') g = armTrainModel(era, color);
       else if (e.def.cls === 'cav') g = tank(color);
       else if (era <= 3) g = Md.trebuchet(color);
       else g = cannon(era, color);
@@ -618,7 +619,7 @@ export class Renderer3D {
         pos.set(X, this.T.height(X, Z) + bob, Z);
         if (NAVAL[line]) pos.y = -0.55 + Math.sin(now / 700 + e.id) * 0.06;
         if (AIR[line]) pos.y += (line === 'heli' ? 3.5 : 7) + Math.sin(now / 500 + e.id) * 0.15;
-        if (AIR[line] || line === 'flak' || NAVAL[line] || line === 'sie' || line === 'art' || line === 'train' || (line === 'cav' && era >= 6)) {
+        if (AIR[line] || line === 'flak' || NAVAL[line] || line === 'sie' || line === 'art' || line === 'train' || line === 'armtrain' || (line === 'cav' && era >= 6)) {
           const o = this.siegeModel(e, color); o.position.copy(pos); o.quaternion.copy(q);
           if (e.state === 2 && line === 'sie') o.children[0].rotation.x = Math.sin(now / 120) * 0.02;
           continue;
@@ -886,6 +887,21 @@ function flakModel(era, color) {
   return g;
 }
 
+// Panzerzug: gepanzerte Lok mit zwei Geschützwagen
+function armTrainModel(era, color) {
+  const g = new THREE.Group(), armor = U.mat(era >= 7 ? '#4f5a40' : '#4a4d44', 0.7, 0.4), dark = U.mat('#232425', 0.6, 0.6), cloth = U.mat(color, 0.8);
+  const add = (geo, m, x, y, z, rx = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.x = rx; o.castShadow = o.receiveShadow = true; g.add(o); return o; };
+  add(new THREE.BoxGeometry(1.3, 1.2, 2.6), armor, 0, 0.95, 0.4);
+  add(new THREE.BoxGeometry(1.0, 0.6, 1.0), armor, 0, 1.8, 0.0);
+  for (const z of [2.6, -1.8]) {
+    add(new THREE.BoxGeometry(1.3, 0.9, 1.9), armor, 0, 0.8, z);
+    add(new THREE.CylinderGeometry(0.42, 0.48, 0.4, 10), armor, 0, 1.45, z);
+    add(new THREE.CylinderGeometry(0.08, 0.1, 1.4, 8), dark, 0, 1.5, z + (z > 0 ? 0.8 : -0.8), Math.PI / 2);
+  }
+  add(new THREE.BoxGeometry(1.32, 0.18, 0.7), cloth, 0, 1.25, 0.4);
+  for (const z of [3.2, 2.0, 1.2, -0.4, -1.2, -2.4]) for (const x of [-0.55, 0.55]) add(new THREE.CylinderGeometry(0.28, 0.28, 0.12, 10), dark, x, 0.28, z).rotation.z = Math.PI / 2;
+  return g;
+}
 function trainModel(era, color) {
   const g = new THREE.Group(), dark = U.mat('#2a2a2c', 0.6, 0.6), body = U.mat(era >= 7 ? '#5a6a4a' : '#3a3f45', 0.6, 0.4), cloth = U.mat(color, 0.8);
   const add = (geo, m, x, y, z, rx = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.x = rx; o.castShadow = o.receiveShadow = true; g.add(o); return o; };

@@ -117,6 +117,47 @@ export function installRail(World) {
     this.cells[this.cellOf(tr.x, tr.y)].push(tr);
     return tr;
   };
+  // Schienenfahrzeuge (Panzerzug, Eisenbahngeschütz): Weg über eigene oder verbündete Gleise zum Punkt nahe dem Ziel
+  W.railMoveCommand = function (u, x, y, amove) {
+    const start = this.idx(Math.floor(u.x), Math.floor(u.y));
+    if (!this.railAt[start]) { this.notice(u.owner, `${u.st.name} steht nicht auf Gleisen.`); return; }
+    const W2 = this.W, prev = new Int32Array(this.W * this.H).fill(-2), q = [start];
+    prev[start] = -1;
+    let best = start, bd = Math.hypot(x - u.x, y - u.y);
+    for (let h = 0; h < q.length && h < 40000; h++) {
+      const i = q[h], cx = i % W2, cy = (i - cx) / W2;
+      const d = Math.hypot(cx + 0.5 - x, cy + 0.5 - y); if (d < bd) { bd = d; best = i; }
+      for (const [dx, dy] of N8) {
+        const nx = cx + dx, ny = cy + dy;
+        if (!this.inBounds(nx, ny)) continue;
+        const j = ny * W2 + nx;
+        if (prev[j] !== -2 || !this.railAt[j] || !this.railUsable(j, u.owner)) continue;
+        prev[j] = i; q.push(j);
+      }
+    }
+    const path = []; for (let i = best; i >= 0; i = prev[i]) path.push(i);
+    path.reverse();
+    u.order = path.length > 1 ? { t: 'railMove', path, i: 1, amove: !!amove } : { t: 'idle' };
+  };
+  // Gleis gehört dem Spieler oder einem Verbündeten
+  W.railUsable = function (i, pid) { const b = this.ents.get(this.occ[i]); return !b || this.allied(b.owner, pid); };
+  W.doRailMove = function (u, dt) {
+    const o = u.order;
+    if (o.amove) {
+      u.scan -= dt;
+      if (u.scan <= 0) { u.scan = 0.4; const t = this.findTarget(u.owner, u.x, u.y, this.rangeOf(u) + 0.5, true, u.st.atkCls || u.cls); if (t) { u.order = { t: 'attack', target: t.id, resume: o }; return; } }
+    }
+    let step = this.speedOf(u) * dt;
+    while (step > 0 && o.i < o.path.length) {
+      const i = o.path[o.i], tx = (i % this.W) + 0.5, ty = Math.floor(i / this.W) + 0.5;
+      if (!this.railAt[i]) { u.order = { t: 'idle' }; this.notice(u.owner, `${u.st.name}: Gleis unterbrochen.`); return; }
+      const dx = tx - u.x, dy = ty - u.y, d = Math.hypot(dx, dy);
+      if (d <= step) { u.x = tx; u.y = ty; step -= d; o.i++; }
+      else { u.x += dx / d * step; u.y += dy / d * step; step = 0; }
+      u.dir = Math.atan2(dy, dx); u.state = 1;
+    }
+    if (o.i >= o.path.length) u.order = { t: 'idle' };
+  };
   W.doRide = function (u, dt) {
     const o = u.order;
     let step = u.st.speed * (this.P[u.owner].mods.railSpeed || 1) * dt;
