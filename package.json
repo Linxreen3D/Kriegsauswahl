@@ -1,10 +1,15 @@
 {
   "name": "frontlinien",
   "version": "1.0.0",
-  "description": "Echtzeitstrategie von der Steinzeit bis zur Moderne – privat mit Freunden im Browser",
-  "main": "server/index.js",
+  "description": "Echtzeitstrategie von der Steinzeit bis zum Kalten Krieg",
+  "main": "desktop/main.mjs",
   "scripts": {
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "desktop": "electron .",
+    "ui-assets": "node tools/build-ui-assets.mjs",
+    "dist:win": "electron-builder --win nsis",
+    "dist:linux": "electron-builder --linux AppImage",
+    "dist:dir": "electron-builder --dir"
   },
   "repository": {
     "type": "git",
@@ -28,6 +33,46 @@
     "@fontsource/ibm-plex-sans-condensed": "^5.3.0",
     "@fontsource/oswald": "^5.3.0",
     "@iconify-json/game-icons": "^1.2.4",
-    "@iconify-json/lucide": "^1.2.157"
-  }
+    "@iconify-json/lucide": "^1.2.157",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "de.frontlinien.game",
+    "productName": "Frontlinien",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "build/icon.png",
+      "desktop/**",
+      "server/**",
+      "shared/**",
+      "public/**",
+      "package.json",
+      "!public/assets/models/**/*.blend",
+      "!**/*.map",
+      {
+        "from": "node_modules/three/examples/jsm",
+        "to": "vendor-three-jsm",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Game"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "icon": "build/icon.png"
+  },
+  "author": "Frontlinien"
 }

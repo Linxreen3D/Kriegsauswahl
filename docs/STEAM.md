@@ -26,7 +26,20 @@ Unity wäre die einzige ernsthafte Alternative, aber erst, wenn die Web-Technik 
 
 ## 2. Technische Schritte
 
-### Phase A – Desktop-Version (ca. 2–3 Wochen)
+### Phase A – Desktop-Version ✅ (Grundgerüst fertig)
+**Stand:**
+- Electron-Programm in `desktop/`: Der Spielserver läuft im selben Prozess auf Port 3456, Freunde im LAN verbinden sich über die IP-Adresse.
+- Spielstände und Einstellungen liegen im Benutzerordner (Windows: `%APPDATA%/frontlinien`, Linux: `~/.config/frontlinien`).
+- Startbildschirm mit „Einzelspieler“ (direkt in die Lobby mit zwei Bots), „Mehrspieler-Raum“, Beitreten per Raumcode oder LAN-Adresse, „Optionen“ und „Beenden“.
+- Optionen: Grafikqualität, Vollbild, Lautstärke, Kamera-Tempo, Kamera am Bildschirmrand.
+- Starten zum Ausprobieren: `npm install`, dann `npm run desktop`.
+- Pakete:
+  - `npm run dist:linux` baut ein AppImage (getestet).
+  - `npm run dist:win` baut einen Windows-Installer, das geht nur unter Windows.
+  - Bequemer: GitHub → Actions → „Desktop-Build“ → „Run workflow“. Das baut beide Versionen und stellt sie zum Download bereit.
+- **Noch offen in Phase A:** Tastenbelegung ändern und Sprache wählen. Die Sprache kommt mit der englischen Übersetzung in Phase C.
+
+**Ursprünglicher Plan:**
 1. **Electron-Hülle:** Ein Fenster lädt das Spiel. Der Spielserver (`server/`) läuft im selben Programm, der Gastgeber ist also selbst Server („Listen-Server“).
 2. **Spielstände und Einstellungen** in den Benutzerordner verlegen statt `saves/` im Programmordner.
 3. **Optionsmenü:** Grafikstufe, Auflösung und Vollbild, Lautstärke, Tastenbelegung, Sprache.

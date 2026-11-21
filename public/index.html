@@ -21,13 +21,19 @@
       <label class="field">Dein Name
         <input id="nameInput" maxlength="20" placeholder="Kommandant" autocomplete="nickname">
       </label>
-      <button id="createBtn" class="btn primary big">Neuen Raum erstellen</button>
-      <div class="divider"><span>oder</span></div>
+      <button id="singleBtn" class="btn primary big">Einzelspieler</button>
+      <button id="createBtn" class="btn big">Mehrspieler-Raum erstellen</button>
+      <div class="divider"><span>oder beitreten</span></div>
       <div class="join-row">
         <input id="codeInput" maxlength="5" placeholder="RAUMCODE" autocomplete="off" spellcheck="false">
         <button id="joinBtn" class="btn">Beitreten</button>
       </div>
+      <div class="join-row lan desktop-only">
+        <input id="lanInput" maxlength="40" placeholder="IP-Adresse des Gastgebers (LAN)" autocomplete="off" spellcheck="false">
+        <button id="lanBtn" class="btn">Verbinden</button>
+      </div>
       <p id="homeError" class="error"></p>
+      <div class="row home-actions"><button id="optionsBtn" class="btn ghost small">Optionen</button><button id="quitBtn" class="btn ghost small desktop-only">Beenden</button></div>
       <details class="howto">
         <summary>Steuerung</summary>
         <ul>
@@ -97,6 +103,22 @@
     </div>
   </section>
 
+  <div id="optionsDlg" class="modal hidden">
+    <div class="card options-card">
+      <h2>Optionen</h2>
+      <div class="settings">
+        <div class="setting"><label for="o_quality">Grafikqualität</label><select id="o_quality"><option value="high">Hoch</option><option value="medium">Mittel</option><option value="low">Niedrig</option></select></div>
+        <div class="setting desktop-only"><label for="o_fullscreen">Vollbild</label><select id="o_fullscreen"><option value="1">An</option><option value="0">Aus</option></select></div>
+        <div class="setting"><label for="o_volume">Lautstärke</label><output id="o_volumeOut"></output><input type="range" id="o_volume" min="0" max="100" step="5"></div>
+        <div class="setting"><label for="o_camSpeed">Kamera-Tempo</label><output id="o_camSpeedOut"></output><input type="range" id="o_camSpeed" min="50" max="200" step="10"></div>
+        <div class="setting"><label for="o_edge">Kamera am Bildschirmrand bewegen</label><select id="o_edge"><option value="1">An</option><option value="0">Aus</option></select></div>
+      </div>
+      <p id="o_hint" class="muted small"></p>
+      <p id="o_lan" class="muted small desktop-only"></p>
+      <button id="optionsClose" class="btn primary">Schließen</button>
+    </div>
+  </div>
+
   <div id="savesDlg" class="modal hidden">
     <div class="card saves-card">
       <h2>Spielstand laden</h2>
@@ -161,6 +183,7 @@
         <h2>Menü</h2>
         <p class="muted">Raumcode: <b id="menuCode"></b></p>
         <button id="menuInvite" class="btn">Einladungslink kopieren</button>
+        <button id="menuOptions" class="btn">Optionen</button>
         <button id="pauseBtn" class="btn host-only">Pause</button>
         <button id="saveBtn" class="btn host-only">Spiel speichern</button>
         <p class="muted small">Alle 5 Spielminuten wird automatisch gespeichert.</p>

@@ -7,7 +7,6 @@ import { WebSocketServer } from 'ws';
 import { Room } from './room.js';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const PORT = Number(process.env.PORT) || 3000;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -32,6 +31,8 @@ function serveFile(req, res, file) {
   res.end(entry.raw);
 }
 
+// Startet Web- und Spielserver. Wird vom Kommandozeilenstart und vom Desktop-Programm (Electron) genutzt.
+export function startServer({ port = Number(process.env.PORT) || 3000, host = '0.0.0.0', quiet = false } = {}) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   let path = decodeURIComponent(url.pathname);
@@ -53,7 +54,9 @@ const server = http.createServer((req, res) => {
   }
   if (path === '/') path = '/index.html';
   // /shared/* -> shared/, /vendor/three/* -> node_modules/three/, sonst public/
-  const routes = [['/shared/', join(ROOT, 'shared')], ['/vendor/three/', join(ROOT, 'node_modules', 'three')]];
+  // Im Desktop-Paket liegen die three.js-Zusatzmodule unter vendor-three-jsm (der Paketbauer lässt „examples“ in node_modules weg)
+  const JSM = join(ROOT, 'vendor-three-jsm');
+  const routes = [['/shared/', join(ROOT, 'shared')], ...(existsSync(JSM) ? [['/vendor/three/examples/jsm/', JSM]] : []), ['/vendor/three/', join(ROOT, 'node_modules', 'three')]];
   const route = routes.find(([pre]) => path.startsWith(pre));
   const base = route ? route[1] : join(ROOT, 'public');
   const file = normalize(join(base, route ? path.slice(route[0].length) : path));
@@ -105,13 +108,22 @@ wss.on('connection', ws => {
   ws.on('error', () => {});
 });
 // Tote Verbindungen erkennen
-setInterval(() => {
+const pinger = setInterval(() => {
   for (const ws of wss.clients) {
     if (!ws.isAlive) { ws.terminate(); continue; }
     ws.isAlive = false; ws.ping();
   }
 }, 15000);
 
-server.listen(PORT, () => {
-  console.log(`Frontlinien läuft auf http://localhost:${PORT}`);
+return new Promise((resolve, reject) => {
+  server.once('error', reject);
+  server.listen(port, host, () => {
+    const p = server.address().port;
+    if (!quiet) console.log(`Frontlinien läuft auf http://localhost:${p}`);
+    resolve({ port: p, close: () => new Promise(r => { clearInterval(pinger); for (const ws of wss.clients) ws.terminate(); server.close(() => r()); }) });
+  });
 });
+}
+
+// Direkter Start: node server/index.js
+if (process.argv[1] && fileURLToPath(import.meta.url) === normalize(process.argv[1])) startServer();

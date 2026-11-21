@@ -99,6 +99,13 @@ const G = {
 const UI = { box: null, ghost: null, rally: null, markers: [], pings: [], mode: null, lastAlert: null };
 let renderer = null, ws = null, reconnectDelay = 500, DIP = null, CONF = null;
 let wantSession = null;
+// Persönliche Optionen (nur auf diesem Gerät)
+const OPT = { camSpeed: 1, edge: true };
+try { const o = JSON.parse(localStorage.getItem('fl_options') || '{}'); Object.assign(OPT, o); } catch { /* egal */ }
+const saveOpt = () => { try { localStorage.setItem('fl_options', JSON.stringify(OPT)); } catch { /* egal */ } };
+const DESKTOP = typeof window !== 'undefined' && window.desktop ? window.desktop : null;
+if (DESKTOP) document.body.classList.add('desktop');
+let singleStart = false;
 try { wantSession = JSON.parse(sessionStorage.getItem('fl_session') || 'null'); } catch { /* egal */ }
 
 // ---------------- Netzwerk ----------------
@@ -227,6 +234,7 @@ function buildSettingsForm() {
 }
 function onLobby(m) {
   G.phase = 'lobby'; G.hostId = m.hostId; G.code = m.code; G.settings = m.settings; G.lobbyPlayers = m.players;
+  if (singleStart && m.hostId === G.you) { singleStart = false; for (let i = 0; i < 2; i++) send({ t: 'addBot', difficulty: $('botDiff').value }); }
   showScreen('lobby');
   const host = m.hostId === G.you;
   document.body.classList.toggle('is-host', host);
@@ -1184,10 +1192,42 @@ function sendChat() {
   send({ t: 'chat', text, team });
 }
 
+// ---------------- Optionen ----------------
+function setupOptions() {
+  const q = (() => { try { return localStorage.getItem('fl_quality') || 'high'; } catch { return 'high'; } })();
+  const open = () => {
+    $('o_quality').value = q; $('o_volume').value = Math.round(sfx.volume * 100); $('o_volumeOut').textContent = Math.round(sfx.volume * 100) + ' %';
+    $('o_camSpeed').value = Math.round(OPT.camSpeed * 100); $('o_camSpeedOut').textContent = Math.round(OPT.camSpeed * 100) + ' %'; $('o_edge').value = OPT.edge ? '1' : '0';
+    $('o_hint').textContent = '';
+    if (DESKTOP) DESKTOP.info().then(i => {
+      $('o_fullscreen').value = i.fullscreen ? '1' : '0';
+      $('o_lan').textContent = i.lan.length ? `Freunde im selben Netzwerk verbinden sich mit: ${i.lan.map(a => a + (i.port === 3456 ? '' : ':' + i.port)).join(' oder ')}` : 'Kein lokales Netzwerk gefunden.';
+    });
+    $('optionsDlg').classList.remove('hidden');
+  };
+  $('optionsBtn').onclick = open; $('menuOptions').onclick = () => { $('menu').classList.add('hidden'); open(); };
+  $('optionsClose').onclick = () => $('optionsDlg').classList.add('hidden');
+  $('o_quality').onchange = e => { try { localStorage.setItem('fl_quality', e.target.value); } catch { /* egal */ } $('o_hint').textContent = 'Die Grafikqualität gilt ab dem nächsten Start des Spiels.'; };
+  $('o_volume').oninput = e => { sfx.setVolume(+e.target.value / 100); $('o_volumeOut').textContent = e.target.value + ' %'; };
+  $('o_volume').onchange = () => sfx.click();
+  $('o_camSpeed').oninput = e => { OPT.camSpeed = +e.target.value / 100; $('o_camSpeedOut').textContent = e.target.value + ' %'; saveOpt(); };
+  $('o_edge').onchange = e => { OPT.edge = e.target.value === '1'; saveOpt(); };
+  $('o_fullscreen').onchange = e => DESKTOP && DESKTOP.setFullscreen(e.target.value === '1');
+  $('optionsDlg').addEventListener('keydown', e => e.stopPropagation());
+}
+
 // ---------------- UI-Verdrahtung ----------------
 function setupUi() {
   try { $('nameInput').value = localStorage.getItem('fl_name') || ''; } catch { /* egal */ }
-  $('createBtn').onclick = () => { sfx.unlock(); $('homeError').textContent = ''; send({ t: 'create', name: getName() }); };
+  $('createBtn').onclick = () => { sfx.unlock(); $('homeError').textContent = ''; singleStart = false; send({ t: 'create', name: getName() }); };
+  // Einzelspieler: eigener Raum mit zwei Bots, direkt in der Lobby
+  $('singleBtn').onclick = () => { sfx.unlock(); $('homeError').textContent = ''; singleStart = true; send({ t: 'create', name: getName() }); };
+  // LAN: zum Gastgeber wechseln (Desktop-Programm)
+  const lan = () => { const a = $('lanInput').value.trim(); if (!a) { $('homeError').textContent = 'Bitte die IP-Adresse des Gastgebers eingeben.'; return; } DESKTOP.connect(a).then(ok => { if (!ok) $('homeError').textContent = 'Ungültige Adresse.'; }); };
+  $('lanBtn').onclick = () => DESKTOP && lan();
+  $('lanInput').addEventListener('keydown', e => { if (e.key === 'Enter' && DESKTOP) lan(); });
+  $('quitBtn').onclick = () => DESKTOP && DESKTOP.quit();
+  setupOptions();
   const join = () => {
     sfx.unlock();
     const code = $('codeInput').value.trim().toUpperCase();
@@ -1201,8 +1241,10 @@ function setupUi() {
   if (params.get('r')) $('codeInput').value = params.get('r').toUpperCase();
   buildSettingsForm();
   const inviteLink = () => `${location.origin}${location.pathname}?r=${G.code}`;
-  const copy = btn => {
-    const link = inviteLink();
+  const copy = async btn => {
+    let link = inviteLink();
+    // Desktop: Freunde im LAN brauchen die Netzwerkadresse dieses Rechners
+    if (DESKTOP) { const i = await DESKTOP.info(); if (i.lan.length) link = `${i.lan[0]}${i.port === 3456 ? '' : ':' + i.port} – Raumcode ${G.code}`; }
     (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(
       () => { const o = btn.textContent; btn.textContent = 'Kopiert ✓'; setTimeout(() => { btn.textContent = o; }, 1500); },
       () => prompt('Einladungslink:', link));
@@ -1257,10 +1299,10 @@ function loop(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
   if ((G.phase === 'play' || G.phase === 'end') && G.terrain) {
     // Kamera: Pfeiltasten & Bildschirmrand
-    const sp = 26 / renderer.cam.z * dt;
+    const sp = 26 / renderer.cam.z * dt * OPT.camSpeed;
     let dx = 0, dy = 0;
     if (keys.has('ArrowLeft')) dx -= 1; if (keys.has('ArrowRight')) dx += 1; if (keys.has('ArrowUp')) dy -= 1; if (keys.has('ArrowDown')) dy += 1;
-    if (mouse.inside && document.hasFocus() && !UI.box) {
+    if (OPT.edge && mouse.inside && document.hasFocus() && !UI.box) {
       const m = 4;
       if (mouse.x <= m) dx -= 1; else if (mouse.x >= window.innerWidth - m) dx += 1;
       if (mouse.y <= m) dy -= 1; else if (mouse.y >= window.innerHeight - m) dy += 1;

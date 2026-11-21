@@ -1,7 +1,8 @@
 // Kleine synthetische Soundeffekte (keine Audiodateien nötig)
 let ctx = null;
-let enabled = true;
-try { enabled = localStorage.getItem('fl_sound') !== '0'; } catch { /* egal */ }
+let enabled = true, volume = 0.8, master = null;
+try { enabled = localStorage.getItem('fl_sound') !== '0'; const v = parseFloat(localStorage.getItem('fl_volume')); if (Number.isFinite(v)) volume = v; } catch { /* egal */ }
+function out(a) { if (!master) { master = a.createGain(); master.gain.value = volume; master.connect(a.destination); } return master; }
 
 function ac() {
   if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; } }
@@ -15,7 +16,7 @@ function tone(freq, dur, type = 'sine', vol = 0.08, slide = 0, delay = 0) {
   o.type = type; o.frequency.setValueAtTime(freq, t);
   if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t + dur);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+  o.connect(g).connect(out(a)); o.start(t); o.stop(t + dur + 0.02);
 }
 function noise(dur, vol = 0.1, freq = 800) {
   const a = ac(); if (!a) return;
@@ -25,11 +26,13 @@ function noise(dur, vol = 0.1, freq = 800) {
   const s = a.createBufferSource(); s.buffer = buf;
   const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq;
   const g = a.createGain(); g.gain.value = vol;
-  s.connect(f).connect(g).connect(a.destination); s.start();
+  s.connect(f).connect(g).connect(out(a)); s.start();
 }
 
 export const sfx = {
   get enabled() { return enabled; },
+  get volume() { return volume; },
+  setVolume(v) { volume = Math.max(0, Math.min(1, v)); if (master) master.gain.value = volume; try { localStorage.setItem('fl_volume', String(volume)); } catch { /* egal */ } },
   toggle() { enabled = !enabled; try { localStorage.setItem('fl_sound', enabled ? '1' : '0'); } catch { /* egal */ } return enabled; },
   unlock() { if (enabled) ac(); },
   click() { if (enabled) tone(660, 0.06, 'triangle', 0.04); },
