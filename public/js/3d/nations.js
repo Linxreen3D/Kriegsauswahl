@@ -192,6 +192,7 @@ export function nationBuilding(type, era, color, nation) {
   mats();
   const N = NATION_STYLES[nation];
   if (!N) return null;
+  if (era === 8) return null; // Kalter Krieg: Nachkriegsmoderne für alle (eras.js)
   if (era >= 7) return type === 'town' && N.wonder ? N.wonder(color) : nationBuilding(type, 6, color, nation);
   if (era < 3) return null;
   const list = N[type];

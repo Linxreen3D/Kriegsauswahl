@@ -512,7 +512,7 @@ export class Renderer3D {
     const glbPath = this.glbPathFor(type, era, nation), glbKey = glbPath ? '|glb:' + glbPath : '';
     era = modelEra(era);
     // Nationaler Stil gilt ab dem Frühen Mittelalter (für Mittelalter und Industrialisierung je ein Modell)
-    const nk = nation && era >= 3 ? nation + (era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : '';
+    const nk = nation && era >= 3 ? nation + (era === 8 ? 'C' : era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : '';
     // Solange das Blender-Modell lädt, wird der Platzhalter gezeigt; danach greift ein neuer Schlüssel
     const glb = glbPath ? this.glbScene(glbPath) : null;
     const key = type + '|' + era + '|' + color + '|' + nk + glbKey + (glb ? '|L' : '');
@@ -522,7 +522,7 @@ export class Renderer3D {
     const g = glb ? teamColored(glb.clone(true), color) : INFRA[type] ? INFRA[type](era, color) : (nk && nationBuilding(type, era, color, nation)) || eraBuilding(type, era, color);
     const mm = mergeModel(g);
     const size = mm.box.getSize(new THREE.Vector3());
-    const fit = type === 'wall' ? (sz * 1.0) / Math.max(size.x, size.z) : (sz * 0.96 * (era === 7 ? 1.55 : 1)) / Math.max(size.x, size.z);
+    const fit = type === 'wall' ? (sz * 1.0) / Math.max(size.x, size.z) : (sz * 0.96 * (era === 7 && type === 'town' ? 1.55 : 1)) / Math.max(size.x, size.z);
     const ctr = mm.box.getCenter(new THREE.Vector3());
     const tf = new THREE.Matrix4().makeScale(fit, fit, fit).multiply(new THREE.Matrix4().makeTranslation(-ctr.x, -mm.box.min.y, -ctr.z));
     for (const p of mm.parts) { p.geo.applyMatrix4(tf); fowify(p.mat); }
@@ -764,7 +764,7 @@ export class Renderer3D {
       g.strokeRect(Math.min(b.x0, b.x1) + 0.5, Math.min(b.y0, b.y1) + 0.5, Math.abs(b.x1 - b.x0), Math.abs(b.y1 - b.y0));
     }
   }
-  buildingKey(e) { const p = this.G.players[e.owner], era = modelEra(e.era), n = p && p.nation; const nk = n && era >= 3 ? n + (era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : ''; return e.def.key + '|' + era + '|' + (p ? p.color : '#888888') + '|' + nk; }
+  buildingKey(e) { const p = this.G.players[e.owner], era = modelEra(e.era), n = p && p.nation; const nk = n && era >= 3 ? n + (era === 8 ? 'C' : era >= 7 ? 'W' : era >= 5 ? 'I' : 'M') : ''; return e.def.key + '|' + era + '|' + (p ? p.color : '#888888') + '|' + nk; }
 
   drawMinimap(canvas, ui) {
     const G = this.G, g = canvas.getContext('2d');
@@ -1068,7 +1068,8 @@ const INFRA = {
 
 // Gebäude-Epoche -> vorhandenes Modell: Weltwunder (WONDER_ERA) nutzt das Wundermodell (7),
 // der Kalte Krieg vorerst die Modelle der 2. Industriellen Revolution, bis eigene Modelle (Blender) kommen.
-function modelEra(era) { era = era | 0; return era >= WONDER_ERA ? 7 : Math.max(0, Math.min(6, era)); }
+// Modell-Epoche: 0–6 wie im Spiel, 7 = Weltwunder, 8 = Kalter Krieg (eigene Nachkriegsmoderne)
+function modelEra(era) { era = era | 0; return era >= WONDER_ERA ? 7 : era === 7 ? 8 : Math.max(0, Math.min(6, era)); }
 
 function cannon(era, color) {
   const g = new THREE.Group(), modern = era >= 5, wood = U.wood(), metal = U.mat(modern ? '#3a3d30' : '#2e2e2e', 0.4, 0.7);

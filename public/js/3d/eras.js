@@ -1,4 +1,4 @@
-// Neutrale Gebäude pro Epoche (0 Steinzeit … 6 Zweite Industrielle Revolution) und das Weltwunder (7).
+// Neutrale Gebäude pro Epoche (0 Steinzeit … 6 Zweite Industrielle Revolution), das Weltwunder (7) und der Kalte Krieg (8).
 import * as THREE from 'three';
 import * as Md from './models.js';
 import * as TX from './textures.js';
@@ -178,6 +178,30 @@ const BUILDERS = {
   ],
 };
 
+// ---------- Kalter Krieg: Nachkriegsmoderne (Beton, Flachdach, Fensterbänder) ----------
+function band(g, w, y, z, lit, ry = 0, x = 0) { add(g, m(new THREE.BoxGeometry(w, 0.55, 0.06), lit ? M.lit : M.glass), x, y, z, 0, ry, 0); }
+function slab(w, d, floors, mat, seed = 1) {
+  const g = G(), fh = 1.15;
+  add(g, m(boxT(w, floors * fh, d, 2), mat), 0, floors * fh / 2, 0);
+  for (let f = 0; f < floors; f++) { const y = 0.55 + f * fh; band(g, w * 0.9, y, d / 2 + 0.03, (f + seed) % 3 === 0); band(g, w * 0.9, y, -d / 2 - 0.03, (f + seed) % 4 === 1, Math.PI); }
+  add(g, m(boxT(w + 0.2, 0.18, d + 0.2, 1), E.iron), 0, floors * fh + 0.09, 0);
+  return g;
+}
+function antenna(h = 3) { const g = G(); add(g, m(cylT(0.05, 0.08, h, 5, 1), E.iron), 0, h / 2, 0); for (let k = 1; k <= 3; k++) add(g, m(boxT(0.8 - k * 0.15, 0.04, 0.04, 1), E.iron), 0, h * k / 4, 0); return g; }
+function dish(r = 0.9) { const g = G(); add(g, m(cylT(0.08, 0.1, 1.2, 6, 1), E.iron), 0, 0.6, 0); const d2 = m(new THREE.SphereGeometry(r, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3), Md.col('#dcdcd6', 0.5)); d2.material.side = THREE.DoubleSide; add(g, d2, 0, 1.3, 0.2, -1.1); return g; }
+function container(color) { return m(boxT(1.2, 0.6, 0.55, 1), Md.col(color, 0.7)); }
+const COLD = {
+  town: c => { const g = G(); add(g, slab(9, 5, 4, E.concrete, 2)); add(g, slab(4, 3.6, 7, E.concrete, 1), -2.2, 0, -0.4); add(g, m(boxT(3, 0.25, 1.6, 1), E.iron), 0, 2.2, 2.9); for (let k = 0; k < 3; k++) add(g, m(cylT(0.1, 0.1, 2.2, 6, 1), E.iron), -1.2 + k * 1.2, 1.1, 3.4); add(g, antenna(3.2), -2.6, 8.05, -0.6); add(g, dish(1), 2.8, 4.6, 0.6); add(g, banner(c, 5.4, 1, 1.6, 0.2), 4.2, 0, 3.4); return g; },
+  house: c => { const g = slab(4.4, 2.6, 5, E.concrete, 3); for (let f = 1; f < 5; f++) add(g, m(boxT(0.9, 0.08, 0.5, 1), E.iron), 1.2, f * 1.15, 1.55); add(g, m(boxT(0.6, 0.06, 0.06, 1), teamCloth(c)), 1.2, 1.5, 1.8); return g; },
+  storage: c => { const g = G(); add(g, m(boxT(6, 3, 4, 2), E.concrete), 0, 1.5, -0.6); const rf = m(new THREE.CylinderGeometry(2.05, 2.05, 6, 16, 1, false, 0, Math.PI), E.metal); add(g, rf, 0, 3, -0.6, 0, 0, Math.PI / 2); for (let k = 0; k < 3; k++) add(g, m(boxT(1.4, 2.2, 0.1, 1), E.metal), -2 + k * 2, 1.1, 1.42); const cols = ['#8a3a2a', '#2a5a7a', '#5a6a3a']; for (let k = 0; k < 3; k++) add(g, container(cols[k]), -1.8 + k * 1.5, 0.3, 2.4); add(g, container('#7a6a3a'), -1.05, 0.9, 2.4); return g; },
+  barracks: c => { const g = G(); add(g, slab(7, 2.4, 2, E.concrete, 4), 0, 0, -1.4); const hg = m(new THREE.CylinderGeometry(1.6, 1.6, 4, 16, 1, false, 0, Math.PI), Md.col('#5a6248', 0.8)); add(g, hg, -2.6, 0, 1.4, 0, 0, Math.PI / 2); add(g, m(cylT(0.05, 0.05, 5.5, 5, 1), E.iron), 3.2, 2.75, 1.8); add(g, banner(c, 5.4, 0.9, 1.4, 0.2), 3.2, 0, 1.8); return g; },
+  range: c => { const g = G(); add(g, slab(4, 2.4, 1, E.concrete, 5), 0, 0, -1.6); add(g, m(boxT(5.2, 1, 0.6, 1.5), E.concrete), 0, 0.5, 1.2); add(g, targets(3, 1.6), 0, 0.2, 3); return g; },
+  stable: c => { const g = G(); add(g, m(boxT(7, 3.4, 4.6, 2), E.concrete), 0, 1.7, -0.2); for (let k = 0; k < 3; k++) add(g, m(boxT(1.8, 2.6, 0.1, 1), E.metal), -2.2 + k * 2.2, 1.3, 2.12); add(g, m(boxT(7.3, 0.25, 4.9, 1), E.iron), 0, 3.5, -0.2); add(g, m(boxT(7, 0.05, 3, 2), Md.col('#4a4a46', 0.95)), 0, 0.03, 3.6); return g; },
+  workshop: c => { const g = G(); add(g, m(boxT(8, 3, 5, 2), E.concrete), 0, 1.5, 0); for (let k = 0; k < 4; k++) { const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(2, 0); sh.lineTo(0, 1.3); const rg = new THREE.ExtrudeGeometry(sh, { depth: 5, bevelEnabled: false }); add(g, m(rg, E.metal), -4 + k * 2, 3, -2.5); add(g, m(new THREE.BoxGeometry(0.06, 1.2, 4.9), M.glass), -4 + k * 2 + 0.03, 3.6, 0); } add(g, chimney(10, 0.45, E.concrete), 3.2, 0, -1.6); for (let k = 0; k < 3; k++) band(g, 7.2, 1.6, 2.53, k === 1); return g; },
+  tower: c => { const g = G(); add(g, m(cylT(0.9, 1.2, 6, 10, 2), E.concrete), 0, 3, 0); add(g, m(cylT(2, 1.8, 1.6, 10, 2), E.concrete), 0, 6.8, 0); band(g, 3.4, 6.9, 1.95, true); band(g, 3.4, 6.9, -1.95, false, Math.PI); add(g, m(boxT(4.2, 0.2, 4.2, 1), E.iron), 0, 7.7, 0); add(g, antenna(2.4), 0, 7.8, 0); return g; },
+};
+export function coldWarBuilding(type, color) { mats(); return COLD[type] ? COLD[type](color) : null; }
+
 // ---------- Weltwunder ----------
 export function wonder(color) {
   mats();
@@ -213,6 +237,7 @@ export function wonder(color) {
 
 export function eraBuilding(type, era, color) {
   mats();
+  if (era === 8) return coldWarBuilding(type, color) || eraBuilding(type, 6, color);
   if (era >= 7) return type === 'town' ? wonder(color) : eraBuilding(type, 6, color);
   const list = BUILDERS[type];
   if (!list) return Md.crate();
