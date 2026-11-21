@@ -4,6 +4,7 @@ import { createDiplomacy } from './diplomacy.js';
 import { createConference } from './conference.js';
 import { icon, iconize, EMOJI } from './icons.js';
 import { createTutorial } from './tutorial.js';
+import { tr, LANG, setLang, loadLang } from './i18n.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
   RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, NUKE, NUCLEAR_NATIONS, ACHIEVEMENTS, LEADER, LEADER_CD, leaderOptions, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
@@ -68,23 +69,33 @@ function iconOf(def) {
 }
 // Alle verbliebenen Emojis im Dokument (auch aus Server-Meldungen) durch Symbole ersetzen
 const EMO_RE = /(?:\p{Extended_Pictographic}|[◆☰✕✖★✚⚔⏸▶◀⁘➖⬛⏬])/u;
+// Sprache: Texte beim Anzeigen übersetzen (siehe i18n.js)
+const EN = LANG() !== 'de';
 function deEmoji(root) {
   const fix = t => {
-    if (!EMO_RE.test(t.data) || !t.parentNode || t.parentNode.closest('svg, textarea, script')) return;
+    if (!t.parentNode || t.parentNode.closest('svg, textarea, script, style')) return;
+    let d = t.data;
+    if (EN) { const x = tr(d); if (x !== d) { d = x; if (!EMO_RE.test(d)) { t.data = d; return; } } }
+    if (!EMO_RE.test(d)) return;
     const span = document.createElement('span');
-    span.innerHTML = iconize(esc(t.data));
+    span.innerHTML = iconize(esc(d));
     t.replaceWith(...span.childNodes);
   };
   if (root.nodeType === 3) return fix(root);
   if (root.nodeType !== 1) return;
   const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [];
-  while (tw.nextNode()) if (EMO_RE.test(tw.currentNode.data)) list.push(tw.currentNode);
+  while (tw.nextNode()) if (EN || EMO_RE.test(tw.currentNode.data)) list.push(tw.currentNode);
   list.forEach(fix);
   // Titel-Attribute (native Tooltips) ohne Emojis
-  if (root.querySelectorAll) for (const el of [root, ...root.querySelectorAll('[title]')]) if (el.title && EMO_RE.test(el.title)) el.title = el.title.replace(new RegExp(EMO_RE.source, 'gu'), '').replace(/^\s+/, '');
+  if (root.querySelectorAll) for (const el of [root, ...root.querySelectorAll('[title], [placeholder]')]) {
+    if (el.title && (EN || EMO_RE.test(el.title))) { const v = (EN ? tr(el.title) : el.title).replace(new RegExp(EMO_RE.source, 'gu'), '').replace(/^\s+/, ''); if (v !== el.title) el.title = v; }
+    if (EN && el.placeholder) { const v = tr(el.placeholder); if (v !== el.placeholder) el.placeholder = v; }
+  }
 }
-new MutationObserver(ms => { for (const m of ms) { if (m.type === 'characterData') deEmoji(m.target); else m.addedNodes.forEach(deEmoji); } })
-  .observe(document.documentElement, { subtree: true, childList: true, characterData: true });
+new MutationObserver(ms => { for (const m of ms) { if (m.type === 'characterData') deEmoji(m.target); else if (m.type === 'attributes') deEmoji(m.target); else m.addedNodes.forEach(deEmoji); } })
+  .observe(document.documentElement, { subtree: true, childList: true, characterData: true, attributes: EN, attributeFilter: EN ? ['title', 'placeholder'] : undefined });
+if (EN) { const c0 = window.confirm.bind(window), p0 = window.prompt.bind(window); window.confirm = m => c0(tr(m)); window.prompt = (m, d) => p0(tr(m), d); }
+loadLang().then(() => deEmoji(document.body));
 document.addEventListener('DOMContentLoaded', () => deEmoji(document.body));
 deEmoji(document.body);
 function keyIcon(key) { return iconOf(TYPES[TYPE_INDEX[key]]); }
@@ -1257,6 +1268,8 @@ function setupOptions() {
   };
   $('optionsBtn').onclick = open; $('menuOptions').onclick = () => { $('menu').classList.add('hidden'); open(); };
   $('optionsClose').onclick = () => $('optionsDlg').classList.add('hidden');
+  $('o_lang').value = LANG();
+  $('o_lang').onchange = e => setLang(e.target.value);
   $('o_quality').onchange = e => { try { localStorage.setItem('fl_quality', e.target.value); } catch { /* egal */ } $('o_hint').textContent = 'Die Grafikqualität gilt ab dem nächsten Start des Spiels.'; };
   $('o_volume').oninput = e => { sfx.setVolume(+e.target.value / 100); $('o_volumeOut').textContent = e.target.value + ' %'; };
   $('o_volume').onchange = () => sfx.click();

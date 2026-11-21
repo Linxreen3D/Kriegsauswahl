@@ -86,6 +86,15 @@ Unity wäre die einzige ernsthafte Alternative, aber erst, wenn die Web-Technik 
 5. **Mogeln:** Der Gastgeber rechnet alles, und Clients bekommen nur, was sie sehen dürfen (Nebel des Krieges). Damit sind Karten-Hacks schon ausgeschlossen. Zusätzliche Anti-Cheat-Software ist nicht nötig.
 
 ### Phase C – Inhalt und Feinschliff vor dem Verkauf
+**Stand:**
+- ✅ **Englisch:**
+  - Einstellbar unter Optionen → „Sprache / Language“. Voreinstellung ist die Systemsprache.
+  - `node tools/i18n-extract.mjs` sammelt alle Texte aus Client, Regeln und Server in `i18n/catalog.json`, auch Vorlagen mit Platzhaltern.
+  - Die Übersetzungen stehen in `public/i18n/en.json`; nachtragen mit `node tools/i18n-merge.mjs <datei>` (Zeilen „Nummer<TAB>Englisch“).
+  - Das Spiel übersetzt beim Anzeigen, auch Server-Meldungen. Eigennamen bleiben unverändert.
+  - Weitere Sprachen: dieselbe Datei als `public/i18n/<code>.json` anlegen.
+- ✅ **Tutorial:** „Tutorial – die erste Partie“ im Startbildschirm, 10 Schritte, der Bot greift nicht an.
+
 - **Englisch** als zweite Sprache: Steam lebt vom englischsprachigen Markt. Dafür alle Texte in eine Sprachdatei auslagern.
 - **Tutorial:** eine geführte erste Partie (Steinzeit → Bronzezeit).
 - **Echte Modelle** aus Blender statt Platzhalter, mindestens für Haupthaus, Häuser, Kasernen, Infanterie je Epoche.
