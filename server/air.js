@@ -17,7 +17,7 @@ export function installAir(World) {
   W.flyTo = function (u, tx, ty, dt) {
     const dx = tx - u.x, dy = ty - u.y, d = Math.hypot(dx, dy);
     if (d < 0.05) return true;
-    const sp = Math.min(d, u.st.speed * dt);
+    const sp = Math.min(d, u.st.speed * this.unitBuff(u, 'speed') * dt);
     u.x = Math.max(0.3, Math.min(this.W - 0.3, u.x + dx / d * sp)); u.y = Math.max(0.3, Math.min(this.H - 0.3, u.y + dy / d * sp));
     u.dir = Math.atan2(dy, dx); u.state = 1;
     return d - sp < 0.05;

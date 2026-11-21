@@ -119,7 +119,7 @@ export function installRail(World) {
   };
   W.doRide = function (u, dt) {
     const o = u.order;
-    let step = u.st.speed * dt;
+    let step = u.st.speed * (this.P[u.owner].mods.railSpeed || 1) * dt;
     while (step > 0 && o.i < o.path.length) {
       const i = o.path[o.i], tx = (i % this.W) + 0.5, ty = Math.floor(i / this.W) + 0.5;
       if (!this.railAt[i]) { this.trainHalt(u, 'Gleis unterbrochen – der Zug hält, die Truppen steigen aus.'); return; }

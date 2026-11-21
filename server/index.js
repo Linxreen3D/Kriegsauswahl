@@ -44,6 +44,13 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     return res.end(JSON.stringify(out));
   }
+  // Vorhandene Führer-Porträts (public/assets/leaders/<id>.png)
+  if (path === '/assets/leaders/index.json') {
+    const dir = join(ROOT, 'public', 'assets', 'leaders');
+    const out = existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.png')).map(f => f.slice(0, -4)) : [];
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    return res.end(JSON.stringify(out));
+  }
   if (path === '/') path = '/index.html';
   // /shared/* -> shared/, /vendor/three/* -> node_modules/three/, sonst public/
   const routes = [['/shared/', join(ROOT, 'shared')], ['/vendor/three/', join(ROOT, 'node_modules', 'three')]];

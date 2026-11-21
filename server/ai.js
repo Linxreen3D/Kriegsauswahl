@@ -1,5 +1,5 @@
 // KI-Gegner: spielt über dieselbe Befehlsschnittstelle wie Menschen.
-import { ERAS, WONDER, CULTURES, BUILDINGS, LINES, RESOURCE_TYPES, LATE_STAGE, isProducer, unitStats, buildingStats, trainable, eraCost } from '../shared/rules.js';
+import { ERAS, WONDER, CULTURES, BUILDINGS, LINES, RESOURCE_TYPES, LATE_STAGE, isProducer, unitStats, buildingStats, trainable, eraCost, LEADER, leaderOptions } from '../shared/rules.js';
 
 const PROFILES = {
   easy: { think: 2.0, workers: 0.6, attackAt: 14, firstAttack: 540, aggression: 0.5, towers: 0 },
@@ -28,6 +28,15 @@ export class AI {
     this.handleProposals(pl);
     if (pl.choice === 'culture') this.cmd({ c: 'choose', kind: 'culture', value: pick(Object.keys(CULTURES)) });
     else if (pl.choice === 'nation') this.cmd({ c: 'choose', kind: 'nation', value: pick(CULTURES[pl.culture].nations) });
+    else if (pl.choice === 'leader') { const era = w.leaderEraDue(pl); const opts = leaderOptions(pl.nation, era); const calm = opts.filter(l => l.b.repSet == null); this.cmd({ c: 'choose', kind: 'leader', value: pick(calm.length ? calm : opts).id }); }
+    // Führer-Fähigkeit: Kampf-Effekte, wenn eigene Truppen kämpfen; Wirtschaft sonst jederzeit
+    if (pl.leader && !(pl.leaderCd > w.time)) {
+      const L = LEADER[pl.leader], a = L.a;
+      const fighting = w.units.some(u => u.owner === this.pid && !u.dead && u.state === 2);
+      const econ = (a.buffs || []).every(b => ['gather', 'build', 'train'].includes(b.k)) && (a.buffs || []).length;
+      const ok = a.special ? ['freeInf', 'grant', 'refit', 'eraFast', 'rebuild', 'empire'].includes(a.special) : econ || fighting;
+      if (ok && !(a.once && pl.leaderUsed && pl.leaderUsed[pl.leaderEra])) this.cmd({ c: 'leader' });
+    }
 
     const units = w.units.filter(u => u.owner === this.pid && !u.dead);
     const blds = w.buildings.filter(b => b.owner === this.pid && !b.dead);

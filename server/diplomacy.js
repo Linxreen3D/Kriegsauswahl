@@ -44,6 +44,7 @@ export function installDiplomacy(World) {
   W.chronicle = function (text, k = 'dip') { const e = { t: Math.round(this.time), text, k }; this.chron.push(e); if (this.chron.length > 400) this.chron.shift(); this.event({ k: 'chron', e }); };
   W.repChange = function (pid, d, why) {
     const pl = this.P[pid]; const before = pl.rep; pl.rep = clampRep(pl.rep + d);
+    if (d < 0 && pl.mods && pl.mods.repFloor != null && before >= pl.mods.repFloor) pl.rep = Math.max(pl.rep, pl.mods.repFloor);
     if (d < 0 && why) this.event({ k: 'notice', to: -1, text: `⚖ ${pl.name}: ${why} – Ansehen ${repLabel(before)} → ${repLabel(pl.rep)}` });
   };
 
@@ -149,6 +150,7 @@ export function installDiplomacy(World) {
         const r = this.relOf(pid, other.id);
         if (!r.alliance || r.cancelAt) return null;
         r.cancelAt = this.time + ALLIANCE_NOTICE;
+        if (pl.freeLeave) { pl.freeLeave = false; r.cancelAt = this.time + 1; this.notice(pid, 'Politik der Größe: Das Bündnis endet sofort und ohne Ansehensverlust.'); return null; }
         this.notice(other.id, `${pl.name} kündigt euer Bündnis. Es endet in ${ALLIANCE_NOTICE / 60} Minuten.`);
         this.notice(pid, `Bündnis gekündigt – es endet in ${ALLIANCE_NOTICE / 60} Minuten (kein Vertragsbruch).`);
         return null;
@@ -198,11 +200,12 @@ export function installDiplomacy(World) {
     transfer(A, B, o.give); transfer(B, A, o.get);
     const r = this.relOf(A.id, B.id), parts = [];
     if (o.alliance) { r.alliance = true; r.cancelAt = 0; parts.push('Bündnis'); }
-    if (o.pact) { r.pactUntil = Math.max(r.pactUntil, this.time + o.pact * 60); parts.push(`Nichtangriffspakt (${o.pact} min)`); }
+    if (o.pact) { r.pactUntil = Math.max(r.pactUntil, this.time + o.pact * 60 * Math.max(A.mods.pactMul || 1, B.mods.pactMul || 1)); parts.push(`Nichtangriffspakt (${o.pact} min)`); }
     if (o.give.prov.length || o.get.prov.length) parts.push('Gebietstausch');
     if (Object.keys(o.give.res).length || Object.keys(o.get.res).length || o.give.tribute || o.get.tribute) parts.push('Rohstoffe');
     if (o.give.units.length || o.get.units.length) parts.push('Truppen');
     A.stats.treaties++; B.stats.treaties++;
+    for (const X of [A, B]) if (X.mods.peaceRep) this.repChange(X.id, X.mods.peaceRep);
     this.repChange(A.id, 1); this.repChange(B.id, 1);
     this.chronicle(`📜 Vertrag zwischen ${A.name} und ${B.name}: ${parts.join(', ')}.`, 'treaty');
     this.event({ k: 'proposalEnd', to: A.id, id: prop.id, ok: true }); this.event({ k: 'proposalEnd', to: B.id, id: prop.id, ok: true });
@@ -312,7 +315,7 @@ export function installDiplomacy(World) {
   // Faktor aus laufenden Ereignis-Effekten
   W.buffMul = function (pl, k, res) {
     let m = 1;
-    for (const b of pl.buffs || []) if (b.k === k && (!b.res || b.res === res)) m *= b.v;
+    for (const b of pl.buffs || []) if (b.k === k && !b.g && !b.own && (!b.res || b.res === res)) m *= b.v;
     return m;
   };
 

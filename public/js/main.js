@@ -3,7 +3,7 @@ import { sfx } from './sound.js';
 import { createDiplomacy } from './diplomacy.js';
 import {
   COLORS, RES, RES_NAMES, RES_ICONS, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, BUILD_ORDER,
-  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
+  RESOURCE_KINDS, TYPES, WONDER, WONDER_ERA, LATE_STAGE, unitStats, buildingStats, playerMods, trainable, unitKey, TYPE_INDEX, NATION_UNITS, NATION_UNIT, LEADER, LEADER_CD, leaderOptions, eraCost, isProducer, FORMATIONS, FORMATION_KEYS, VET_RANKS, SEASONS, seasonAt, TERRAIN, SPY_MISSIONS, scaleCost, repLabel,
 } from '/shared/rules.js';
 
 const $ = id => document.getElementById(id);
@@ -364,6 +364,7 @@ function onEvent(e, now) {
       if (e.what === 'cancel' && !mine) chatLine(`${pname(e.p)} hat den Bau des Weltwunders abgebrochen.`, true);
       break;
     }
+    case 'leaderAbility': if (e.p !== G.you) chatLine(`★ ${pname(e.p)}: ${esc(e.by)} setzt „${esc(e.name)}“ ein.`, true); break;
     case 'paradrop': renderer.addEffect && renderer.addEffect('dust', e.x, e.y, { s: 1 }); break;
     case 'late':
       if (e.p === G.you) { notice(`🔬 ${LATE_STAGE.name} erforscht – deine Armee rüstet auf!`, 'good'); sfx.win(); updateCmdCard(true); }
@@ -374,8 +375,11 @@ function onEvent(e, now) {
       else chatLine(`${pname(e.p)} erreicht die ${ERAS[e.era].name}.`, true);
       break;
     case 'choice': {
-      const v = e.what === 'culture' ? CULTURES[e.v].name : NATIONS[e.v].name;
-      chatLine(`${pname(e.p)} wählt ${e.what === 'culture' ? 'die Kultur' : 'die Nation'} ${esc(v)}.`, true);
+      if (e.what === 'leader') { const L = LEADER[e.v]; if (L) chatLine(`${pname(e.p)}: ${esc(L.name)} übernimmt die Führung.`, true); }
+      else {
+        const v = e.what === 'culture' ? CULTURES[e.v]?.name : NATIONS[e.v]?.name;
+        chatLine(`${pname(e.p)} wählt ${e.what === 'culture' ? 'die Kultur' : 'die Nation'} ${esc(v || e.v)}.`, true);
+      }
       if (e.p === G.you) updateCmdCard(true);
       break;
     }
@@ -454,7 +458,7 @@ function addChat(c, silent) {
 // ---------------- Auswahl-Hilfen ----------------
 function myStats(e) {
   const p = G.players[e.owner];
-  const mods = p ? playerMods(p.culture, p.nation, p.id === G.you && G.me.late) : null;
+  const mods = p ? playerMods(p.culture, p.nation, p.id === G.you && G.me.late, p.leader) : null;
   if (e.def.kind === 'u') return unitStats(e.def.line, e.def.era, e.def.unique || null, mods);
   return buildingStats(e.def.key, e.era || 0, mods);
 }
@@ -586,7 +590,7 @@ function ghostCells(type, wx, wy) {
 function enterBuildMode(type) {
   const workers = selectedOwn().filter(e => e.def.kind === 'u' && e.def.cls === 'wrk');
   if (!workers.length) return;
-  const st = buildingStats(type, G.me.era, playerMods(G.me.culture, G.me.nation, G.me.late));
+  const st = buildingStats(type, G.me.era, playerMods(G.me.culture, G.me.nation, G.me.late, G.me.leader));
   if (!affordable(st.cost)) { notice('Nicht genug Rohstoffe.', 'bad'); return; }
   UI.mode = { build: type };
   UI.wallStart = null;
@@ -619,7 +623,7 @@ function updateCmdCard(force) {
   const own = selectedOwn();
   const slots = new Array(15).fill(null);
   const put = (key, b) => { const i = SLOT_KEYS.indexOf(key); if (i >= 0) slots[i] = { ...b, key }; };
-  const mods = playerMods(G.me.culture, G.me.nation, G.me.late);
+  const mods = playerMods(G.me.culture, G.me.nation, G.me.late, G.me.leader);
   const era = G.me.era;
   if (UI.mode && UI.mode.build) {
     put('C', { icon: '✕', title: 'Abbrechen (Esc)', fn: cancelMode });
@@ -795,6 +799,30 @@ function updateSelInfo() {
   if (box._html !== html) { box.innerHTML = html; box._html = html; }
 }
 
+// ---------------- Staatsführer-Knopf ----------------
+function updateLeaderBtn(m) {
+  let el = $('leaderBtn');
+  const L = m.leader && LEADER[m.leader];
+  if (!L) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('button'); el.id = 'leaderBtn'; el.className = 'leader-btn'; $('eraLabel').after(el); el.onclick = useLeaderAbility; }
+  const ready = !m.leaderCd && !m.leaderUsed;
+  const html = `${leaderPortrait(L, true)}<span class="lb-text"><b>${esc(L.a.name)}</b><small>${m.leaderUsed ? 'eingesetzt' : m.leaderCd ? `${Math.floor(m.leaderCd / 60)}:${String(m.leaderCd % 60).padStart(2, '0')}` : 'bereit (L)'}</small></span>`;
+  if (el._h !== html) { el.innerHTML = html; el._h = html; }
+  el.classList.toggle('ready', ready);
+  el.title = `${L.name} (${L.years})\n${L.p}\n★ ${L.a.name}: ${L.a.desc}`;
+}
+function useLeaderAbility() {
+  const L = G.me.leader && LEADER[G.me.leader]; if (!L) return;
+  if (L.a.special === 'congress' || L.a.special === 'secretCongress') {
+    const foes = G.players.filter(p => p && p.alive && p.id !== G.you && !G.allied(p.id));
+    if (!foes.length) return;
+    const pick = foes.length === 1 ? foes[0] : foes.find(p => p.name === prompt(`${L.a.name}: Mit wem verhandeln? (${foes.map(p => p.name).join(', ')})`, foes[0].name));
+    if (!pick) return;
+    cmd({ c: 'leader', target: pick.id });
+  } else cmd({ c: 'leader' });
+  sfx.build && sfx.build();
+}
+
 // ---------------- HUD ----------------
 function updateHud() {
   const m = G.me;
@@ -803,6 +831,7 @@ function updateHud() {
   $('r_pop').parentElement.classList.toggle('low', m.cap - m.pop <= 2 && m.cap < 200);
   const cult = m.culture ? CULTURES[m.culture].icon + ' ' : '';
   $('eraLabel').textContent = `${cult}${ERAS[m.era].name}${m.adv ? ' ⬆' : ''}${m.choice ? ' · Wahl offen!' : ''}`;
+  updateLeaderBtn(m);
   const t = G.time;
   const wl = G.players.filter(p => p.wonder != null && p.alive);
   let wb = $('wonderBanner');
@@ -829,12 +858,32 @@ function updateScore() {
 function showChoice() {
   const m = G.me;
   if (!m.choice) return;
+  if (m.choice === 'leader') {
+    const era = m.era >= 7 ? 7 : 6;
+    $('choiceTitle').textContent = `Wähle deinen Staatsführer (${ERAS[era].name})`;
+    $('choiceSub').textContent = 'Jeder Führer bringt zwei Dauerboni und eine Fähigkeit (Abklingzeit 10 min, sofern nicht anders angegeben). In der nächsten Epoche wählst du neu.';
+    $('choiceOptions').innerHTML = leaderOptions(m.nation, era).map(l => `<button class="choice-opt leader-opt" data-choice="${l.id}">${leaderPortrait(l)}<b>${esc(l.name)}</b><span class="years">${esc(l.years)}</span><p>${esc(l.p)}</p><p class="ability">★ <b>${esc(l.a.name)}:</b> ${esc(l.a.desc)}</p></button>`).join('');
+    $('choice').classList.remove('hidden');
+    return;
+  }
   const isCulture = m.choice === 'culture';
   $('choiceTitle').textContent = isCulture ? 'Wähle deine Kultur' : 'Wähle deine Nation';
   $('choiceSub').textContent = isCulture ? 'Deine Kultur bestimmt Boni und eine Spezialeinheit (ab dem Frühen Mittelalter).' : 'Deine Nation bestimmt einen Bonus, den Baustil deiner Stadt und dein Weltwunder.';
   const opts = isCulture ? Object.entries(CULTURES).map(([k, c]) => ({ k, icon: c.icon, name: c.name, desc: c.desc })) : CULTURES[m.culture].nations.map(k => ({ k, icon: '🏳', name: NATIONS[k].name, desc: NATIONS[k].desc + ' Eigene Einheiten: ' + (NATION_UNITS[k] || []).map(u => `${u.name} (${ERAS[u.era].short})`).join(', ') + '.' }));
   $('choiceOptions').innerHTML = opts.map(o => `<button class="choice-opt" data-choice="${o.k}"><span class="ic">${o.icon}</span><b>${esc(o.name)}</b><p>${esc(o.desc)}</p></button>`).join('');
   $('choice').classList.remove('hidden');
+}
+
+// Porträt-Platzhalter: Monogramm im einheitlichen Stil; A.H. nur als dunkler Schattenriss ohne Gesicht.
+// Gemalte Porträts kommen später als Bilder nach public/assets/leaders/<id>.png.
+const PORTRAITS = new Set();
+fetch('/assets/leaders/index.json').then(r => r.ok ? r.json() : []).then(l => { for (const id of l) if (id !== 'ah') PORTRAITS.add(id); }).catch(() => {});
+function leaderPortrait(l, small = false) {
+  const cls = small ? 'leader-portrait small' : 'leader-portrait';
+  if (l.silhouette) return `<span class="${cls} silhouette"><svg viewBox="0 0 40 48" aria-hidden="true"><circle cx="20" cy="15" r="9"/><path d="M4 48c0-11 7-18 16-18s16 7 16 18z"/></svg></span>`;
+  const ini = l.name.replace(/\(.*\)/, '').split(/\s+/).filter(w => /^[A-ZÄÖÜŞİ]/.test(w)).map(w => w[0]).slice(0, 2).join('');
+  if (PORTRAITS.has(l.id)) return `<span class="${cls}" style="background-image:url('/assets/leaders/${l.id}.png')"></span>`;
+  return `<span class="${cls}"><i>${esc(ini)}</i></span>`;
 }
 
 // ---------------- Eingabe ----------------
@@ -995,6 +1044,7 @@ function setupInput() {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const up = k.toUpperCase();
     if (up === 'P') { DIP.open(); return; }
+    if (up === 'L' && G.me.leader) { useLeaderAbility(); return; }
     if (up === 'H') { const tc = [...G.ents.values()].find(x => x.owner === G.you && x.def.key === 'town'); if (tc) { setSelection([tc.id]); centerOn([tc.id]); } return; }
     if (up === 'A' && selectedOwn().some(x => x.def.kind === 'u')) {
       UI.mode = { amove: true }; renderer.canvas.style.cursor = 'crosshair'; updateCmdCard(true); return;

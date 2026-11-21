@@ -585,7 +585,7 @@ export function unitBase(line, era, unique) {
 }
 
 // Bonus-Sammlung eines Spielers aus Kultur + Nation
-export function playerMods(culture, nation, late = false) {
+export function playerMods(culture, nation, late = false, leader = null) {
   const m = {
     gather: { food: 1, wood: 1, stone: 1, gold: 1 }, armyCost: 1, cavCost: 1, cavSpeed: 1, cavHp: 1, infAtk: 1, infHp: 1, infSpeed: 1,
     bldHp: 1, buildSpeed: 1, towerAtk: 1, towerRange: 0, housePop: 0, trainSpeed: 1, rangedRange: 0, siegeDmg: 1, regen: 0,
@@ -602,6 +602,16 @@ export function playerMods(culture, nation, late = false) {
     for (const k of ['armyCost', 'cavHp', 'trainSpeed', 'siegeDmg', 'infSpeed', 'armyHp', 'armyDmg', 'bldHp', 'fortCost', 'uniqueCost', 'infCost', 'hillDmg', 'shipCost', 'shipBuild']) if (b[k]) m[k] *= b[k];
     for (const k of ['housePop', 'rangedRange', 'towerRange', 'regen']) if (b[k]) m[k] += b[k];
     if (b.winter) m.winter = true;
+  }
+  const ld = leader && LEADER[leader];
+  if (ld) {
+    const b = ld.b;
+    m.leader = ld.id;
+    if (b.gather) for (const k in m.gather) m.gather[k] *= b.gather;
+    if (b.gatherRes) for (const k in b.gatherRes) m.gather[k] *= b.gatherRes[k];
+    for (const k of ['buildSpeed', 'bldHp', 'towerAtk', 'fortCost', 'hillDmg']) if (b[k]) m[k] *= b[k];
+    if (b.housePop) m.housePop += b.housePop;
+    for (const k of ['cls', 'unitCost', 'envoySpeed', 'railCost', 'railSpeed', 'nukeTime', 'nukeCost', 'eraSpeed', 'abm', 'homeShield', 'homeDmg', 'forestDmg', 'roadSpeed', 'fortHp', 'outpostCost', 'bldCost', 'repFloor', 'pactMul', 'peaceRep']) if (b[k] != null) m[k] = b[k];
   }
   return m;
 }
@@ -622,6 +632,17 @@ export function unitStats(line, era, unique, mods) {
     s.hp *= LATE_STAGE.hpMul; s.atk *= LATE_STAGE.atkMul;
     if (!unique && LINES[line].late) s.name = LINES[line].late;
   }
+  if (mods.cls) for (const g in mods.cls) if (inGroup(g, s)) {
+    const c = mods.cls[g];
+    if (c.cost) s.cost = scaleCost(s.cost, c.cost);
+    if (c.time) s.time *= c.time;
+    if (c.atk) s.atk *= c.atk;
+    if (c.hp) s.hp *= c.hp;
+    if (c.speed) s.speed *= c.speed;
+    if (c.range && s.range > 1) s.range += c.range;
+    if (c.sight) s.sight += c.sight;
+  }
+  if (mods.unitCost && unique && mods.unitCost[unique]) s.cost = scaleCost(s.cost, mods.unitCost[unique]);
   s.time /= mods.trainSpeed;
   s.hp = Math.round(s.hp);
   return s;
@@ -637,6 +658,13 @@ export function buildingStats(type, era, mods) {
   }
   if (type === 'house' && mods) s.pop = b.pop + mods.housePop;
   if (mods && mods.fortCost !== 1 && (type === 'wall' || type === 'tower' || type === 'outpost')) s.cost = scaleCost(s.cost || b.cost, mods.fortCost);
+  if (mods) {
+    const fort = ['wall', 'tower', 'outpost', 'coastgun', 'flakpos', 'bunker', 'abm'].includes(type);
+    if (mods.fortHp && fort) s.hp = Math.round(s.hp * mods.fortHp);
+    if (mods.outpostCost && type === 'outpost') s.cost = scaleCost(s.cost || b.cost, mods.outpostCost);
+    if (mods.railCost && (type === 'rail' || type === 'station')) s.cost = scaleCost(s.cost || b.cost, mods.railCost);
+    if (mods.bldCost && !b.decor) s.cost = scaleCost(s.cost || b.cost, mods.bldCost);
+  }
   s.time = b.time / (mods ? mods.buildSpeed : 1);
   return s;
 }
@@ -655,3 +683,139 @@ export function trainable(bType, era, culture, nation, late = true) {
   }
   return out;
 }
+
+// ---------------- Staatsführer (Epoche VII und VIII) ----------------
+// Dauerboni (b) wirken über playerMods, Fähigkeiten (a) als zeitlich begrenzte Effekte.
+// Gruppen: inf = Infanterie/Speer/Fernkampf, tank = Panzer/Kavallerie, art = Artillerie/Belagerung, veh = tank+art,
+// ship = Schiffe, air = Flugzeuge/Hubschrauber, aa = Flugabwehr, wrk = Arbeiter, spec = Spezialkräfte (Signatur-Infanterie), all = alle Militäreinheiten
+export const UNIT_GROUPS = {
+  inf: ['inf', 'spr', 'rng'], tank: ['cav'], art: ['art', 'sie'], veh: ['cav', 'art', 'sie'], ship: ['shp', 'sub'], air: ['air', 'bmb', 'hel'], aa: ['aa'], wrk: ['wrk'],
+};
+export function inGroup(g, st) {
+  if (!g || g === 'all') return st.cls !== 'wrk';
+  if (g === 'spec') return !!st.sig && (st.cls === 'inf' || st.cls === 'rng');
+  if (g === 'para') return !!st.para;
+  return (UNIT_GROUPS[g] || []).includes(st.cls);
+}
+const L = (id, nation, era, name, years, p, b, a, extra = {}) => ({ id, nation, era, name, years, p, b, a, ...extra });
+export const LEADERS = [
+  // Deutschland
+  L('bismarck', 'germany', 6, 'Otto von Bismarck', '1871–1890', 'Botschafter +50 % Tempo; jeder Vertrag +5 Ansehen; eigene Einheiten +5 % Schaden', { envoySpeed: 1.5, peaceRep: 5, cls: { all: { atk: 1.05 } } },
+    { name: 'Kongress', desc: 'Erzwingt eine Friedenskonferenz mit einem Kriegsgegner, die er nicht ablehnen kann (1× pro Epoche).', special: 'congress', once: true }),
+  L('wilhelm2', 'germany', 6, 'Wilhelm II.', '1888–1918', 'Schiffe 25 % billiger und 20 % schneller gebaut; Artillerie +1 Reichweite', { cls: { ship: { cost: 0.75, time: 0.8 }, art: { range: 1 } } },
+    { name: 'Flottenparade', desc: '60 s lang alle Schiffe +30 % Schaden.', buffs: [{ k: 'dmg', v: 1.3, s: 60, g: 'ship' }] }),
+  L('ah', 'germany', 6, 'A.H.', '1933–1945', 'Panzer und Flugzeuge 30 % schneller gebaut; Panzer +10 % Schaden. Nachteil: Ansehen fällt bei Wahl auf „niedrig“', { cls: { tank: { time: 0.7, atk: 1.1 }, air: { time: 0.7 } }, repSet: -60 },
+    { name: 'Blitzkrieg', desc: '60 s lang Fahrzeuge +40 % Tempo und +15 % Schaden.', buffs: [{ k: 'speed', v: 1.4, s: 60, g: 'veh' }, { k: 'dmg', v: 1.15, s: 60, g: 'veh' }] }, { silhouette: true }),
+  L('adenauer', 'germany', 7, 'Konrad Adenauer', '1949–1963', 'Wirtschaftswunder: +20 % Sammeltempo; Gebäude 25 % schneller gebaut', { gather: 1.2, buildSpeed: 1.25 },
+    { name: 'Westbindung', desc: '5 min lang +20 % Abfangchance der Raketenabwehr (Obergrenze 70 %) und Verteidigungsgebäude +15 % Schaden.', buffs: [{ k: 'abm', v: 0.2, s: 300 }, { k: 'tower', v: 1.15, s: 300 }] }),
+  L('schmidt', 'germany', 7, 'Helmut Schmidt', '1974–1982', 'Verteidigungsgebäude +30 % Leben; Flugabwehr +20 % Schaden', { fortHp: 1.3, cls: { aa: { atk: 1.2 } } },
+    { name: 'Doppelbeschluss', desc: '3 min lang +25 % Abfangchance (Obergrenze 75 %).', buffs: [{ k: 'abm', v: 0.25, s: 180 }] }),
+  // Österreich
+  L('franzjoseph', 'austria', 6, 'Franz Joseph I.', '1848–1916', 'Gebäude +25 % Leben; Türme +15 % Schaden', { bldHp: 1.25, towerAtk: 1.15 },
+    { name: 'Viribus Unitis', desc: '90 s lang alle Einheiten in eigenen Provinzen +20 % Leben.', buffs: [{ k: 'hp', v: 1.2, s: 90, own: true }] }),
+  L('karl1', 'austria', 6, 'Karl I.', '1916–1918', 'Infanterie 15 % billiger; jeder Vertrag +5 Ansehen', { cls: { inf: { cost: 0.85 } }, peaceRep: 5 },
+    { name: 'Sixtus-Brief', desc: 'Geheime Friedenskonferenz mit einem Kriegsgegner, ohne Zuschauer und ohne Pause.', special: 'secretCongress', cd: 900 }),
+  L('kreisky', 'austria', 7, 'Bruno Kreisky', '1970–1983', 'Nichtangriffspakte doppelt so lang; +15 % Goldertrag', { pactMul: 2, gatherRes: { gold: 1.15 } },
+    { name: 'Wiener Gipfel', desc: '3 min lang +25 % Sammeltempo und +15 Ansehen.', buffs: [{ k: 'gather', v: 1.25, s: 180 }], rep: 15 }),
+  L('raab', 'austria', 7, 'Julius Raab', '1953–1961', 'Außenposten 50 % billiger; +15 % Sammeltempo', { outpostCost: 0.5, gather: 1.15 },
+    { name: 'Staatsvertrag', desc: '2 min lang erleiden eigene Einheiten und Gebäude in eigenen Provinzen 60 % weniger Schaden (Abklingzeit 20 min).', buffs: [{ k: 'hp', v: 2.5, s: 120, own: true }, { k: 'bldHp', v: 2.5, s: 120 }], cd: 1200 }),
+  // Russland
+  L('alexander2', 'russia', 6, 'Alexander II.', '1855–1881', 'Arbeiter 25 % billiger; Gleisbau 25 % billiger', { cls: { wrk: { cost: 0.75 } }, railCost: 0.75 },
+    { name: 'Große Reformen', desc: 'Die nächste Aufstiegsforschung ist 30 % schneller (1× pro Epoche).', special: 'eraFast', once: true }),
+  L('stalin', 'russia', 6, 'Josef Stalin', '1924–1953', 'Panzer 25 % billiger; Infanterie 20 % schneller ausgebildet. Nachteil: Botschafter −25 % Tempo', { cls: { tank: { cost: 0.75 }, inf: { time: 0.8 } }, envoySpeed: 0.75 },
+    { name: 'Kein Schritt zurück', desc: '90 s lang Infanterie in eigenen Provinzen +30 % Leben.', buffs: [{ k: 'hp', v: 1.3, s: 90, g: 'inf', own: true }] }),
+  L('khrushchev', 'russia', 7, 'Nikita Chruschtschow', '1953–1964', 'Atomrakete 40 % schneller und 25 % billiger gebaut', { nukeTime: 0.6, nukeCost: 0.75 },
+    { name: 'Kuba-Krise', desc: 'Der nächste Atomstart erfolgt ohne Vorwarnung.', special: 'noWarning' }),
+  L('brezhnev', 'russia', 7, 'Leonid Breschnew', '1964–1982', 'Panzer +15 % Leben und 15 % billiger', { cls: { tank: { hp: 1.15, cost: 0.85 } } },
+    { name: 'Breschnew-Doktrin', desc: '3 min lang alle Einheiten +15 % Schaden.', buffs: [{ k: 'dmg', v: 1.15, s: 180 }] }),
+  L('gorbachev', 'russia', 7, 'Michail Gorbatschow', '1985–1991', 'Jeder Vertrag +5 Ansehen; +10 % Sammeltempo', { peaceRep: 5, gather: 1.1 },
+    { name: 'Perestroika', desc: '3 min lang alle Gebäude 50 % schneller gebaut.', buffs: [{ k: 'build', v: 1.5, s: 180 }] }),
+  // China
+  L('sunyatsen', 'china', 6, 'Sun Yat-sen', '1912', 'Infanterie 20 % billiger; Aufstiegsforschung 15 % schneller', { cls: { inf: { cost: 0.8 } }, eraSpeed: 1.15 },
+    { name: 'Drei Volksprinzipien', desc: '3 min lang +25 % Sammeltempo.', buffs: [{ k: 'gather', v: 1.25, s: 180 }] }),
+  L('chiang', 'china', 6, 'Chiang Kai-shek', '1928–1949', 'Befestigungen 30 % billiger und +25 % Leben', { fortCost: 0.7, fortHp: 1.25 },
+    { name: 'Verbrannte Erde', desc: '2 min lang sind Gegner in deinen Provinzen 50 % langsamer.', special: 'zoneSlow', v: 0.5, s: 120 }),
+  L('mao', 'china', 7, 'Mao Zedong', '1949–1976', 'Infanterie 30 % schneller ausgebildet und +10 % Leben. Nachteil: −10 % Sammeltempo', { cls: { inf: { time: 0.7, hp: 1.1 } }, gather: 0.9 },
+    { name: 'Volkskrieg', desc: '2 min lang bilden alle Gebäude doppelt so schnell aus.', buffs: [{ k: 'train', v: 2, s: 120 }] }),
+  L('deng', 'china', 7, 'Deng Xiaoping', '1978–1989', '+20 % Sammeltempo; +15 % Goldertrag', { gather: 1.2, gatherRes: { gold: 1.15 } },
+    { name: 'Sonderwirtschaftszone', desc: '5 min lang +30 % Sammeltempo.', buffs: [{ k: 'gather', v: 1.3, s: 300 }] }),
+  // Indien
+  L('gandhi', 'india', 6, 'Mahatma Gandhi', 'Unabhängigkeitsbewegung', 'Ansehen sinkt nie unter neutral; Gegner in eigenen Provinzen −15 % Schaden', { repFloor: 0, homeShield: 0.85 },
+    { name: 'Salzmarsch', desc: '2 min lang sind Gegner in deinen Provinzen 25 % langsamer und können dort nicht sammeln.', special: 'zoneSlow', v: 0.75, s: 120, noGather: true }),
+  L('bose', 'india', 6, 'Subhas Chandra Bose', 'Indische Nationalarmee, 1943', 'Infanterie 20 % billiger und +10 % Schaden', { cls: { inf: { cost: 0.8, atk: 1.1 } } },
+    { name: 'Delhi Chalo', desc: '60 s lang Infanterie +30 % Tempo.', buffs: [{ k: 'speed', v: 1.3, s: 60, g: 'inf' }] }),
+  L('nehru', 'india', 7, 'Jawaharlal Nehru', '1947–1964', 'Jeder Vertrag +5 Ansehen; Häuser +2 Bevölkerung', { peaceRep: 5, housePop: 2 },
+    { name: 'Bandung-Konferenz', desc: '+20 Ansehen und 3 min lang +20 % Sammeltempo.', buffs: [{ k: 'gather', v: 1.2, s: 180 }], rep: 20 }),
+  L('indira', 'india', 7, 'Indira Gandhi', '1966–1977, 1980–1984', 'Panzer und Artillerie +15 % Schaden', { cls: { veh: { atk: 1.15 } } },
+    { name: 'Feldzug 1971', desc: '2 min lang alle Einheiten +20 % Tempo.', buffs: [{ k: 'speed', v: 1.2, s: 120 }] }),
+  // Jugoslawien
+  L('peter1', 'yugoslavia', 6, 'Peter I.', 'Serbien, 1903–1921', 'Infanterie +15 % Leben; Gebirgsbatterie 25 % billiger', { cls: { inf: { hp: 1.15 } }, unitCost: { nu_yugoslavia_mountainbattery: 0.75 } },
+    { name: 'Rückzug über Albanien', desc: '30 s lang alle Einheiten +50 % Tempo.', buffs: [{ k: 'speed', v: 1.5, s: 30 }] }),
+  L('tito41', 'yugoslavia', 6, 'Josip Broz Tito', 'Partisanenführer, 1941–1945', 'Partisanen 40 % billiger; Infanterie im Wald +15 % Schaden', { unitCost: { nu_yugoslavia_partisan: 0.6 }, forestDmg: 1.15 },
+    { name: 'Partisanenkrieg', desc: '2 min lang ist alle Infanterie im Wald unsichtbar.', special: 'stealth', s: 120 }),
+  L('tito', 'yugoslavia', 7, 'Josip Broz Tito', '1945–1980', 'Blockfreiheit: jeder Vertrag +5 Ansehen; +15 % Goldertrag', { peaceRep: 5, gatherRes: { gold: 1.15 } },
+    { name: 'Totale Volksverteidigung', desc: '3 min lang alle Einheiten in eigenen Provinzen +20 % Schaden und +20 % Leben.', buffs: [{ k: 'dmg', v: 1.2, s: 180, own: true }, { k: 'hp', v: 1.2, s: 180, own: true }] }),
+  L('presidium', 'yugoslavia', 7, 'Kollektives Staatspräsidium', '1980–1991', 'Gebäude +20 % Leben; Infanterie 15 % billiger', { bldHp: 1.2, cls: { inf: { cost: 0.85 } } },
+    { name: 'Rotation', desc: '3 min lang alle Gebäude doppelt so schnell in der Ausbildung.', buffs: [{ k: 'train', v: 2, s: 180 }] }),
+  // USA
+  L('lincoln', 'usa', 6, 'Abraham Lincoln', '1861–1865', 'Gleisbau 40 % billiger; Züge +30 % Tempo', { railCost: 0.6, railSpeed: 1.3 },
+    { name: 'Union', desc: '3 min lang +20 % Leben für alle Einheiten in eigenen Provinzen.', buffs: [{ k: 'hp', v: 1.2, s: 180, own: true }] }),
+  L('troosevelt', 'usa', 6, 'Theodore Roosevelt', '1901–1909', 'Schiffe 20 % schneller gebaut und 10 % billiger', { cls: { ship: { time: 0.8, cost: 0.9 } } },
+    { name: 'Große Weiße Flotte', desc: '2 min lang Schiffe +25 % Tempo.', buffs: [{ k: 'speed', v: 1.25, s: 120, g: 'ship' }] }),
+  L('fdr', 'usa', 6, 'Franklin D. Roosevelt', '1933–1945', 'Fließband: Fahrzeuge, Flugzeuge und Schiffe 25 % schneller gebaut', { cls: { veh: { time: 0.75 }, air: { time: 0.75 }, ship: { time: 0.75 } } },
+    { name: 'Arsenal der Demokratie', desc: '2 min lang alle Gebäude 50 % schneller in der Ausbildung.', buffs: [{ k: 'train', v: 1.5, s: 120 }] }),
+  L('eisenhower', 'usa', 7, 'Dwight D. Eisenhower', '1953–1961', 'Eigene Einheiten +5 % Schaden; Straßen +40 % statt +25 % Tempo', { cls: { all: { atk: 1.05 } }, roadSpeed: 1.4 },
+    { name: 'Operation Overlord', desc: '2 min lang Schiffe und Fallschirmjäger +30 % Leben.', buffs: [{ k: 'hp', v: 1.3, s: 120, g: 'ship' }, { k: 'hp', v: 1.3, s: 120, g: 'para' }] }),
+  L('kennedy', 'usa', 7, 'John F. Kennedy', '1961–1963', 'Spezialkräfte 30 % billiger; alle Einheiten +1 Sicht', { cls: { spec: { cost: 0.7 }, all: { sight: 1 } } },
+    { name: 'Seeblockade', desc: 'Feindliche Schiffe in Sicht deiner Einheiten sind 60 s lang bewegungsunfähig.', special: 'blockade', s: 60 }),
+  L('reagan', 'usa', 7, 'Ronald Reagan', '1981–1989', 'Raketenabwehr +20 % Abfangchance (Obergrenze 70 %)', { abm: 0.2 },
+    { name: 'Rüstungswettlauf', desc: '3 min lang alle Produktionsgebäude +30 % Tempo.', buffs: [{ k: 'train', v: 1.3, s: 180 }] }),
+  // Frankreich
+  L('napoleon3', 'france', 6, 'Napoleon III.', '1852–1870', 'Artillerie +15 % Schaden; Gleisbau 20 % billiger', { cls: { art: { atk: 1.15 } }, railCost: 0.8 },
+    { name: 'Haussmann', desc: '3 min lang Gebäude 50 % schneller gebaut.', buffs: [{ k: 'build', v: 1.5, s: 180 }] }),
+  L('clemenceau', 'france', 6, 'Georges Clemenceau', '1917–1920', 'Befestigungen +30 % Leben; Infanterie in eigenen Provinzen +10 % Schaden', { fortHp: 1.3, homeDmg: { inf: 1.1 } },
+    { name: 'Der Tiger', desc: '2 min lang alle Einheiten +20 % Schaden in eigenen Provinzen.', buffs: [{ k: 'dmg', v: 1.2, s: 120, own: true }] }),
+  L('degaulle', 'france', 7, 'Charles de Gaulle', '1959–1969', 'Force de frappe: Atomrakete 30 % billiger; +10 Ansehen', { nukeCost: 0.7, repAdd: 10 },
+    { name: 'Politik der Größe', desc: 'Kündigt ein Bündnis ohne Ansehensverlust (Abklingzeit 20 min).', special: 'freeLeave', cd: 1200 }),
+  L('mitterrand', 'france', 7, 'François Mitterrand', '1981–1995', 'Züge +40 % Tempo (TGV); +10 % Sammeltempo', { railSpeed: 1.4, gather: 1.1 },
+    { name: 'Achse Paris–Bonn', desc: '3 min lang +15 % Sammeltempo für dich und alle Verbündeten.', buffs: [{ k: 'gather', v: 1.15, s: 180 }], allies: true }),
+  // Großbritannien
+  L('victoria', 'britain', 6, 'Königin Victoria', '1837–1901', 'Werften 30 % schneller; Schiffe +10 % Leben', { cls: { ship: { time: 0.7, hp: 1.1 } } },
+    { name: 'Weltreich', desc: '3 min lang +10 % Sammeltempo je eigener Küstenprovinz (höchstens +40 %).', special: 'empire', s: 180 }),
+  L('churchill', 'britain', 6, 'Winston Churchill', '1940–1945', 'Einheiten in eigenen Provinzen +15 % Schaden; Jäger +15 % Schaden', { homeDmg: { all: 1.15 }, cls: { air: { atk: 1.15 } } },
+    { name: 'Wir werden niemals kapitulieren', desc: '2 min lang alle Einheiten in eigenen Provinzen +30 % Leben.', buffs: [{ k: 'hp', v: 1.3, s: 120, own: true }] }),
+  L('attlee', 'britain', 7, 'Clement Attlee', '1945–1951', 'Arbeiter +20 % Leben; Häuser +2 Bevölkerung', { cls: { wrk: { hp: 1.2 } }, housePop: 2 },
+    { name: 'Wiederaufbau', desc: 'Alle eigenen Gebäude erhalten sofort 30 % Leben zurück (Abklingzeit 20 min).', special: 'rebuild', cd: 1200 }),
+  L('thatcher', 'britain', 7, 'Margaret Thatcher', '1979–1990', 'Schiffe 20 % billiger; Spezialkräfte +20 % Leben', { cls: { ship: { cost: 0.8 }, spec: { hp: 1.2 } } },
+    { name: 'Falkland', desc: '2 min lang Flotte +25 % Tempo und +15 % Schaden.', buffs: [{ k: 'speed', v: 1.25, s: 120, g: 'ship' }, { k: 'dmg', v: 1.15, s: 120, g: 'ship' }] }),
+  // Italien
+  L('garibaldi', 'italy', 6, 'Giuseppe Garibaldi', 'Risorgimento', 'Infanterie +20 % Tempo; Infanterie auf Hügeln +10 % Schaden', { cls: { inf: { speed: 1.2 } }, hillDmg: 1.1 },
+    { name: 'Zug der Tausend', desc: 'Sofort 10 Infanteristen kostenlos am Haupthaus (1× pro Epoche).', special: 'freeInf', n: 10, once: true }),
+  L('mussolini', 'italy', 6, 'Benito Mussolini', '1922–1943', 'Flugzeuge 20 % billiger; Schiffe 10 % billiger. Nachteil: Infanterie −5 % Leben', { cls: { air: { cost: 0.8 }, ship: { cost: 0.9 }, inf: { hp: 0.95 } } },
+    { name: 'Mare Nostrum', desc: '2 min lang Schiffe +20 % Schaden.', buffs: [{ k: 'dmg', v: 1.2, s: 120, g: 'ship' }] }),
+  L('degasperi', 'italy', 7, 'Alcide De Gasperi', '1945–1953', 'Gebäude 30 % schneller gebaut; +15 % Sammeltempo', { buildSpeed: 1.3, gather: 1.15 },
+    { name: 'Marshallplan', desc: 'Sofort 1200 Nahrung, 800 Holz und 600 Gold (Abklingzeit 15 min).', special: 'grant', res: { food: 1200, wood: 800, gold: 600 }, cd: 900 }),
+  L('craxi', 'italy', 7, 'Bettino Craxi', '1983–1987', '+15 % Goldertrag; Gebirgshaubitze 20 % billiger', { gatherRes: { gold: 1.15 }, unitCost: { nu_italy_mod56: 0.8 } },
+    { name: 'Sigonella', desc: 'Fremde Truppen in deinen Provinzen sind 1 min lang bewegungsunfähig.', special: 'immobilize', s: 60 }),
+  // Japan
+  L('meiji', 'japan', 6, 'Kaiser Meiji', '1867–1912', 'Aufstiegsforschung 20 % schneller; Infanterie 15 % billiger', { eraSpeed: 1.2, cls: { inf: { cost: 0.85 } } },
+    { name: 'Meiji-Restauration', desc: 'Alle eigenen Einheiten sofort kostenlos auf die aktuelle Epoche nachrüsten (1× pro Epoche).', special: 'refit', once: true }),
+  L('tojo', 'japan', 6, 'Hideki Tōjō', '1941–1944', 'Schiffe und Flugzeuge +15 % Schaden. Nachteil: Ansehen fällt bei Wahl auf „niedrig“', { cls: { ship: { atk: 1.15 }, air: { atk: 1.15 } }, repSet: -60 },
+    { name: 'Pazifikoffensive', desc: '2 min lang Flugzeuge +30 % Tempo und +15 % Schaden.', buffs: [{ k: 'speed', v: 1.3, s: 120, g: 'air' }, { k: 'dmg', v: 1.15, s: 120, g: 'air' }] }),
+  L('yoshida', 'japan', 7, 'Shigeru Yoshida', '1946–1954', '+20 % Sammeltempo; Gebäude 15 % billiger', { gather: 1.2, bldCost: 0.85 },
+    { name: 'Yoshida-Doktrin', desc: '5 min lang erleiden deine Gebäude 25 % weniger Schaden.', buffs: [{ k: 'bldHp', v: 1.33, s: 300 }] }),
+  L('nakasone', 'japan', 7, 'Yasuhiro Nakasone', '1982–1987', 'Flugabwehr +25 % Schaden; Schiffe +10 % Leben', { cls: { aa: { atk: 1.25 }, ship: { hp: 1.1 } } },
+    { name: 'Unsinkbarer Flugzeugträger', desc: '3 min lang Küstenbatterien, Flak und Türme +40 % Reichweite.', buffs: [{ k: 'towerRange', v: 1.4, s: 180 }] }),
+  // Osmanisches Reich / Türkei
+  L('abdulhamid', 'ottoman', 6, 'Abdülhamid II.', '1876–1909', 'Gleisbau 30 % billiger (Hedschasbahn); Botschafter +30 % Tempo', { railCost: 0.7, envoySpeed: 1.3 },
+    { name: 'Panislamische Diplomatie', desc: '+15 Ansehen sofort und 3 min lang +20 % Sammeltempo.', rep: 15, buffs: [{ k: 'gather', v: 1.2, s: 180 }] }),
+  L('ataturk', 'ottoman', 6, 'Mustafa Kemal Atatürk', '1923–1938', 'Infanterie +15 % Leben; Gebäude 20 % schneller gebaut', { cls: { inf: { hp: 1.15 } }, buildSpeed: 1.2 },
+    { name: 'Gallipoli', desc: '2 min lang Infanterie in eigenen Provinzen +35 % Leben.', buffs: [{ k: 'hp', v: 1.35, s: 120, g: 'inf', own: true }] }),
+  L('inonu', 'ottoman', 7, 'İsmet İnönü', '1938–1950', 'Nichtangriffspakte doppelt so lang; +10 Ansehen', { pactMul: 2, repAdd: 10 },
+    { name: 'Aktive Neutralität', desc: '2 min lang erleiden deine Einheiten und Gebäude in eigenen Provinzen 50 % weniger Schaden (Abklingzeit 30 min).', buffs: [{ k: 'hp', v: 2, s: 120, own: true }, { k: 'bldHp', v: 2, s: 120 }], cd: 1800 }),
+  L('ozal', 'ottoman', 7, 'Turgut Özal', '1983–1989', '+15 % Sammeltempo; +15 % Goldertrag', { gather: 1.15, gatherRes: { gold: 1.15 } },
+    { name: 'Öffnung', desc: '3 min lang +40 % Goldertrag.', buffs: [{ k: 'gather', v: 1.4, s: 180, res: 'gold' }] }),
+];
+export const LEADER = Object.fromEntries(LEADERS.map(l => [l.id, l]));
+export const LEADER_CD = 600;
+export function leaderOptions(nation, era) { return LEADERS.filter(l => l.nation === nation && l.era === era); }

@@ -2,7 +2,7 @@
 import {
   TICK_MS, RES, ERAS, CULTURES, NATIONS, LINES, UNIQUE, UNIQUE_MIN_ERA, BUILDINGS, RESOURCE_TYPES, RESOURCE_KINDS,
   FARM_RATE, CARRY, MAX_POP, DMG, TYPE_INDEX, unitStats, buildingStats, playerMods, unitKey, trainable, sumCost,
-  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, scaleCost, NATION_UNIT, EVENTS, isProducer, DEPOSIT_LAYERS, hasLayers,
+  WONDER, WONDER_ERA, wonderHold, LATE_STAGE, eraCost, scaleCost, NATION_UNIT, EVENTS, inGroup, isProducer, DEPOSIT_LAYERS, hasLayers,
   VET_RANKS, VET_BONUS, FORMATIONS, FORMATION_KEYS, SUPPLY_RANGE, SUPPLY_GRACE,
   seasonAt, PROVINCE_BONUS, PROVINCE_WEIGHT, RAIL,
 } from '../shared/rules.js';
@@ -11,6 +11,7 @@ import { installRail } from './rail.js';
 import { installNaval } from './naval.js';
 import { installAir } from './air.js';
 import { installCelo } from './celo.js';
+import { installLeaders } from './leaders.js';
 import { generateMap, blockedTerrain, waterTerrain, T_HILL, T_SNOW, T_DESERT, T_SWAMP, T_FORD, T_GRASS, T_DIRT } from './mapgen.js';
 
 const CAMO = { inf: 1, spr: 1, rng: 1, sup: 1 }; // im Wald getarnt
@@ -447,7 +448,8 @@ export class World {
         const next = ERAS[pl.era + 1], cost = pl.eraDiscount ? scaleCost(eraCost(pl.era + 1, this.leaderEra()), 1 - pl.eraDiscount) : eraCost(pl.era + 1, this.leaderEra());
         if (!this.canAfford(pl, cost)) { this.notice(pid, 'Nicht genug Rohstoffe für die nächste Epoche.'); return; }
         this.pay(pl, cost);
-        b.queue.unshift({ era: pl.era + 1, cost, time: next.time });
+        b.queue.unshift({ era: pl.era + 1, cost, time: next.time / (pl.mods.eraSpeed || 1) * (pl.eraFast || 1) });
+        pl.eraFast = null;
         pl.eraDiscount = 0;
         b.qProg = 0;
         pl.advancing = b.id;
@@ -524,6 +526,7 @@ export class World {
         }
         break;
       }
+      case 'leader': this.leaderAbility(pl, c); break;
       case 'paradrop': {
         this.paradropCommand(pid, own(c.ids).filter(e => e.kind === 'u'), +c.x, +c.y);
         break;
@@ -561,7 +564,8 @@ export class World {
           pl.nation = c.value; pl.choice = null;
           this.updateMods(pl);
           this.event({ k: 'choice', p: pid, what: 'nation', v: c.value });
-        }
+          this.checkLeaderChoice(pl);
+        } else if (c.kind === 'leader' && pl.choice === 'leader') this.chooseLeader(pl, c.value);
         break;
       }
       default:
@@ -571,7 +575,7 @@ export class World {
   pay(pl, cost) { for (const k in cost) pl.res[k] -= cost[k]; }
   refund(pl, cost) { for (const k in cost) pl.res[k] += cost[k]; }
   updateMods(pl) {
-    pl.mods = playerMods(pl.culture, pl.nation, pl.late);
+    pl.mods = playerMods(pl.culture, pl.nation, pl.late, pl.leader);
   }
   countUnique(pid, uq) { let n = 0; for (const u of this.units) if (!u.dead && u.owner === pid && u.unique === uq) n++; for (const b of this.buildings) if (b.owner === pid) for (const q of b.queue) if (q.unique === uq) n++; return n; }
   leaderEra() { let m = 0; for (const p of this.P) if (p.alive && p.era > m) m = p.era; return m; }
@@ -628,12 +632,14 @@ export class World {
   }
   speedOf(u) {
     const f = FORMATIONS[u.form];
-    return u.st.speed * (f ? f.speed : 1) * (u.morale < 30 ? 0.85 : 1) * this.terrainSpeed(u);
+    const z = this.zoneFactor(u);
+    return u.st.speed * (f ? f.speed : 1) * (u.morale < 30 ? 0.85 : 1) * this.terrainSpeed(u) * this.unitBuff(u, 'speed') * (z ? z.v : 1)
+      * (u.cls === 'env' ? this.P[u.owner].mods.envoySpeed || 1 : 1);
   }
   // Gelände × Jahreszeit; Straßen heben Nachteile auf
   terrainSpeed(u) {
     const i = this.idx(Math.min(this.W - 1, Math.max(0, Math.floor(u.x))), Math.min(this.H - 1, Math.max(0, Math.floor(u.y))));
-    if (this.road[i]) return 1.25;
+    if (this.road[i]) return this.P[u.owner].mods.roadSpeed || 1.25;
     const t = this.terrain[i], veh = isVehicle(u), sea = this.season();
     const winterFree = this.P[u.owner].mods.winter && this.ownProvince(u.owner, u.x, u.y);
     let m = 1;
@@ -881,7 +887,10 @@ export class World {
   }
   // Schadensfaktor des Angreifers: Veteranenrang, Moral, Formation
   dealMul(u, range) {
-    let m = (1 + u.rank * VET_BONUS) * this.buffMul(this.P[u.owner], 'dmg') * (u.letterBuff ? 1.1 : 1);
+    const mods = this.P[u.owner].mods;
+    let m = (1 + u.rank * VET_BONUS) * this.buffMul(this.P[u.owner], 'dmg') * this.unitBuff(u, 'dmg') * (u.letterBuff ? 1.1 : 1);
+    if (mods.homeDmg) for (const g in mods.homeDmg) if (inGroup(g, u.st) && this.ownProvince(u.owner, u.x, u.y)) m *= mods.homeDmg[g];
+    if (mods.forestDmg && u.cls === 'inf' && this.inForest(u)) m *= mods.forestDmg;
     if (u.morale < 50) m *= 0.8;
     const hd = this.P[u.owner].mods.hillDmg; if (hd && hd !== 1 && (u.cls === 'inf' || u.cls === 'spr' || u.cls === 'rng') && this.onHill(u)) m *= hd;
     const f = FORMATIONS[u.form];
@@ -947,6 +956,10 @@ export class World {
   damage(t, dmg, by, src) {
     if (t.kind === 'b' && t.st.decor) return;
     if (t.invulnUntil && t.invulnUntil > this.time) return;
+    if (t.kind === 'u') {
+      dmg /= this.unitBuff(t, 'hp');
+      const hs = this.P[t.owner].mods.homeShield; if (hs && this.ownProvince(t.owner, t.x, t.y)) dmg *= hs;
+    } else dmg /= this.buffMul(this.P[t.owner], 'bldHp');
     if (t.guardedBy) {
       const g = this.ents.get(t.guardedBy);
       if (g && !g.dead && g !== t && Math.hypot(g.x - (t.cx ?? t.x), g.y - (t.cy ?? t.y)) <= 3.5) {
@@ -1122,7 +1135,7 @@ export class World {
     u.dir = Math.atan2(t.cy - u.y, t.cx - u.x);
     const rate = (isFarm ? BUILDINGS[o.rtype].rate : RESOURCE_TYPES[o.rtype].rate) * pl.mods.gather[resKind] * (1 + pl.era * 0.06)
       * (this.ownProvince(u.owner, t.cx, t.cy) ? 1 + PROVINCE_BONUS : 1) * (o.rtype === 'farm' && this.season() === 3 ? 0.7 : 1)
-      * this.buffMul(pl, 'gather', resKind) * (o.rtype === 'farm' ? this.buffMul(pl, 'farm') : 1);
+      * this.buffMul(pl, 'gather', resKind) * (o.rtype === 'farm' ? this.buffMul(pl, 'farm') : 1) * (this.zoneFactor(u)?.noGather ? 0 : 1);
     let amt = rate * dt;
     if (!u.carry) u.carry = { res: resKind, amt: 0 };
     if (!isFarm) {
@@ -1156,7 +1169,7 @@ export class World {
     u.state = ST.build;
     u.dir = Math.atan2(b.cy - u.y, b.cx - u.x);
     if (!b.built) {
-      const inc = dt / b.st.time;
+      const inc = dt / b.st.time * this.buffMul(this.P[u.owner], 'build');
       b.progress = Math.min(1, b.progress + inc);
       b.hp = Math.min(b.maxHp, b.hp + b.maxHp * inc);
       if (b.progress >= 1) {
@@ -1188,10 +1201,10 @@ export class World {
     if (b.st.atk) {
       b.cd -= dt;
       if (b.cd <= 0) {
-        const t = this.findTarget(b.owner, b.cx, b.cy, b.st.range + b.size / 2, true, b.st.dmgRow || 'bld');
+        const t = this.findTarget(b.owner, b.cx, b.cy, b.st.range * this.buffMul(pl, 'towerRange') + b.size / 2, true, b.st.dmgRow || 'bld');
         if (t && t.kind === 'u') {
           b.cd = b.st.cd;
-          this.damage(t, this.bldDamage(b, t), b.owner);
+          this.damage(t, this.bldDamage(b, t) * this.buffMul(pl, 'tower'), b.owner);
           this.event({ k: 'shot', x: b.cx, y: b.cy - 0.5, tx: t.x, ty: t.y, c: pl.era >= 4 ? 2 : 0 });
         } else b.cd = 0.4;
       }
@@ -1231,6 +1244,7 @@ export class World {
         pl.era = q.era; pl.advancing = null;
         if (pl.era === 1 && !pl.culture) pl.choice = 'culture';
         else if (pl.era === 3 && !pl.nation) pl.choice = pl.culture ? 'nation' : 'culture';
+        else this.checkLeaderChoice(pl);
         this.event({ k: 'era', p: pl.id, era: pl.era });
         this.chronicle(`${pl.name} erreicht die Epoche „${ERAS[pl.era].name}“.`, 'era');
         // Gebäude werden mit der Epoche robuster
@@ -1344,7 +1358,8 @@ export class World {
     if (e.kind === 'u') {
       const s = v[this.idx(Math.floor(e.x), Math.floor(e.y))];
       // Infanterie im Wald und Spione sind erst aus der Nähe (3 Kacheln) zu sehen; Wachgebäude enttarnen Spione
-      const seen = v2 => (e.st && e.st.camo && e.state !== ST.attack ? v2 === 2 : e.cls === 'sub' ? v2 === 2 : e.cls === 'spy' ? v2 === 2 || this.detectedSpy(e) : CAMO[e.cls] && this.inForest(e) ? v2 === 2 : v2 >= 1);
+      const hide = e.cls === 'inf' && this.P[e.owner].stealthUntil > this.time && this.inForest(e);
+      const seen = v2 => (hide ? false : e.st && e.st.camo && e.state !== ST.attack ? v2 === 2 : e.cls === 'sub' ? v2 === 2 : e.cls === 'spy' ? v2 === 2 || this.detectedSpy(e) : CAMO[e.cls] && this.inForest(e) ? v2 === 2 : v2 >= 1);
       if (seen(s)) return true;
       for (const q of this.P) if (q.team !== this.P[pid].team && this.sharesVision(pid, q.id)) { const v2 = this.vis.get(q.team); if (v2 && seen(v2[this.idx(Math.floor(e.x), Math.floor(e.y))])) return true; }
       return false;
@@ -1476,7 +1491,7 @@ export class World {
     for (const b of w.buildings) b.typeIdx = TYPE_INDEX[b.type];
     w.computeTreeDensity();
     w.P = [];
-    for (const pl of d.P) { pl.mods = playerMods(pl.culture, pl.nation, pl.late); w.P[pl.id] = pl; }
+    for (const pl of d.P) { pl.mods = playerMods(pl.culture, pl.nation, pl.late, pl.leader); w.P[pl.id] = pl; }
     Object.assign(w, { rel: d.rel || {}, proposals: d.proposals || [], dchat: d.dchat || {}, tributes: d.tributes || [], chron: d.chron || [], nextPropId: d.nextPropId || 1 });
     w.initDiplomacy();
     w.initRail();
@@ -1499,14 +1514,14 @@ export class World {
   playersPublic() {
     const won = {};
     for (const b of this.buildings) if (b.wonder && !b.dead) won[b.owner] = Math.max(0, Math.ceil(wonderHold(this.W) - (this.time - b.wonderAt)));
-    return this.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, pop: p.pop, culture: p.culture, nation: p.nation, score: this.score(p), isBot: p.isBot, wonder: won[p.id] ?? null, ...this.diploPublic(p) }));
+    return this.P.map(p => ({ id: p.id, name: p.name, color: p.color, team: p.team, alive: p.alive, era: p.era, pop: p.pop, culture: p.culture, nation: p.nation, leader: p.leader || null, score: this.score(p), isBot: p.isBot, wonder: won[p.id] ?? null, ...this.diploPublic(p) }));
   }
   privateState(pl) {
     const qs = [];
     for (const b of this.buildings) if (b.owner === pl.id && b.queue.length) qs.push([b.id, b.queue.map(q => q.wonder ? 'wonder' : q.late ? 'late' : q.era != null ? 'era' : unitKey(q.line, Math.max(pl.era, LINES[q.line].minEra), q.unique)), +b.qProg.toFixed(1), +b.queue[0].time.toFixed(1), b.blocked ? 1 : 0]);
     return {
       t: 'me', res: Object.fromEntries(RES.map(k => [k, Math.floor(pl.res[k])])), pop: pl.pop, cap: pl.popCap, era: pl.era,
-      culture: pl.culture, nation: pl.nation, choice: pl.choice, adv: pl.advancing, wonderB: pl.wonderBuilding, q: qs, alive: pl.alive,
+      culture: pl.culture, nation: pl.nation, leader: pl.leader || null, leaderCd: pl.leaderCd > this.time ? Math.ceil(pl.leaderCd - this.time) : 0, leaderUsed: !!(pl.leaderUsed && pl.leaderUsed[pl.leaderEra]), choice: pl.choice, adv: pl.advancing, wonderB: pl.wonderBuilding, q: qs, alive: pl.alive,
       late: pl.late, lateR: pl.lateResearch, dip: this.diploPrivate(pl),
       st: this.buildings.filter(b => !b.dead && b.owner === pl.id && b.type === 'station' && b.built).map(b => [b.id, (b.waiting || []).length, Math.round(Object.values(b.stock || {}).reduce((x, y) => x + y, 0)), this.isHomeStation(b) ? 1 : 0, this.reachableStations(b, pl.id).length]),
     };
@@ -1584,3 +1599,4 @@ installRail(World);
 installNaval(World);
 installAir(World);
 installCelo(World);
+installLeaders(World);
