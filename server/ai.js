@@ -109,6 +109,8 @@ export class AI {
         }
       }
     }
+    // Eisenbahn: Heimatbahnhof, Bahnhof an fernem Gold/Stein, Gleis dazwischen (Güterzüge, Panzerzug)
+    if (pl.era >= 5 && workers.length > 26 && !this.defensive) this.railPlan(pl, blds, workers);
     // Weltwunder in der letzten Epoche
     if (pl.era === ERAS.length - 1 && !pl.wonderBuilding && towns.length && !blds.some(b => b.wonder) && this.prof.aggression >= 0.8) {
       const wc = WONDER.cost; if (w.canAfford(pl, wc)) this.cmd({ c: 'wonder', id: towns[towns.length - 1].id });
@@ -117,6 +119,7 @@ export class AI {
 
     // Baustellen ohne Bauarbeiter besetzen
     for (const b of building) {
+      if (BUILDINGS[b.type].line) continue; // Gleise/Straßen bauen die beauftragten Arbeiter der Reihe nach
       const has = workers.some(u => u.order.t === 'build' && u.order.target === b.id);
       if (has) continue;
       const free = workers.filter(u => u.order.t !== 'build').sort((a, c) => Math.hypot(a.x - b.cx, a.y - b.cy) - Math.hypot(c.x - b.cx, c.y - b.cy))[0];
@@ -137,6 +140,7 @@ export class AI {
       // Kampfeinheiten bevorzugen; Spezialisten nur gezielt
       const skip = ['scout', 'fishboat', 'transport', 'para', 'worker', 'envoy', 'spy', 'med'];
       if (!enemyAir) skip.push('flak');
+      if (army.filter(u => u.line === 'armtrain').length >= 2) skip.push('armtrain');
       const pool = opts.filter(x => !skip.includes(x.line));
       if (!pool.length) continue;
       const nat = pool.filter(x => x.unique);
@@ -365,6 +369,82 @@ export class AI {
     }
   }
 
+  railPlan(pl, blds, workers) {
+    const w = this.w, rp = this.rail || (this.rail = { phase: 0, next: 0 });
+    if (w.time < rp.next) return;
+    rp.next = w.time + 20;
+    const stations = blds.filter(b => b.type === 'station');
+    // Heimatbahnhof: höchstens 10 Felder vom Haupthaus (nur dort kommen Güterzüge an)
+    const home = stations.find(b => Math.hypot(b.cx - this.bx, b.cy - this.by) <= 9.5);
+    if (!home) {
+      if (blds.some(b => b.type === 'station' && !b.built && Math.hypot(b.cx - this.bx, b.cy - this.by) <= 9.5)) return;
+      const st = buildingStats('station', pl.era, pl.mods);
+      if (!w.canAfford(pl, st.cost)) { this.saveFor(st.cost, 60); return; }
+      let spot = null;
+      for (let k = 0; k < 6 && !spot; k++) { const sp = this.findSpot('station', this.bx, this.by, 4, 7); if (sp && Math.hypot(sp[0] + 1 - this.bx, sp[1] + 1 - this.by) <= 9.5) spot = sp; }
+      const ws = workers.filter(u => u.order.t !== 'build').slice(0, 2);
+      if (spot && ws.length) this.cmd({ c: 'build', ids: ws.map(u => u.id), type: 'station', pos: [spot] });
+      return;
+    }
+    if (!home.built) return;
+    if (rp.linked && w.ents.get(rp.linked) && !w.ents.get(rp.linked).dead) { // eine Strecke genügt – Arbeiter zum fernen Bahnhof schicken
+      const far = w.ents.get(rp.linked);
+      const there = workers.filter(u => u.order.t === 'gather' && Math.hypot(u.x - far.cx, u.y - far.cy) < 10).length;
+      if (there < 5) {
+        let res = null, bd = 12;
+        for (const r of w.resources.values()) { if (r.depleted || r.res === 'food') continue; const d = Math.hypot(r.cx - far.cx, r.cy - far.cy); if (d < bd) { bd = d; res = r; } }
+        const free = workers.filter(u => u.order.t === 'gather' && Math.hypot(u.x - far.cx, u.y - far.cy) >= 10).slice(0, 5 - there);
+        if (res && free.length) this.cmd({ c: 'gather', ids: free.map(u => u.id), target: res.id });
+      }
+      return;
+    }
+    const linked = stations.find(b => b !== home && b.built && w.railPath(home, b));
+    if (linked) { rp.linked = linked.id; return; }
+    let far = stations.find(b => b !== home && Math.hypot(b.cx - home.cx, b.cy - home.cy) >= 14 && Math.hypot(b.cx - home.cx, b.cy - home.cy) <= 45);
+    if (!far && stations.some(b => b !== home && Math.hypot(b.cx - home.cx, b.cy - home.cy) < 14)) return; // zweiter Bahnhof noch zu nah oder im Bau
+    if (!far) {
+      // fernes Gold- oder Steinvorkommen, zu Fuß erreichbar
+      let best = null, bd = Infinity;
+      for (const r of w.resources.values()) {
+        if (r.depleted || (r.res !== 'gold' && r.res !== 'stone')) continue;
+        const d = Math.hypot(r.cx - this.bx, r.cy - this.by);
+        if (d < 18 || d > 40 || !this.reachable({ x: r.cx, y: r.cy })) continue;
+        if (d < bd) { bd = d; best = r; }
+      }
+      if (!best) { rp.next = w.time + 300; return; }
+      const spot = this.findSpot('station', best.cx, best.cy, 2, 6);
+      const st = buildingStats('station', pl.era, pl.mods);
+      if (!spot || !w.canAfford(pl, st.cost)) { if (spot) this.saveFor(st.cost, 60); return; }
+      const ws = workers.filter(u => u.order.t !== 'build').slice(0, 2);
+      if (ws.length) this.cmd({ c: 'build', ids: ws.map(u => u.id), type: 'station', pos: [spot] });
+      return;
+    }
+    if (!far.built) return;
+    if (blds.some(b => b.type === 'rail' && !b.built)) return; // Gleisbau läuft noch
+    // Weg für das Gleis: Breitensuche über bebaubare Kacheln und vorhandene Gleise
+    const W = w.W, prev = new Int32Array(W * w.H).fill(-2), q = [], goal = new Set(w.stationTiles(far));
+    for (const i of w.stationTiles(home)) { prev[i] = -1; q.push(i); }
+    let f = -1;
+    for (let h = 0; h < q.length && f < 0 && h < 60000; h++) {
+      const i = q[h], x = i % W, y = (i - x) / W;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy; if (!w.inBounds(nx, ny)) continue;
+        const j = ny * W + nx; if (prev[j] !== -2) continue;
+        if (goal.has(j)) { prev[j] = i; f = j; break; }
+        if (!w.railAt[j] && !w.canPlace('rail', nx, ny)) continue;
+        prev[j] = i; q.push(j);
+      }
+    }
+    if (f < 0) { rp.next = w.time + 300; return; }
+    const pos = [];
+    for (let i = prev[f]; i >= 0 && prev[i] !== -1; i = prev[i]) if (!w.railAt[i]) pos.push([i % W, Math.floor(i / W)]);
+    const cost = buildingStats('rail', pl.era, pl.mods).cost, n = pos.length;
+    const total = Object.fromEntries(Object.entries(cost).map(([k, v]) => [k, v * n]));
+    if (!w.canAfford(pl, total)) { this.saveFor(total, 90); return; }
+    const ws = workers.filter(u => u.order.t !== 'build').sort((a, b) => Math.hypot(a.x - home.cx, a.y - home.cy) - Math.hypot(b.x - home.cx, b.y - home.cy)).slice(0, 4);
+    if (!ws.length) return;
+    for (let k = 0; k < pos.length; k += 60) this.cmd({ c: 'build', ids: ws.map(u => u.id), type: 'rail', pos: pos.slice(k, k + 60), queue: k > 0 });
+  }
   saveFor(cost, s) { if (!this.saving || this.saving.until < this.w.time) this.saving = { cost, until: this.w.time + s }; }
   build(type, workers, nWorkers = 1, dMin = 4, dMax = 14) {
     const pl = this.pl;
