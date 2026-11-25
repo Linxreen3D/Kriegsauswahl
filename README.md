@@ -20,7 +20,7 @@ Alle starten in der Steinzeit auf einer zufällig erzeugten Karte und führen ih
 - **Bots** in drei Stufen. Sie nutzen Wirtschaft, Eisenbahn, Flotten mit Landungen, Luftwaffe, Führer und Konferenzen.
 - **Tutorial**, **Spielhandbuch** (F1), **Speichern/Fortsetzen**, **Bot-Vertretung** bei Verbindungsabbruch, **Deutsch und Englisch**.
 
-Planung und Hintergrund: [`docs/SPIELDESIGN.md`](docs/SPIELDESIGN.md) · Steam-Release: [`docs/STEAM.md`](docs/STEAM.md) · Store-Texte: [`docs/STORE.md`](docs/STORE.md)
+Planung und Hintergrund: [`docs/SPIELDESIGN.md`](docs/SPIELDESIGN.md) · Steam-Release: [`docs/STEAM.md`](docs/STEAM.md) · Store-Texte: [`docs/STORE.md`](docs/STORE.md) · Übergabe für den Windows-PC: [`docs/UEBERGABE.md`](docs/UEBERGABE.md)
 
 ## Starten
 
